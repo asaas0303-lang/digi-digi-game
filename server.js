@@ -1,5 +1,5 @@
 /**
- * DIGI DIGI — Official Backend Server (Telegram Mini App + Data Persistence + 1-Week Block)
+ * DIGI DIGI — Official Backend Server (Telegram Mini App + Data Persistence + 1-Week Block + Webhook)
  * Domain: https://digi-digi.livops.app/
  */
 const express = require('express');
@@ -9,6 +9,9 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000; // 7 kun (1 hafta)
+
+const BOT_TOKEN = process.env.BOT_TOKEN || "9299427859:AAHPfHEA_Ze5r_ulGYaAprh3Gp7-EznE3Zs";
+const APP_URL = "https://digi-digi.livops.app";
 
 app.use(express.json({ limit: '2mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -235,9 +238,7 @@ app.post('/api/tg/friend-respond', (req, res) => {
   return res.json({ ok: true, action });
 });
 
-// 6) Telegram Bot Webhook (/start xabarlariga avtomatik javob berish)
-const BOT_TOKEN = process.env.BOT_TOKEN || '9299427859:AAHPfHEA_Ze5r_ulGYaAprh3Gp7-EznE3Zs';
-
+// 6) Telegram Bot Webhook (/api/tg/webhook)
 app.post('/api/tg/webhook', async (req, res) => {
   res.sendStatus(200);
   try {
@@ -248,13 +249,15 @@ app.post('/api/tg/webhook', async (req, res) => {
     const text = (msg.text || '').trim();
 
     if (text.startsWith('/start') && chatId) {
-      const parts = text.split(' ');
-      const startPayload = parts[1] || '';
-      const gameUrl = startPayload
-        ? `https://digi-digi.livops.app/?friend_ref=${encodeURIComponent(startPayload)}`
-        : 'https://digi-digi.livops.app/';
+      const firstName = (msg.from && msg.from.first_name) || "Jangchi";
+      const parts = text.split(/\s+/);
+      const startPayload = parts.length > 1 ? parts.slice(1).join(' ').trim() : '';
 
-      const welcomeText = `🔥 *DIGI DIGI — 3D Global Offensive* o'yiniga xush kelibsiz!\n\n🎮 Brauzer va Telegram Mini App orqali to'g'ridan-to'g'ri o'ynang.\n👥 5v5 FPS janglar, do'stlarni taklif qilish, ELO reytingi va yangi skinlar!\n\n👇 O'yinni boshlash uchun quyidagi tugmani bosing:`;
+      const webAppUrl = startPayload
+        ? `${APP_URL}/?friend_ref=${encodeURIComponent(startPayload)}`
+        : `${APP_URL}/`;
+
+      const welcomeText = `🪖 <b>Salom, ${firstName}!</b>\n\n🔥 <b>DIGI DIGI — Global Offensive</b> taktik 3D labirint jangiga xush kelibsiz!\n\n🎯 <b>Sizni nimalar kutmoqda?</b>\n• 🔫 <b>5v5 va 1v1 Duel:</b> Do'stlaringiz yoki aqlli botlarga qarshi shiddatli otishmalar\n• 🧰 <b>Oltin Harbiy Sandiq:</b> Bepul sandiq ochib, minglab tilla tangalar yutib oling\n• 🎨 <b>Eksklyuziv Skinlar:</b> Oltin Ajdar, Kiberpank Neon va Zumrad qurollar\n• 🏆 <b>Reyting:</b> TOP jangchilar ro'yxatida 1-o'ringa chiqing!\n\n👇 <b>Qurolingizni o'qlang! Labirintga kirish uchun pastdagi tugmani bosing:</b>`;
 
       await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
         method: 'POST',
@@ -262,13 +265,13 @@ app.post('/api/tg/webhook', async (req, res) => {
         body: JSON.stringify({
           chat_id: chatId,
           text: welcomeText,
-          parse_mode: 'Markdown',
+          parse_mode: 'HTML',
           reply_markup: {
             inline_keyboard: [
               [
                 {
-                  text: '🎮 DIGI DIGI 3D O\'YININI BOSHLASH',
-                  web_app: { url: gameUrl }
+                  text: "🔥 O'YINNI BOSHLASH (DIGI DIGI) 🎮",
+                  web_app: { url: webAppUrl }
                 }
               ]
             ]
@@ -277,11 +280,29 @@ app.post('/api/tg/webhook', async (req, res) => {
       });
     }
   } catch (err) {
-    console.error('Webhook error:', err.message);
+    console.error('Telegram webhook error:', err.message);
   }
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`DIGI DIGI Server running on port ${PORT}`);
-});
 
+  // Telegram Webhook va Menu tugmasini avtomatik sozlash
+  try {
+    const webhookRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/setWebhook?url=${encodeURIComponent(APP_URL + '/api/tg/webhook')}`);
+    const webhookData = await webhookRes.json();
+    console.log('Telegram setWebhook result:', webhookData);
+
+    const menuRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/setChatMenuButton`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        menu_button: { type: 'default' }
+      })
+    });
+    const menuData = await menuRes.json();
+    console.log('Telegram setChatMenuButton (default) result:', menuData);
+  } catch (err) {
+    console.error('Telegram init error:', err.message);
+  }
+});
