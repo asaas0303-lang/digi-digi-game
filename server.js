@@ -235,6 +235,53 @@ app.post('/api/tg/friend-respond', (req, res) => {
   return res.json({ ok: true, action });
 });
 
+// 6) Telegram Bot Webhook (/start xabarlariga avtomatik javob berish)
+const BOT_TOKEN = process.env.BOT_TOKEN || '9299427859:AAHPfHEA_Ze5r_ulGYaAprh3Gp7-EznE3Zs';
+
+app.post('/api/tg/webhook', async (req, res) => {
+  res.sendStatus(200);
+  try {
+    const update = req.body;
+    if (!update || !update.message) return;
+    const msg = update.message;
+    const chatId = msg.chat && msg.chat.id;
+    const text = (msg.text || '').trim();
+
+    if (text.startsWith('/start') && chatId) {
+      const parts = text.split(' ');
+      const startPayload = parts[1] || '';
+      const gameUrl = startPayload
+        ? `https://digi-digi.livops.app/?friend_ref=${encodeURIComponent(startPayload)}`
+        : 'https://digi-digi.livops.app/';
+
+      const welcomeText = `🔥 *DIGI DIGI — 3D Global Offensive* o'yiniga xush kelibsiz!\n\n🎮 Brauzer va Telegram Mini App orqali to'g'ridan-to'g'ri o'ynang.\n👥 5v5 FPS janglar, do'stlarni taklif qilish, ELO reytingi va yangi skinlar!\n\n👇 O'yinni boshlash uchun quyidagi tugmani bosing:`;
+
+      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: welcomeText,
+          parse_mode: 'Markdown',
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: '🎮 DIGI DIGI 3D O\'YININI BOSHLASH',
+                  web_app: { url: gameUrl }
+                }
+              ]
+            ]
+          }
+        })
+      });
+    }
+  } catch (err) {
+    console.error('Webhook error:', err.message);
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`DIGI DIGI Server running on port ${PORT}`);
 });
+
