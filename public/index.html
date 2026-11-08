@@ -2176,6 +2176,14 @@
         player.recoilPitch = Math.min(0.14, (player.recoilPitch || 0) + (selectedWeaponIdx === 1 ? 0.026 : 0.018));
         player.pumpStage = selectedWeaponIdx === 2 ? 14 : 6;
         player.muzzleFlash = w.isMelee ? 0 : 4;
+        // 2-OPTIMIZATSIYA: Persistent Muzzle Light - sahnadan remove qilmasdan faqat intensity va position yangilanadi
+        if (!w.isMelee && window._persistentMuzzleLight) {
+          window._persistentMuzzleLight.position.set(player.x, 1.04, player.y);
+          window._persistentMuzzleLight.intensity = 2.2;
+          setTimeout(() => {
+            if (window._persistentMuzzleLight) window._persistentMuzzleLight.intensity = 0;
+          }, 55);
+        }
         // #1 Dinamik nishon kengayishi (Crosshair Recoil Bloom)
         player.crosshairBloom = Math.min(22, player.crosshairBloom + (w.isMelee ? 4 : 7));
 
@@ -3007,9 +3015,15 @@
         if (threeRenderer || typeof THREE === 'undefined') return;
 
         threeRenderer = new THREE.WebGLRenderer({ canvas: webglCanvas, antialias: true, powerPreference: 'high-performance' });
-        threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        // 1-OPTIMIZATSIYA: Smart Retina PixelRatio (1.5x chegara)
+        threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
         threeRenderer.toneMapping = THREE.ACESFilmicToneMapping;
         threeRenderer.toneMappingExposure = 1.08;
+
+        // 4-OPTIMIZATSIYA: ShadowMap (Soyalar) tezligini 2x oshirish
+        threeRenderer.shadowMap.enabled = true;
+        threeRenderer.shadowMap.type = THREE.PCFShadowMap;
+        window.renderer = threeRenderer;
 
         threeScene = new THREE.Scene();
         threeScene.background = new THREE.Color(0x050404);
@@ -3024,6 +3038,14 @@
         // O'yinchining o'q uzganda yonadigan dinamik yorug'ligi va xira fonari
         gunPointLight = new THREE.PointLight(0xffaa44, 0.55, 7.5, 2.0);
         threeScene.add(gunPointLight);
+
+        // 2-OPTIMIZATSIYA: Persistent Muzzle Light (Shader recompilation oldini olish uchun doimiy sahnada qoladi)
+        if (!window._persistentMuzzleLight) {
+          window._persistentMuzzleLight = new THREE.PointLight(0xffaa33, 0, 8);
+        }
+        if (!threeScene.children.includes(window._persistentMuzzleLight)) {
+          threeScene.add(window._persistentMuzzleLight);
+        }
       }
 
       function rebuildThreeMazeScene() {
@@ -3640,6 +3662,14 @@
             mesh.position.set(pk.x, 0.12 + Math.sin(nowSec * 3 + idx) * 0.02, pk.y);
             mesh.rotation.y = nowSec * 1.2;
           });
+
+          // 4-OPTIMIZATSIYA: ShadowMap (Soyalar) tezligini 2x oshirish (har 2-kadrda yangilanadi)
+          window._frameTick = (window._frameTick || 0) + 1;
+          const currentRenderer = typeof renderer !== 'undefined' ? renderer : threeRenderer;
+          if (currentRenderer.shadowMap && currentRenderer.shadowMap.enabled) {
+            currentRenderer.shadowMap.autoUpdate = false;
+            if (window._frameTick % 2 === 0) currentRenderer.shadowMap.needsUpdate = true;
+          }
 
           threeRenderer.render(threeScene, threeCamera);
         }
@@ -4640,7 +4670,8 @@
         if (!cvs) return;
 
         caseThreeRenderer = new THREE.WebGLRenderer({ canvas: cvs, antialias: true, alpha: true });
-        caseThreeRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        // 1-OPTIMIZATSIYA: Smart Retina PixelRatio (1.5x chegara)
+        caseThreeRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
         caseThreeScene = new THREE.Scene();
 
         caseThreeCamera = new THREE.PerspectiveCamera(42, 2.0, 0.1, 20);
@@ -4807,7 +4838,8 @@
 
       function renderCase3DLoop() {
         const modal = document.getElementById('modalBonus');
-        if (!modal || modal.classList.contains('hidden')) {
+        // 3-OPTIMIZATSIYA: 3D Oltin Sandiq (#modalBonus) renderini fonda to'xtatish
+        if (!modal || modal.classList.contains('hidden') || getComputedStyle(modal).display === 'none') {
           caseAnimFrameId = null;
           return;
         }
@@ -4921,7 +4953,10 @@
             });
           }
 
-          caseThreeRenderer.render(caseThreeScene, caseThreeCamera);
+          // 3-OPTIMIZATSIYA: Faqat #modalBonus ochiq turgandagina render qilinadi
+          if (modal && !modal.classList.contains('hidden') && getComputedStyle(modal).display !== 'none') {
+            caseThreeRenderer.render(caseThreeScene, caseThreeCamera);
+          }
         }
         caseAnimFrameId = requestAnimationFrame(renderCase3DLoop);
       }
