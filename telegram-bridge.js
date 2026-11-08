@@ -544,7 +544,6 @@
   window.addEventListener('DOMContentLoaded', async () => {
     loadLocalBridgeState();
     injectTelegramBridgeUI();
-    initNetGraphTelemetry();
 
     const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
     if (tg) {

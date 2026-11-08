@@ -132,18 +132,6 @@
 </head>
 <body class="relative w-full h-full flex flex-col justify-between horror-bg select-none">
 
-  <!-- JONLI DIAGNOSTIKA HUD: FPS | MS | PING | GPU (Bosganda nusxalaydi) -->
-  <div id="digiNetGraphHud" style="position:fixed; top:168px; left:10px; z-index:9999;" class="flex items-center gap-1.5 bg-zinc-950/90 border border-emerald-500/70 rounded-lg px-2.5 py-1 text-[10px] font-mono shadow-2xl select-none cursor-pointer active:scale-95 transition">
-    <span id="ngFps" class="font-extrabold text-emerald-400">FPS:60</span>
-    <span class="text-zinc-600">|</span>
-    <span id="ngMs" class="text-sky-300 font-bold">16.6ms</span>
-    <span class="text-zinc-600">|</span>
-    <span id="ngPing" class="font-extrabold text-emerald-400">PING:--ms</span>
-    <span class="text-zinc-600">|</span>
-    <span id="ngGpu" class="text-amber-300 font-bold">DC:0</span>
-    <span class="text-[9px] bg-emerald-900/70 border border-emerald-500/50 text-emerald-200 px-1 rounded ml-0.5">📋</span>
-  </div>
-
   <!-- Qon va qo'rqinchli chaqnash qatlami -->
   <div id="damageFlash" class="fixed inset-0 bg-red-600/0 pointer-events-none z-50 transition-all duration-100"></div>
   <div id="jumpscareBanner" class="hidden fixed inset-0 z-35 pointer-events-none flex items-center justify-center bg-red-950/60 backdrop-blur-[1px]">
@@ -451,6 +439,14 @@
             </div>
           </div>
 
+          <div class="flex items-center justify-between bg-slate-900/90 border border-slate-800 rounded-xl px-3.5 py-2.5 mt-2">
+            <div>
+              <div class="text-xs font-bold text-slate-200">📶 FPS va PING ko'rsatkichi</div>
+              <div class="text-[10px] text-slate-400">O'yin vaqtida burchakda kadr va tarmoq tezligini ko'rsatish</div>
+            </div>
+            <input id="toggleNetGraph" type="checkbox" class="w-5 h-5 accent-amber-500 rounded cursor-pointer">
+          </div>
+
           <div class="bg-slate-950/85 border border-slate-800 rounded-xl p-3 space-y-2.5">
             <h3 class="font-black text-sky-400 uppercase text-[11px]">🔊 Akustika va 3D Ovoz</h3>
             <div class="flex items-center justify-between">
@@ -600,6 +596,17 @@
 
   <!-- ==================== 2. 3D LABIRINT O'YIN EKRANI (35 TA MUAMMO TUZATILGAN) ==================== -->
   <div id="gameView" class="hidden fixed inset-0 z-30 w-full h-full flex flex-col bg-black overflow-hidden">
+    
+    <!-- Minimalist FPS & PING Indikatori (Faqat 3D o'yinda va Sozlamalarda yoqilganda ko'rinadi) -->
+    <div id="digiNetGraphHud" style="position:absolute; top:4px; left:12px; z-index:45; text-shadow: 0 1px 2px rgba(0,0,0,0.95);" class="hidden items-center gap-1.5 text-[9px] font-mono tracking-tight opacity-75 hover:opacity-100 select-none cursor-pointer transition">
+      <span id="ngFps" class="font-bold text-emerald-400">FPS 60</span>
+      <span class="text-white/30">·</span>
+      <span id="ngMs" class="text-slate-300">16.6ms</span>
+      <span class="text-white/30">·</span>
+      <span id="ngPing" class="font-bold text-emerald-400">PING --ms</span>
+      <span class="text-white/30">·</span>
+      <span id="ngGpu" class="text-amber-300/90">DC 0</span>
+    </div>
     
     <!-- YUQORI COMPACT HUD SATRI (#21 Kattaroq Radar, #28 Kompas, #35 Ixcham yonma-yon tugmalar) -->
     <div class="shrink-0 bg-zinc-950/95 border-b border-red-900/60 px-2 py-1.5 flex items-center justify-between gap-1.5 z-30">
@@ -5207,7 +5214,36 @@
       const elMs = document.getElementById('ngMs');
       const elPing = document.getElementById('ngPing');
       const elGpu = document.getElementById('ngGpu');
+      const toggleEl = document.getElementById('toggleNetGraph');
+      const gameViewEl = document.getElementById('gameView');
       if (!hud || !elFps || !elMs || !elPing || !elGpu) return;
+
+      // Standart holatda O'CHIQ (false) bo'ladi, faqat foydalanuvchi yoqsa '1' saqlanadi
+      let isEnabled = localStorage.getItem('digi_show_netgraph') === '1';
+      if (toggleEl) {
+        toggleEl.checked = isEnabled;
+        toggleEl.addEventListener('change', function() {
+          isEnabled = !!toggleEl.checked;
+          localStorage.setItem('digi_show_netgraph', isEnabled ? '1' : '0');
+          updateHudVisibility();
+          if (isEnabled && isInActiveGame()) pingCheck();
+        });
+      }
+
+      function isInActiveGame() {
+        if (!gameViewEl) return false;
+        return !gameViewEl.classList.contains('hidden') && gameViewEl.style.display !== 'none';
+      }
+
+      function updateHudVisibility() {
+        if (isEnabled && isInActiveGame()) {
+          hud.classList.remove('hidden');
+          hud.classList.add('flex');
+        } else {
+          hud.classList.add('hidden');
+          hud.classList.remove('flex');
+        }
+      }
 
       let frameCount = 0;
       let lastFpsUpdate = performance.now();
@@ -5219,53 +5255,59 @@
       let spikesOver55 = 0;
 
       function loop(now) {
-        frameCount++;
-        const dt = now - lastFrameTime;
-        lastFrameTime = now;
-        if (dt > maxSpike && dt < 2000) maxSpike = dt;
-        if (dt > 55) spikesOver55++;
+        updateHudVisibility();
+        if (isEnabled && isInActiveGame()) {
+          frameCount++;
+          const dt = now - lastFrameTime;
+          lastFrameTime = now;
+          if (dt > maxSpike && dt < 2000) maxSpike = dt;
+          if (dt > 55) spikesOver55++;
 
-        if (now - lastFpsUpdate >= 500) {
-          curFps = Math.min(120, Math.round((frameCount * 1000) / (now - lastFpsUpdate)));
-          if (curFps < minFps && curFps > 0) minFps = curFps;
-          const avgMs = frameCount > 0 ? ((now - lastFpsUpdate) / frameCount).toFixed(1) : '16.6';
+          if (now - lastFpsUpdate >= 500) {
+            curFps = Math.min(144, Math.round((frameCount * 1000) / (now - lastFpsUpdate)));
+            if (curFps < minFps && curFps > 0) minFps = curFps;
+            const avgMs = frameCount > 0 ? ((now - lastFpsUpdate) / frameCount).toFixed(1) : '16.6';
 
-          elFps.textContent = 'FPS:' + curFps;
-          elFps.className = curFps >= 50 ? 'font-extrabold text-emerald-400' : (curFps >= 30 ? 'font-extrabold text-amber-400' : 'font-extrabold text-red-500');
+            elFps.textContent = 'FPS ' + curFps;
+            elFps.className = curFps >= 50 ? 'font-bold text-emerald-400' : (curFps >= 30 ? 'font-bold text-amber-400' : 'font-bold text-red-400');
 
-          const spikeStr = maxSpike > 45 ? ' (max:' + Math.round(maxSpike) + 'ms)' : '';
-          elMs.textContent = avgMs + 'ms' + spikeStr;
-          elMs.className = maxSpike > 60 ? 'text-red-400 font-bold' : 'text-sky-300 font-bold';
+            elMs.textContent = avgMs + 'ms';
+            elMs.className = maxSpike > 60 ? 'text-red-400' : 'text-slate-300';
 
-          const r = window._mainThreeRenderer;
-          if (r && r.info && r.info.render) {
-            elGpu.textContent = 'DC:' + r.info.render.calls;
+            const r = window._mainThreeRenderer;
+            if (r && r.info && r.info.render) {
+              elGpu.textContent = 'DC ' + r.info.render.calls;
+            }
+
+            frameCount = 0;
+            maxSpike = 0;
+            lastFpsUpdate = now;
           }
-
-          frameCount = 0;
-          maxSpike = 0;
+        } else {
+          lastFrameTime = now;
           lastFpsUpdate = now;
+          frameCount = 0;
         }
         requestAnimationFrame(loop);
       }
       requestAnimationFrame(loop);
 
       async function pingCheck() {
+        if (!isEnabled || !isInActiveGame()) return;
         const t0 = performance.now();
         try {
           const res = await fetch('/api/tg/ping?t=' + Date.now(), { cache: 'no-store' });
           if (res.ok) {
             curPing = Math.round(performance.now() - t0);
-            elPing.textContent = 'PING:' + curPing + 'ms';
-            elPing.className = curPing < 80 ? 'font-extrabold text-emerald-400' : (curPing < 160 ? 'font-extrabold text-amber-400' : 'font-extrabold text-red-500');
+            elPing.textContent = curPing + 'ms';
+            elPing.className = curPing < 90 ? 'font-bold text-emerald-400' : (curPing < 180 ? 'font-bold text-amber-400' : 'font-bold text-red-400');
           }
         } catch (e) {
-          elPing.textContent = 'PING:OFF';
-          elPing.className = 'font-extrabold text-red-500';
+          elPing.textContent = 'OFF';
+          elPing.className = 'font-bold text-red-400';
         }
       }
-      pingCheck();
-      setInterval(pingCheck, 2500);
+      setInterval(pingCheck, 4000);
 
       hud.addEventListener('click', function() {
         const r = window._mainThreeRenderer;
@@ -5278,9 +5320,9 @@
         const tb = document.getElementById('toastBox');
         const tm = document.getElementById('toastMsg');
         if (tb && tm) {
-          tm.textContent = '📋 Nusxalandi! Gemini-ga yuboring: ' + report;
+          tm.textContent = '📋 Nusxalandi: ' + report;
           tb.classList.remove('hidden');
-          setTimeout(function(){ tb.classList.add('hidden'); }, 3500);
+          setTimeout(function(){ tb.classList.add('hidden'); }, 3000);
         }
         minFps = curFps;
         spikesOver55 = 0;
