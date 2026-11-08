@@ -54,12 +54,14 @@ function loadDb() {
   }
 }
 
+let _saveTimer = null;
 function saveDb() {
-  try {
-    fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), "utf8");
-  } catch (err) {
-    console.error("DB Save error:", err.message);
-  }
+  if (_saveTimer) clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(() => {
+    fs.promises.writeFile(DB_FILE, JSON.stringify(db, null, 2), "utf8").catch(err => {
+      console.error("DB save error:", err);
+    });
+  }, 300);
 }
 
 loadDb();
@@ -89,7 +91,9 @@ function tgApiCall(method, payload) {
 
 // 0) Tezkor Ping o'lchash endpointi
 app.get("/api/tg/ping", (req, res) => {
-  res.json({ ok: true, t: Date.now() });
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("Cache-Control", "no-store");
+  res.status(200).send("1");
 });
 
 // 1) O'yinchi profilini va o'yin ma'lumotlarini (tangalar, skinlar, ELO, bloklar) saqlash va olish

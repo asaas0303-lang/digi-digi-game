@@ -1217,9 +1217,11 @@
       window.userStats = userStats;
 
       function saveUserData() {
-        try {
-          localStorage.setItem(LOCAL_USER_STATS_KEY, JSON.stringify(userStats));
-        } catch (e) {}
+        setTimeout(() => {
+          try {
+            localStorage.setItem(LOCAL_USER_STATS_KEY, JSON.stringify(userStats));
+          } catch (e) {}
+        }, 50);
         if (typeof window.tgBridgeForceSync === 'function') {
           window.tgBridgeForceSync();
         }
@@ -3172,6 +3174,8 @@
         floorMesh.rotation.x = -Math.PI / 2;
         floorMesh.position.set(MAP_SIZE / 2, 0, MAP_SIZE / 2);
         floorMesh.userData.isMazePart = true;
+        floorMesh.matrixAutoUpdate = false;
+        floorMesh.updateMatrix();
         threeScene.add(floorMesh);
 
         // 2. To'liq Yopiq Tosh va G'isht Shift (Ochiq osmon umuman ko'rinmaydi! #1)
@@ -3187,6 +3191,8 @@
         ceilMesh.rotation.x = Math.PI / 2;
         ceilMesh.position.set(MAP_SIZE / 2, wallHeight, MAP_SIZE / 2);
         ceilMesh.userData.isMazePart = true;
+        ceilMesh.matrixAutoUpdate = false;
+        ceilMesh.updateMatrix();
         threeScene.add(ceilMesh);
 
         // Shiftdagi tosh arkalar/ustunlar (Ceiling Beams)
@@ -3195,6 +3201,8 @@
           const beam = new THREE.Mesh(beamGeo, ceilMat);
           beam.position.set(MAP_SIZE / 2, wallHeight - 0.07, z);
           beam.userData.isMazePart = true;
+          beam.matrixAutoUpdate = false;
+          beam.updateMatrix();
           threeScene.add(beam);
         }
 
@@ -3217,6 +3225,8 @@
               const m = new THREE.Mesh(wallGeo, wallMat);
               m.position.set(x + 0.5, wallHeight / 2, y + 0.5);
               m.userData.isMazePart = true;
+              m.matrixAutoUpdate = false;
+              m.updateMatrix();
               threeScene.add(m);
             } else {
               // Ochiq koridorlarda devorga osilgan eski sariq fonuslar (Wall Lanterns) joylashtirish
@@ -3240,6 +3250,8 @@
                 lGroup.add(cap);
                 lGroup.position.set(lx, ly, lz);
                 lGroup.userData.isMazePart = true;
+                lGroup.matrixAutoUpdate = false;
+                lGroup.updateMatrix();
                 threeScene.add(lGroup);
 
                 const pLight = new THREE.PointLight(0xff9822, 1.55, 6.2, 1.85);
@@ -3256,6 +3268,8 @@
                 prop.position.set(x + 0.23, isBarrel ? 0.28 : 0.21, y + 0.25);
                 prop.rotation.y = (x * y) * 0.4;
                 prop.userData.isMazePart = true;
+                prop.matrixAutoUpdate = false;
+                prop.updateMatrix();
                 threeScene.add(prop);
               }
             }
@@ -3567,10 +3581,18 @@
         const initGeo = (swatWalkGeometries && swatWalkGeometries[0]) ? swatWalkGeometries[0] : new THREE.BoxGeometry(0.4, 1.18, 0.4);
         const initMat = isAlly ? swatBlueMat : swatRedMat;
         const bodyMesh = new THREE.Mesh(initGeo, initMat);
+        bodyMesh.castShadow = true;
+        bodyMesh.receiveShadow = false;
         actorHolder.add(bodyMesh);
 
         // 3D Taktik Avtomatni askar qo'liga biriktirish
         const rifleGrp = create3DSoldierRifle();
+        rifleGrp.traverse(child => {
+          if (child.isMesh) {
+            child.castShadow = false;
+            child.receiveShadow = false;
+          }
+        });
         actorHolder.add(rifleGrp);
 
         // Oyoq osti 3D soyasi (Ambient Occlusion Shadow)
@@ -3758,12 +3780,12 @@
             mesh.rotation.y = nowSec * 1.2;
           });
 
-          // 4-OPTIMIZATSIYA: ShadowMap (Soyalar) tezligini 2x oshirish (har 2-kadrda yangilanadi)
+          // 4-OPTIMIZATSIYA: ShadowMap (Soyalar) tezligini 4x oshirish (har 4-kadrda yangilanadi)
           window._frameTick = (window._frameTick || 0) + 1;
           const currentRenderer = typeof renderer !== 'undefined' ? renderer : threeRenderer;
           if (currentRenderer.shadowMap && currentRenderer.shadowMap.enabled) {
             currentRenderer.shadowMap.autoUpdate = false;
-            if (window._frameTick % 2 === 0) currentRenderer.shadowMap.needsUpdate = true;
+            if (window._frameTick % 4 === 0) currentRenderer.shadowMap.needsUpdate = true;
           }
 
           threeRenderer.render(threeScene, threeCamera);
@@ -4142,14 +4164,16 @@
         document.getElementById('hudBlueScore').textContent = String(blueScore);
         document.getElementById('hudWeaponName').textContent = w.name;
 
-        let normA = ((player.angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-        const deg = Math.round((normA * 180) / Math.PI);
-        const dirs = ['E', 'SE', 'S', 'SW', 'W', 'NW', 'N', 'NE'];
-        const dirIdx = Math.round(normA / (Math.PI / 4)) % 8;
-        const compEl = document.getElementById('hudCompass');
-        if (compEl) compEl.textContent = `${dirs[dirIdx]} • ${deg}°`;
+        if (window._frameTick % 3 === 0) {
+          let normA = ((player.angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+          const deg = Math.round((normA * 180) / Math.PI);
+          const dirs = ['E', 'SE', 'S', 'SW', 'W', 'NW', 'N', 'NE'];
+          const dirIdx = Math.round(normA / (Math.PI / 4)) % 8;
+          const compEl = document.getElementById('hudCompass');
+          if (compEl) compEl.textContent = `${dirs[dirIdx]} • ${deg}°`;
 
-        drawMarineFacePortrait();
+          drawMarineFacePortrait();
+        }
       }
 
       function renderScoreboardTable() {
@@ -4190,7 +4214,9 @@
           updatePlayerMovement(dt);
           updateCombatantsAI(dt);
           render3DScene();
-          renderMinimap();
+          if (window._frameTick % 3 === 0) {
+            renderMinimap();
+          }
           updateHud();
         } catch (err) {
           console.error('Frame error:', err);
@@ -5292,13 +5318,19 @@
       }
       requestAnimationFrame(loop);
 
+      let _pingWarmedUp = false;
       async function pingCheck() {
         if (!isEnabled || !isInActiveGame()) return;
-        const t0 = performance.now();
         try {
+          if (!_pingWarmedUp) {
+            _pingWarmedUp = true;
+            await fetch('/api/tg/ping?t=' + Date.now(), { cache: 'no-store' });
+          }
+          const t0 = performance.now();
           const res = await fetch('/api/tg/ping?t=' + Date.now(), { cache: 'no-store' });
+          const t1 = performance.now();
           if (res.ok) {
-            curPing = Math.round(performance.now() - t0);
+            curPing = Math.round(t1 - t0);
             elPing.textContent = curPing + 'ms';
             elPing.className = curPing < 90 ? 'font-bold text-emerald-400' : (curPing < 180 ? 'font-bold text-amber-400' : 'font-bold text-red-400');
           }

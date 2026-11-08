@@ -144,9 +144,18 @@
     } catch (e) {}
   }
 
-  // Global force sync API
-  window.tgBridgeForceSync = function () {
-    syncWithServer(false);
+  function isGameActiveNow() {
+    const gv = document.getElementById('gameView');
+    return !!(gv && !gv.classList.contains('hidden') && gv.style.display !== 'none');
+  }
+
+  // Global force sync API (2.5s debounce bilan o'yin qotmasligi uchun)
+  let _syncDebounceTimer = null;
+  window.tgBridgeForceSync = () => {
+    if (_syncDebounceTimer) clearTimeout(_syncDebounceTimer);
+    _syncDebounceTimer = setTimeout(() => {
+      syncWithServer(false);
+    }, 2500);
   };
 
   // Sahifa yopilganda yoki fonda qolganda darhol saqlash
@@ -413,6 +422,7 @@
   // 6. Bildirishnomalarni har 4 soniyada tekshirish (Real-time Do'stlashish so'rovlari)
   function startNotificationsPolling() {
     setInterval(async () => {
+      if (isGameActiveNow()) return;
       try {
         const res = await fetch(`/api/tg/notifications?myId=${encodeURIComponent(tgState.myId)}`);
         if (!res.ok) return;
