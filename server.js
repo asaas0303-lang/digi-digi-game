@@ -15,6 +15,16 @@ const BOT_TOKEN = process.env.BOT_TOKEN || "9299427859:AAHPfHEA_Ze5r_ulGYaAprh3G
 const APP_URL = "https://digi-digi.livops.app";
 
 app.use(express.json({ limit: "2mb" }));
+
+app.use((req, res, next) => {
+  if (req.path === "/" || req.path.endsWith(".html") || req.path.endsWith(".js")) {
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+  }
+  next();
+});
+
 app.use(express.static(path.join(__dirname, "public")));
 app.use(express.static(__dirname));
 

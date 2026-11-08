@@ -132,7 +132,17 @@
 </head>
 <body class="relative w-full h-full flex flex-col justify-between horror-bg select-none">
 
-
+  <!-- JONLI DIAGNOSTIKA HUD: FPS | MS | PING | GPU (Bosganda nusxalaydi) -->
+  <div id="digiNetGraphHud" style="position:fixed; top:168px; left:10px; z-index:9999;" class="flex items-center gap-1.5 bg-zinc-950/90 border border-emerald-500/70 rounded-lg px-2.5 py-1 text-[10px] font-mono shadow-2xl select-none cursor-pointer active:scale-95 transition">
+    <span id="ngFps" class="font-extrabold text-emerald-400">FPS:60</span>
+    <span class="text-zinc-600">|</span>
+    <span id="ngMs" class="text-sky-300 font-bold">16.6ms</span>
+    <span class="text-zinc-600">|</span>
+    <span id="ngPing" class="font-extrabold text-emerald-400">PING:--ms</span>
+    <span class="text-zinc-600">|</span>
+    <span id="ngGpu" class="text-amber-300 font-bold">DC:0</span>
+    <span class="text-[9px] bg-emerald-900/70 border border-emerald-500/50 text-emerald-200 px-1 rounded ml-0.5">📋</span>
+  </div>
 
   <!-- Qon va qo'rqinchli chaqnash qatlami -->
   <div id="damageFlash" class="fixed inset-0 bg-red-600/0 pointer-events-none z-50 transition-all duration-100"></div>
@@ -5186,7 +5196,97 @@
         drawMarineFacePortrait();
       });
     })();
+
+    // CS2 uslubidagi JONLI PING + FPS + MS + GPU DIAGNOSTIKA HUD
+    (function startBuiltInNetGraph() {
+      if (window._netGraphRunning) return;
+      window._netGraphRunning = true;
+
+      const hud = document.getElementById('digiNetGraphHud');
+      const elFps = document.getElementById('ngFps');
+      const elMs = document.getElementById('ngMs');
+      const elPing = document.getElementById('ngPing');
+      const elGpu = document.getElementById('ngGpu');
+      if (!hud || !elFps || !elMs || !elPing || !elGpu) return;
+
+      let frameCount = 0;
+      let lastFpsUpdate = performance.now();
+      let lastFrameTime = performance.now();
+      let maxSpike = 0;
+      let curFps = 60;
+      let minFps = 60;
+      let curPing = 0;
+      let spikesOver55 = 0;
+
+      function loop(now) {
+        frameCount++;
+        const dt = now - lastFrameTime;
+        lastFrameTime = now;
+        if (dt > maxSpike && dt < 2000) maxSpike = dt;
+        if (dt > 55) spikesOver55++;
+
+        if (now - lastFpsUpdate >= 500) {
+          curFps = Math.min(120, Math.round((frameCount * 1000) / (now - lastFpsUpdate)));
+          if (curFps < minFps && curFps > 0) minFps = curFps;
+          const avgMs = frameCount > 0 ? ((now - lastFpsUpdate) / frameCount).toFixed(1) : '16.6';
+
+          elFps.textContent = 'FPS:' + curFps;
+          elFps.className = curFps >= 50 ? 'font-extrabold text-emerald-400' : (curFps >= 30 ? 'font-extrabold text-amber-400' : 'font-extrabold text-red-500');
+
+          const spikeStr = maxSpike > 45 ? ' (max:' + Math.round(maxSpike) + 'ms)' : '';
+          elMs.textContent = avgMs + 'ms' + spikeStr;
+          elMs.className = maxSpike > 60 ? 'text-red-400 font-bold' : 'text-sky-300 font-bold';
+
+          const r = window._mainThreeRenderer;
+          if (r && r.info && r.info.render) {
+            elGpu.textContent = 'DC:' + r.info.render.calls;
+          }
+
+          frameCount = 0;
+          maxSpike = 0;
+          lastFpsUpdate = now;
+        }
+        requestAnimationFrame(loop);
+      }
+      requestAnimationFrame(loop);
+
+      async function pingCheck() {
+        const t0 = performance.now();
+        try {
+          const res = await fetch('/api/tg/ping?t=' + Date.now(), { cache: 'no-store' });
+          if (res.ok) {
+            curPing = Math.round(performance.now() - t0);
+            elPing.textContent = 'PING:' + curPing + 'ms';
+            elPing.className = curPing < 80 ? 'font-extrabold text-emerald-400' : (curPing < 160 ? 'font-extrabold text-amber-400' : 'font-extrabold text-red-500');
+          }
+        } catch (e) {
+          elPing.textContent = 'PING:OFF';
+          elPing.className = 'font-extrabold text-red-500';
+        }
+      }
+      pingCheck();
+      setInterval(pingCheck, 2500);
+
+      hud.addEventListener('click', function() {
+        const r = window._mainThreeRenderer;
+        const dc = (r && r.info && r.info.render) ? r.info.render.calls : 'N/A';
+        const tris = (r && r.info && r.info.render) ? r.info.render.triangles : 'N/A';
+        const report = '[DIGI DIGI DIAGNOSTIKA] FPS:' + curFps + ' (Min:' + minFps + ') | Ping:' + curPing + 'ms | Qotish(>55ms):' + spikesOver55 + 'ta | DrawCalls:' + dc + ' | Tri:' + tris + ' | DPR:' + window.devicePixelRatio;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(report).catch(function(){});
+        }
+        const tb = document.getElementById('toastBox');
+        const tm = document.getElementById('toastMsg');
+        if (tb && tm) {
+          tm.textContent = '📋 Nusxalandi! Gemini-ga yuboring: ' + report;
+          tb.classList.remove('hidden');
+          setTimeout(function(){ tb.classList.add('hidden'); }, 3500);
+        }
+        minFps = curFps;
+        spikesOver55 = 0;
+      });
+    })();
   </script>
-  <script src="/telegram-bridge.js"></script>
+  <script src="/telegram-bridge.js?v=20261108_3"></script>
 </body>
 </html>
