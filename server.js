@@ -77,6 +77,11 @@ function tgApiCall(method, payload) {
   });
 }
 
+// 0) Tezkor Ping o'lchash endpointi
+app.get("/api/tg/ping", (req, res) => {
+  res.json({ ok: true, t: Date.now() });
+});
+
 // 1) O'yinchi profilini va o'yin ma'lumotlarini (tangalar, skinlar, ELO, bloklar) saqlash va olish
 app.post("/api/tg/sync", (req, res) => {
   const { myProfile, userStats, blockedUsersMap, savedFriends, initLoad } = req.body || {};

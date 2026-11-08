@@ -207,7 +207,7 @@
 
       <!-- Dinamik Tangalar ko'rsatkichi va + tugmasi -->
       <div class="absolute top-[1.3%] left-[55.5%] w-[23%] h-[4.5%] flex items-center justify-between px-1">
-        <div class="flex items-center justify-center flex-1 h-full ml-5 mr-1 bg-[#0b101e] rounded-md px-1">
+        <div class="flex items-center justify-center flex-1 h-full ml-5 mr-1 bg-[#0b101e] rounded-md px-1.5 py-0.5">
           <span id="userCoinsLabel" class="font-mono font-extrabold text-xs text-amber-400">0</span>
         </div>
         <button id="btnQuickBonusPlus" class="w-[34%] h-full rounded-lg active:bg-amber-400/30 transition" title="CS:GO Oltin Sandiq (Case Opening)"><span class="sr-only">+</span></button>
@@ -1225,11 +1225,10 @@
         if (Array.isArray(srvStats.ownedSkins) && srvStats.ownedSkins.length > 0) userStats.ownedSkins = srvStats.ownedSkins;
         if (srvStats.equippedSkinId) userStats.equippedSkinId = srvStats.equippedSkinId;
 
-        try {
-          localStorage.setItem(LOCAL_USER_STATS_KEY, JSON.stringify(userStats));
-        } catch (e) {}
+        saveUserData();
 
-        if (typeof updateMainMenuWidgets === 'function') updateMainMenuWidgets();
+        if (typeof updateAllCoinDisplays === 'function') updateAllCoinDisplays();
+        else if (typeof updateMainMenuWidgets === 'function') updateMainMenuWidgets();
         if (typeof renderShopSkins === 'function') renderShopSkins();
         if (typeof renderRatingLeaderboard === 'function') renderRatingLeaderboard();
       };
@@ -3090,6 +3089,7 @@
         threeRenderer.shadowMap.enabled = true;
         threeRenderer.shadowMap.type = THREE.PCFShadowMap;
         window.renderer = threeRenderer;
+        window._mainThreeRenderer = threeRenderer;
 
         threeScene = new THREE.Scene();
         threeScene.background = new THREE.Color(0x050404);

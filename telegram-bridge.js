@@ -442,10 +442,109 @@
     }, 4000);
   }
 
+  // CS2 uslubidagi JONLI PING + FPS + MS + GPU DIAGNOSTIKA HUD PANELINI yaratish
+  function initNetGraphTelemetry() {
+    if (document.getElementById('digiNetGraphHud')) return;
+
+    const hud = document.createElement('div');
+    hud.id = 'digiNetGraphHud';
+    hud.className = 'fixed top-1 left-2 z-50 flex items-center gap-1.5 bg-black/80 border border-slate-700/80 rounded-lg px-2 py-0.5 text-[10px] font-mono shadow-lg select-none cursor-pointer active:scale-95 transition';
+    hud.title = 'Diagnostika hisobotini nusxalash uchun bosing';
+    hud.innerHTML = `
+      <span id="ngFps" class="font-extrabold text-emerald-400">FPS: 60</span>
+      <span class="text-slate-600">|</span>
+      <span id="ngMs" class="text-sky-300">16ms</span>
+      <span class="text-slate-600">|</span>
+      <span id="ngPing" class="font-bold text-emerald-400">PING: --ms</span>
+      <span class="text-slate-600">|</span>
+      <span id="ngGpu" class="text-amber-300">GPU: 0</span>
+      <span class="text-[9px] bg-slate-800 text-slate-200 px-1 rounded ml-0.5">📋</span>
+    `;
+    document.body.appendChild(hud);
+
+    const elFps = document.getElementById('ngFps');
+    const elMs = document.getElementById('ngMs');
+    const elPing = document.getElementById('ngPing');
+    const elGpu = document.getElementById('ngGpu');
+
+    let frameCount = 0;
+    let lastFpsUpdate = performance.now();
+    let lastFrameTime = performance.now();
+    let maxFrameSpikeMs = 0;
+    let currentFps = 60;
+    let minFps = 60;
+    let currentPing = 0;
+    let freezeCount = 0; // >50ms frame spikes
+
+    function measureFrame(now) {
+      frameCount++;
+      const dt = now - lastFrameTime;
+      lastFrameTime = now;
+      if (dt > maxFrameSpikeMs && dt < 2000) maxFrameSpikeMs = dt;
+      if (dt > 55) freezeCount++;
+
+      if (now - lastFpsUpdate >= 500) {
+        currentFps = Math.min(120, Math.round((frameCount * 1000) / (now - lastFpsUpdate)));
+        if (currentFps < minFps && currentFps > 0) minFps = currentFps;
+        const avgMs = frameCount > 0 ? ((now - lastFpsUpdate) / frameCount).toFixed(1) : '16.6';
+
+        elFps.textContent = `FPS:${currentFps}`;
+        elFps.className = currentFps >= 50 ? 'font-extrabold text-emerald-400' : (currentFps >= 30 ? 'font-extrabold text-amber-400' : 'font-extrabold text-red-500');
+
+        const spikeTag = maxFrameSpikeMs > 45 ? ` (max:${Math.round(maxFrameSpikeMs)}ms)` : '';
+        elMs.textContent = `${avgMs}ms${spikeTag}`;
+        elMs.className = maxFrameSpikeMs > 60 ? 'text-red-400 font-bold' : 'text-sky-300';
+
+        const r = window._mainThreeRenderer;
+        if (r && r.info && r.info.render) {
+          elGpu.textContent = `DC:${r.info.render.calls}`;
+        }
+
+        frameCount = 0;
+        maxFrameSpikeMs = 0;
+        lastFpsUpdate = now;
+      }
+      requestAnimationFrame(measureFrame);
+    }
+    requestAnimationFrame(measureFrame);
+
+    async function measurePing() {
+      const t0 = performance.now();
+      try {
+        const res = await fetch('/api/tg/ping?t=' + Date.now(), { cache: 'no-store' });
+        if (res.ok) {
+          currentPing = Math.round(performance.now() - t0);
+          elPing.textContent = `PING:${currentPing}ms`;
+          elPing.className = currentPing < 80 ? 'font-bold text-emerald-400' : (currentPing < 160 ? 'font-bold text-amber-400' : 'font-bold text-red-500');
+        }
+      } catch (e) {
+        elPing.textContent = 'PING:ERR';
+        elPing.className = 'font-bold text-red-500';
+      }
+    }
+    measurePing();
+    setInterval(measurePing, 3000);
+
+    // Ustiga bosganda diagnostika hisobotini nusxalash
+    hud.addEventListener('click', () => {
+      const r = window._mainThreeRenderer;
+      const dc = (r && r.info && r.info.render) ? r.info.render.calls : 'N/A';
+      const tris = (r && r.info && r.info.render) ? r.info.render.triangles : 'N/A';
+      const report = `[DIGI DIGI DIAGNOSTIKA] FPS: ${currentFps} (Min: ${minFps}) | Ping: ${currentPing}ms | Qotishlar (>55ms): ${freezeCount} marta | GPU DrawCalls: ${dc} | Triangles: ${tris} | DPR: ${window.devicePixelRatio}`;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(report).catch(() => {});
+      }
+      showBridgeToast('📊 Diagnostika nusxalandi! Gemini chatiga yuboring: ' + report);
+      minFps = currentFps;
+      freezeCount = 0;
+    });
+  }
+
   // 7. Ishga tushirish (Telegram WebApp Init & Load First)
   window.addEventListener('DOMContentLoaded', async () => {
     loadLocalBridgeState();
     injectTelegramBridgeUI();
+    initNetGraphTelemetry();
 
     const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
     if (tg) {
