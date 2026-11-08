@@ -1,7 +1,7 @@
 /**
  * DIGI DIGI — Telegram Mini App, Server Data Sync, Mutual Profile & 7-Day Block Bridge
  * Domain: https://digi-digi.livops.app/
- * v2.1 — Do'st taklif deep-link @digi_dig_bot + pending so'rov qayta chiqish muammosi to'liq hal qilindi
+ * v2.2 — Standart 0 tanga, bazadan to'liq statistikani yuklash (Load First) va real-time saqlash
  */
 (function () {
   const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000; // 7 kun = 604,800,000 ms
@@ -14,7 +14,7 @@
     myUsername: '',
     myPhoto: '',
     elo: 1000,
-    coins: 12500,
+    coins: 0, // Yangi o'yinchi har doim 0 tanga bilan boshlaydi!
     blockedUsers: {}, // { [playerId]: blockedUntilTimestampMs }
     friends: [],
     handledRequests: {} // { [senderId]: handledAtTimestampMs } — 60 soniya davomida qayta modal chiqmasin
@@ -32,7 +32,6 @@
         Object.assign(tgState, parsed);
       }
     } catch (e) {}
-    // handledRequests har doim mavjud bo'lsin
     if (!tgState.handledRequests) tgState.handledRequests = {};
   }
 
@@ -42,7 +41,7 @@
     } catch (e) {}
   }
 
-  // 2. O'yin ichidagi DOM elementlardan joriy balans va ELO ni o'qish va yozish
+  // 2. O'yin ichidagi DOM elementlardan va window.userStats dan joriy statistikani o'qish
   function syncFromGameDOM() {
     const nameInp = document.getElementById('myNameInput');
     const idEl = document.getElementById('myDoomId');
@@ -51,13 +50,19 @@
 
     if (nameInp && nameInp.value) tgState.myName = nameInp.value.trim();
     if (idEl && idEl.textContent) tgState.myId = idEl.textContent.trim();
-    if (coinsEl && coinsEl.textContent) {
-      const num = parseInt(coinsEl.textContent.replace(/[^0-9]/g, ''), 10);
-      if (!isNaN(num)) tgState.coins = num;
-    }
-    if (rankEl && rankEl.textContent) {
-      const eloNum = parseInt(rankEl.textContent.replace(/[^0-9]/g, ''), 10);
-      if (!isNaN(eloNum)) tgState.elo = eloNum;
+
+    if (window.userStats && typeof window.userStats === 'object') {
+      tgState.coins = typeof window.userStats.coins === 'number' ? window.userStats.coins : 0;
+      tgState.elo = typeof window.userStats.elo === 'number' ? window.userStats.elo : 1000;
+    } else {
+      if (coinsEl && coinsEl.textContent) {
+        const num = parseInt(coinsEl.textContent.replace(/[^0-9]/g, ''), 10);
+        if (!isNaN(num)) tgState.coins = num;
+      }
+      if (rankEl && rankEl.textContent) {
+        const eloNum = parseInt(rankEl.textContent.replace(/[^0-9]/g, ''), 10);
+        if (!isNaN(eloNum)) tgState.elo = eloNum;
+      }
     }
   }
 
@@ -74,14 +79,34 @@
   }
 
   // 3. Server bazasi bilan sinxronizatsiya (/api/tg/sync)
-  async function syncWithServer() {
+  async function syncWithServer(isInitLoad = false) {
     syncFromGameDOM();
     saveLocalBridgeState();
+
+    const statsPayload = (window.userStats && typeof window.userStats === 'object') ? {
+      coins: typeof window.userStats.coins === 'number' ? window.userStats.coins : tgState.coins,
+      elo: typeof window.userStats.elo === 'number' ? window.userStats.elo : tgState.elo,
+      botLevel: window.userStats.botLevel || 1,
+      botMatches: window.userStats.botMatches || 0,
+      lobbyMatches: window.userStats.lobbyMatches || 0,
+      totalKills: window.userStats.totalKills || 0,
+      totalHS: window.userStats.totalHS || 0,
+      ownedSkins: Array.isArray(window.userStats.ownedSkins) ? window.userStats.ownedSkins : ['classic'],
+      equippedSkinId: window.userStats.equippedSkinId || 'classic'
+    } : {
+      coins: tgState.coins,
+      elo: tgState.elo,
+      botLevel: 1,
+      ownedSkins: ['classic'],
+      equippedSkinId: 'classic'
+    };
+
     try {
       const res = await fetch('/api/tg/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          initLoad: !!isInitLoad,
           myProfile: {
             id: tgState.myId,
             tgId: tgState.myTgId,
@@ -89,18 +114,24 @@
             username: tgState.myUsername,
             photoUrl: tgState.myPhoto
           },
-          userStats: {
-            coins: tgState.coins,
-            elo: tgState.elo
-          },
+          userStats: statsPayload,
           blockedUsersMap: tgState.blockedUsers,
           savedFriends: tgState.friends,
           updatedAt: Date.now()
         })
       });
+
       if (res.ok) {
         const data = await res.json();
         if (data && data.player) {
+          if (data.player.userStats) {
+            tgState.coins = typeof data.player.userStats.coins === 'number' ? data.player.userStats.coins : tgState.coins;
+            tgState.elo = typeof data.player.userStats.elo === 'number' ? data.player.userStats.elo : tgState.elo;
+            // Agar serverdan stats kelsa, o'yin ichidagi ko'rsatkichlarga darhol tatbiq etamiz:
+            if (typeof window.applyServerStatsToGame === 'function') {
+              window.applyServerStatsToGame(data.player.userStats);
+            }
+          }
           if (data.player.blockedUsersMap) {
             tgState.blockedUsers = Object.assign({}, tgState.blockedUsers, data.player.blockedUsersMap);
           }
@@ -112,6 +143,21 @@
       }
     } catch (e) {}
   }
+
+  // Global force sync API
+  window.tgBridgeForceSync = function () {
+    syncWithServer(false);
+  };
+
+  // Sahifa yopilganda yoki fonda qolganda darhol saqlash
+  window.addEventListener('beforeunload', () => {
+    syncWithServer(false);
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      syncWithServer(false);
+    }
+  });
 
   // 4. 1 haftalik blok tekshiruvi
   function getBlockRemaining(playerId) {
@@ -137,7 +183,6 @@
     if (!handledAt) return false;
     const sinceMs = Date.now() - handledAt;
     if (sinceMs > 60000) {
-      // 60 soniyadan o'tgan — kesh tozalanadi
       delete tgState.handledRequests[key];
       return false;
     }
@@ -146,11 +191,9 @@
 
   // 5. UI: O'zaro Profil Ko'rish Modali + 1 Haftalik Blok Tugmasini Yaratish
   function injectTelegramBridgeUI() {
-    // a) #incomingModal ichiga "🚫 1 haftaga bloklash" tugmasini qo'shish (agar yo'q bo'lsa)
     const acceptBtn = document.getElementById('btnAcceptIncoming');
     const rejectBtn = document.getElementById('btnRejectIncoming');
 
-    // Markaziy javob funksiyasi — har 3 tugma ham shu orqali ishlaydi
     async function respondToFriendRequest(actionType) {
       const modal = document.getElementById('incomingModal');
       if (modal) {
@@ -164,7 +207,6 @@
       ).toUpperCase();
       if (!senderId || senderId === 'DOOM-ID') return;
 
-      // Javob berilgan vaqtni keshlaymiz — 60 soniya davomida qayta modal chiqmasin
       tgState.handledRequests[senderId] = Date.now();
 
       if (actionType === 'block_1_week') {
@@ -173,7 +215,6 @@
       saveLocalBridgeState();
       currentPendingSender = null;
 
-      // Serverga javobni yuboramiz — pending o'chirilsin
       try {
         await fetch('/api/tg/friend-respond', {
           method: 'POST',
@@ -188,7 +229,7 @@
 
       if (actionType === 'accept') {
         showBridgeToast(`✅ ${senderId} do'stlar ro'yxatiga qo'shildi!`);
-        syncWithServer();
+        syncWithServer(false);
       } else if (actionType === 'reject') {
         showBridgeToast(`✕ ${senderId} so'rovi rad etildi.`);
       } else if (actionType === 'block_1_week') {
@@ -319,7 +360,7 @@
     }
   }
 
-  // Do'st taklif havolasi — endi @digi_dig_bot Deep-Link orqali
+  // Do'st taklif havolasi — @digi_dig_bot Deep-Link
   function buildMyInviteLink() {
     syncFromGameDOM();
     return `https://t.me/digi_dig_bot?start=friend_${encodeURIComponent(tgState.myId)}`;
@@ -379,10 +420,7 @@
         if (data && Array.isArray(data.requests) && data.requests.length > 0) {
           const req = data.requests[0];
 
-          // 1 haftalik blokda bo'lsa ko'rsatmaymiz
           if (getBlockRemaining(req.fromId)) return;
-
-          // So'nggi 60 soniyada allaqachon javob berilgan bo'lsa, qayta modal chiqarilmasin!
           if (wasRecentlyHandled(req.fromId)) return;
 
           currentPendingSender = { id: req.fromId, name: req.fromName, elo: req.fromElo || 1050 };
@@ -404,7 +442,7 @@
     }, 4000);
   }
 
-  // 7. Ishga tushirish (Telegram WebApp Init)
+  // 7. Ishga tushirish (Telegram WebApp Init & Load First)
   window.addEventListener('DOMContentLoaded', async () => {
     loadLocalBridgeState();
     injectTelegramBridgeUI();
@@ -426,7 +464,9 @@
     }
 
     applyToGameDOM();
-    await syncWithServer();
+
+    // 1-QADAM: Dastlab serverdan mavjud ma'lumotlarni yuklab olish (Load First: initLoad=true)
+    await syncWithServer(true);
 
     // Havola orqali kirganlikni tekshirish (?friend_ref=... yoki Telegram start_param)
     const params = new URLSearchParams(window.location.search);
@@ -435,7 +475,6 @@
     let refName = params.get('friend_name') || '';
     let refElo = parseInt(params.get('friend_elo') || '1100', 10);
 
-    // "friend_DOOM-XXXX" yoki "DOOM-XXXX" formatlarining ikkalasini ham qo'llab-quvvatlash
     if (!refId && startParam) {
       refId = startParam.startsWith('friend_') ? startParam.replace('friend_', '') : startParam;
     }
@@ -459,7 +498,7 @@
     }
 
     startNotificationsPolling();
-    // Har 15 soniyada o'yinchi ma'lumotlarini serverga saqlab borish
-    setInterval(syncWithServer, 15000);
+    // Har 15 soniyada muntazam sinxronizatsiya
+    setInterval(() => syncWithServer(false), 15000);
   });
 })();

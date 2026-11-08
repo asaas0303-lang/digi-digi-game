@@ -198,17 +198,17 @@
       <!-- 1. YUQORI PROFIL INTERAKTIV ZONALARI (Ism, ID nusxalash, Tangalar, Qo'ng'iroqcha, Sozlamalar) -->
       <!-- Ism va ID (Sardor_UZ / DOOM-4886) -->
       <div class="absolute top-[0.8%] left-[2.5%] w-[44%] h-[5.8%] flex items-center pl-[14%] pr-1">
-        <div class="w-full opacity-0 hover:opacity-100 focus-within:opacity-100 bg-slate-950/90 rounded-lg px-2 py-0.5 transition flex items-center justify-between">
+        <div class="w-full bg-[#0b101e]/95 rounded-lg px-2 py-0.5 transition flex items-center justify-between border border-amber-500/30 shadow-md">
           <input id="myNameInput" type="text" value="Sardor_UZ" maxlength="12" class="bg-transparent text-xs font-extrabold text-white w-20 focus:outline-none" title="Ismingizni tahrirlash" />
           <span id="myDoomId" class="font-mono text-[9px] text-amber-400">DOOM-4886</span>
-          <button id="btnCopyMyId" class="text-[9px] bg-slate-800 text-white px-1 rounded">📋 Nusxa</button>
+          <button id="btnCopyMyId" class="text-[9px] bg-slate-800 text-white px-1 rounded active:scale-95">📋 Nusxa</button>
         </div>
       </div>
 
-      <!-- Dinamik Tangalar ko'rsatkichi ($ 12,500) va + tugmasi -->
+      <!-- Dinamik Tangalar ko'rsatkichi va + tugmasi -->
       <div class="absolute top-[1.3%] left-[55.5%] w-[23%] h-[4.5%] flex items-center justify-between px-1">
-        <div class="flex items-center justify-center flex-1 h-full pl-5 pr-1">
-          <span id="userCoinsLabel" class="hidden font-mono font-extrabold text-xs text-white">12,500</span>
+        <div class="flex items-center justify-center flex-1 h-full ml-5 mr-1 bg-[#0b101e] rounded-md px-1">
+          <span id="userCoinsLabel" class="font-mono font-extrabold text-xs text-amber-400">0</span>
         </div>
         <button id="btnQuickBonusPlus" class="w-[34%] h-full rounded-lg active:bg-amber-400/30 transition" title="CS:GO Oltin Sandiq (Case Opening)"><span class="sr-only">+</span></button>
       </div>
@@ -1173,17 +1173,65 @@
         deaths: 0
       };
 
-      // O'yinchi tangalari, reytingi, statistikasi va qurol skinlari
-      const userStats = {
-        coins: 12500,
+      // O'yinchi tangalari, reytingi, statistikasi va qurol skinlari (Standart yangi o'yinchi: 0 tanga!)
+      const LOCAL_USER_STATS_KEY = 'digi_digi_user_stats_v1';
+      let userStats = {
+        coins: 0,
         elo: 1000,
         botLevel: 1,
-        botMatches: 3,
-        lobbyMatches: 2,
-        totalKills: 18,
-        totalHS: 7,
+        botMatches: 0,
+        lobbyMatches: 0,
+        totalKills: 0,
+        totalHS: 0,
         equippedSkinId: 'classic',
         ownedSkins: ['classic']
+      };
+
+      try {
+        const rawLocalStats = localStorage.getItem(LOCAL_USER_STATS_KEY);
+        if (rawLocalStats) {
+          const parsedStats = JSON.parse(rawLocalStats);
+          if (parsedStats && typeof parsedStats === 'object') {
+            Object.assign(userStats, parsedStats);
+          }
+        }
+      } catch (e) {}
+
+      window.userStats = userStats;
+
+      function saveUserData() {
+        try {
+          localStorage.setItem(LOCAL_USER_STATS_KEY, JSON.stringify(userStats));
+        } catch (e) {}
+        if (typeof window.tgBridgeForceSync === 'function') {
+          window.tgBridgeForceSync();
+        }
+      }
+      window.saveUserData = saveUserData;
+
+      window.applyServerStatsToGame = function (srvStats) {
+        if (!srvStats || typeof srvStats !== 'object') return;
+        if (typeof srvStats.coins === 'number') userStats.coins = srvStats.coins;
+        if (typeof srvStats.elo === 'number') userStats.elo = srvStats.elo;
+        if (typeof srvStats.botLevel === 'number') userStats.botLevel = srvStats.botLevel;
+        if (typeof srvStats.totalKills === 'number') userStats.totalKills = srvStats.totalKills;
+        else if (typeof srvStats.kills === 'number') userStats.totalKills = srvStats.kills;
+        if (typeof srvStats.totalHS === 'number') userStats.totalHS = srvStats.totalHS;
+        else if (typeof srvStats.headshots === 'number') userStats.totalHS = srvStats.headshots;
+        if (typeof srvStats.botMatches === 'number') userStats.botMatches = srvStats.botMatches;
+        else if (typeof srvStats.matches5v5 === 'number') userStats.botMatches = srvStats.matches5v5;
+        if (typeof srvStats.lobbyMatches === 'number') userStats.lobbyMatches = srvStats.lobbyMatches;
+        else if (typeof srvStats.matchesOnline === 'number') userStats.lobbyMatches = srvStats.matchesOnline;
+        if (Array.isArray(srvStats.ownedSkins) && srvStats.ownedSkins.length > 0) userStats.ownedSkins = srvStats.ownedSkins;
+        if (srvStats.equippedSkinId) userStats.equippedSkinId = srvStats.equippedSkinId;
+
+        try {
+          localStorage.setItem(LOCAL_USER_STATS_KEY, JSON.stringify(userStats));
+        } catch (e) {}
+
+        if (typeof updateMainMenuWidgets === 'function') updateMainMenuWidgets();
+        if (typeof renderShopSkins === 'function') renderShopSkins();
+        if (typeof renderRatingLeaderboard === 'function') renderRatingLeaderboard();
       };
 
       const WEAPON_SKINS = [
@@ -2363,7 +2411,9 @@
           userStats.elo = Math.max(800, userStats.elo - 15);
           userStats.coins += 250;
         }
+        userStats.totalKills = (userStats.totalKills || 0) + (player.kills || 0);
         userStats.botLevel = Math.min(5, Math.max(1, Math.floor((userStats.elo - 900) / 80) + 1));
+        saveUserData();
         updateMainMenuWidgets();
         icon.textContent = didWin ? '🏆' : '💀';
         title.textContent = winnerTeam === 'red' ? '🔴 T-FORCE (QIZIL) G\'OLIB!' : '🔵 CT-SPEC (KO\'K) G\'OLIB!';
@@ -3453,15 +3503,27 @@
       }
 
       const threeHitBursts = [];
+      // 3-BOSQICH: Zarrachalar geometriya va materiallarini kesh qilish (Memory leak va GC qotishini 100% yo'qotish)
+      let _sharedSparkGeo = null;
+      let _sharedBloodGeo = null;
+      let _sharedSparkMat = null;
+      let _sharedBloodMat1 = null;
+      let _sharedBloodMat2 = null;
+
       function spawn3DHitEffect(wx, wy, wz, isHeadshot) {
         if (!threeScene || typeof THREE === 'undefined') return;
-        const count = isHeadshot ? 12 : 8;
+        if (!_sharedSparkGeo) {
+          _sharedSparkGeo = new THREE.BoxGeometry(0.022, 0.022, 0.022);
+          _sharedBloodGeo = new THREE.BoxGeometry(0.028, 0.028, 0.028);
+          _sharedSparkMat = new THREE.MeshBasicMaterial({ color: 0xffe066 });
+          _sharedBloodMat1 = new THREE.MeshBasicMaterial({ color: 0x990f0f });
+          _sharedBloodMat2 = new THREE.MeshBasicMaterial({ color: 0xc81e1e });
+        }
+        const count = isHeadshot ? 6 : 4;
         for (let i = 0; i < count; i++) {
-          const isSpark = isHeadshot && i < 5;
-          const sz = isSpark ? 0.022 : 0.028;
-          const geo = new THREE.BoxGeometry(sz, sz, sz);
-          const col = isSpark ? 0xffe066 : (i % 2 === 0 ? 0x990f0f : 0xc81e1e);
-          const mat = new THREE.MeshBasicMaterial({ color: col });
+          const isSpark = isHeadshot && i < 3;
+          const geo = isSpark ? _sharedSparkGeo : _sharedBloodGeo;
+          const mat = isSpark ? _sharedSparkMat : (i % 2 === 0 ? _sharedBloodMat1 : _sharedBloodMat2);
           const m = new THREE.Mesh(geo, mat);
           m.position.set(wx + (Math.random() - 0.5) * 0.12, wy + (Math.random() - 0.5) * 0.10, wz + (Math.random() - 0.5) * 0.12);
           m.userData.isMazePart = true;
@@ -3471,7 +3533,7 @@
             vx: (Math.random() - 0.5) * 1.8,
             vy: 0.4 + Math.random() * 1.2,
             vz: (Math.random() - 0.5) * 1.8,
-            ttl: 16
+            ttl: 14
           });
         }
       }
@@ -4439,16 +4501,16 @@
 
       // ==================== 7 TA BOSH MENYU MODALLARI, DO'KON VA 777 MASHINASI ====================
       function updateMainMenuWidgets() {
-        const coinsFormatted = userStats.coins.toLocaleString('en-US');
+        const coinsFormatted = (userStats.coins || 0).toLocaleString('en-US');
         const c1 = document.getElementById('userCoinsLabel');
         const c2 = document.getElementById('shopCoinsLabel');
+        const c3 = document.getElementById('caseModalCoinsLabel');
         if (c1) {
           c1.textContent = coinsFormatted;
-          if (userStats.coins !== 12500) {
-            c1.className = 'font-mono font-extrabold text-[11px] text-white bg-slate-950 px-1.5 py-0.5 rounded';
-          }
+          c1.className = 'font-mono font-extrabold text-xs text-amber-400';
         }
         if (c2) c2.textContent = coinsFormatted;
+        if (c3) c3.textContent = coinsFormatted;
 
         const diffBadge = document.getElementById('botDifficultyBadge');
         if (diffBadge) diffBadge.textContent = `5 vs 5 • LVL ${userStats.botLevel}`;
@@ -4476,6 +4538,7 @@
         if (elKills) elKills.textContent = String(userStats.totalKills + player.kills);
         if (elHS) elHS.textContent = String(userStats.totalHS);
       }
+      window.updateAllCoinDisplays = updateMainMenuWidgets;
 
       function renderRatingLeaderboard() {
         const box = document.getElementById('ratingLeaderboardBox');
@@ -4530,6 +4593,7 @@
             btn.textContent = 'Oʻrnatish (Equip)';
             btn.addEventListener('click', () => {
               userStats.equippedSkinId = sk.id;
+              saveUserData();
               updateMainMenuWidgets();
               renderShopSkins();
               playSound('notify');
@@ -4546,6 +4610,7 @@
               userStats.coins -= sk.price;
               userStats.ownedSkins.push(sk.id);
               userStats.equippedSkinId = sk.id;
+              saveUserData();
               updateMainMenuWidgets();
               renderShopSkins();
               playSound('victory_fanfare');
@@ -5088,6 +5153,7 @@
 
           const reward = winningItem.reward;
           userStats.coins += reward;
+          saveUserData();
           updateMainMenuWidgets();
           if (cLbl) cLbl.textContent = userStats.coins.toLocaleString('en-US');
 

@@ -79,29 +79,56 @@ function tgApiCall(method, payload) {
 
 // 1) O'yinchi profilini va o'yin ma'lumotlarini (tangalar, skinlar, ELO, bloklar) saqlash va olish
 app.post("/api/tg/sync", (req, res) => {
-  const { myProfile, userStats, blockedUsersMap, savedFriends } = req.body || {};
+  const { myProfile, userStats, blockedUsersMap, savedFriends, initLoad } = req.body || {};
   if (!myProfile || !myProfile.id) {
     return res.status(400).json({ ok: false, error: "INVALID_PROFILE" });
   }
 
   const pid = String(myProfile.id).trim().toUpperCase();
-  const existing = db.players[pid] || {
-    id: pid,
-    tgId: myProfile.tgId || null,
-    name: myProfile.name || "Player",
-    username: myProfile.username || "",
-    userStats: { coins: 12500, elo: 1000, botLevel: 1, ownedSkins: ["classic"], equippedSkinId: "classic" },
-    blockedUsersMap: {},
-    savedFriends: [],
-    createdAt: Date.now()
-  };
+  const existing = db.players[pid];
 
+  if (!existing) {
+    // Yangi o'yinchi: boshlang'ich tangalar: 0!
+    const newPlayer = {
+      id: pid,
+      tgId: myProfile.tgId || null,
+      name: myProfile.name || "Player",
+      username: myProfile.username || "",
+      userStats: {
+        coins: 0,
+        elo: 1000,
+        botLevel: 1,
+        kills: 0,
+        headshots: 0,
+        matches5v5: 0,
+        matchesOnline: 0,
+        ownedSkins: ["classic"],
+        equippedSkinId: "classic"
+      },
+      blockedUsersMap: {},
+      savedFriends: [],
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+    if (userStats && typeof userStats === "object" && !initLoad) {
+      newPlayer.userStats = Object.assign({}, newPlayer.userStats, userStats);
+    }
+    db.players[pid] = newPlayer;
+    saveDb();
+    return res.json({ ok: true, player: newPlayer });
+  }
+
+  // Mavjud o'yinchi
   existing.name = myProfile.name || existing.name;
   existing.tgId = myProfile.tgId || existing.tgId;
   existing.username = myProfile.username || existing.username;
-  if (userStats && typeof userStats === "object") {
+
+  // Agar initLoad === true bo'lsa, bazadagi saqlangan statistikani 0 bilan ezib yubormaymiz!
+  if (!initLoad && userStats && typeof userStats === "object") {
     existing.userStats = Object.assign({}, existing.userStats, userStats);
+    existing.updatedAt = Date.now();
   }
+
   if (blockedUsersMap && typeof blockedUsersMap === "object") {
     existing.blockedUsersMap = Object.assign({}, existing.blockedUsersMap, blockedUsersMap);
   }
@@ -111,11 +138,8 @@ app.post("/api/tg/sync", (req, res) => {
     savedFriends.forEach(f => { if (f && f.id) map[f.id] = f; });
     existing.savedFriends = Object.values(map);
   }
-  existing.updatedAt = Date.now();
 
-  db.players[pid] = existing;
   saveDb();
-
   return res.json({ ok: true, player: existing });
 });
 
@@ -127,13 +151,15 @@ app.get("/api/tg/profile/:id", (req, res) => {
     return res.json({
       id: rawId.startsWith("DOOM-") ? rawId : `DOOM-${rawId.slice(-4)}`,
       name: `@Player_${rawId.slice(-4)}`,
-      elo: 1100
+      elo: 1000,
+      coins: 0
     });
   }
   return res.json({
     id: player.id,
     name: player.name,
-    elo: (player.userStats && player.userStats.elo) ? player.userStats.elo : 1000
+    elo: (player.userStats && player.userStats.elo) ? player.userStats.elo : 1000,
+    coins: (player.userStats && typeof player.userStats.coins === 'number') ? player.userStats.coins : 0
   });
 });
 
