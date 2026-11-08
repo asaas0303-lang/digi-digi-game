@@ -1,6 +1,7 @@
 /**
  * DIGI DIGI — Telegram Mini App, Server Data Sync, Mutual Profile & 7-Day Block Bridge
  * Domain: https://digi-digi.livops.app/
+ * v2.1 — Do'st taklif deep-link @digi_dig_bot + pending so'rov qayta chiqish muammosi to'liq hal qilindi
  */
 (function () {
   const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000; // 7 kun = 604,800,000 ms
@@ -15,7 +16,8 @@
     elo: 1000,
     coins: 12500,
     blockedUsers: {}, // { [playerId]: blockedUntilTimestampMs }
-    friends: []
+    friends: [],
+    handledRequests: {} // { [senderId]: handledAtTimestampMs } — 60 soniya davomida qayta modal chiqmasin
   };
 
   let currentPendingSender = null;
@@ -30,6 +32,8 @@
         Object.assign(tgState, parsed);
       }
     } catch (e) {}
+    // handledRequests har doim mavjud bo'lsin
+    if (!tgState.handledRequests) tgState.handledRequests = {};
   }
 
   function saveLocalBridgeState() {
@@ -126,11 +130,82 @@
     return { until, days, hours };
   }
 
+  // 4b. So'rovga javob bergandan 60 soniya o'tganini tekshirish (spam oldini olish)
+  function wasRecentlyHandled(senderId) {
+    const key = String(senderId || '').trim().toUpperCase();
+    const handledAt = tgState.handledRequests[key];
+    if (!handledAt) return false;
+    const sinceMs = Date.now() - handledAt;
+    if (sinceMs > 60000) {
+      // 60 soniyadan o'tgan — kesh tozalanadi
+      delete tgState.handledRequests[key];
+      return false;
+    }
+    return true;
+  }
+
   // 5. UI: O'zaro Profil Ko'rish Modali + 1 Haftalik Blok Tugmasini Yaratish
   function injectTelegramBridgeUI() {
     // a) #incomingModal ichiga "🚫 1 haftaga bloklash" tugmasini qo'shish (agar yo'q bo'lsa)
     const acceptBtn = document.getElementById('btnAcceptIncoming');
     const rejectBtn = document.getElementById('btnRejectIncoming');
+
+    // Markaziy javob funksiyasi — har 3 tugma ham shu orqali ishlaydi
+    async function respondToFriendRequest(actionType) {
+      const modal = document.getElementById('incomingModal');
+      if (modal) {
+        modal.classList.add('hidden');
+        modal.style.display = 'none';
+      }
+      const badgeEl = document.getElementById('incomingBadge');
+      const senderId = (
+        (currentPendingSender && currentPendingSender.id) ||
+        (badgeEl ? badgeEl.textContent.trim() : '')
+      ).toUpperCase();
+      if (!senderId || senderId === 'DOOM-ID') return;
+
+      // Javob berilgan vaqtni keshlaymiz — 60 soniya davomida qayta modal chiqmasin
+      tgState.handledRequests[senderId] = Date.now();
+
+      if (actionType === 'block_1_week') {
+        tgState.blockedUsers[senderId] = Date.now() + ONE_WEEK_MS;
+      }
+      saveLocalBridgeState();
+      currentPendingSender = null;
+
+      // Serverga javobni yuboramiz — pending o'chirilsin
+      try {
+        await fetch('/api/tg/friend-respond', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            myId: tgState.myId,
+            senderId: senderId,
+            action: actionType
+          })
+        });
+      } catch (e) {}
+
+      if (actionType === 'accept') {
+        showBridgeToast(`✅ ${senderId} do'stlar ro'yxatiga qo'shildi!`);
+        syncWithServer();
+      } else if (actionType === 'reject') {
+        showBridgeToast(`✕ ${senderId} so'rovi rad etildi.`);
+      } else if (actionType === 'block_1_week') {
+        showBridgeToast(`🚫 ${senderId} 1 haftaga bloklandi! 7 kun davomida sizga so'rov yubora olmaydi.`);
+      }
+    }
+
+    if (acceptBtn && !acceptBtn.dataset.tgBound) {
+      acceptBtn.dataset.tgBound = '1';
+      acceptBtn.addEventListener('click', () => respondToFriendRequest('accept'));
+    }
+
+    if (rejectBtn && !rejectBtn.dataset.tgBound) {
+      rejectBtn.dataset.tgBound = '1';
+      rejectBtn.addEventListener('click', () => respondToFriendRequest('reject'));
+    }
+
     if (acceptBtn && rejectBtn && !document.getElementById('btnBlockIncoming1Week')) {
       const btnRow = acceptBtn.parentElement;
       const blockBtn = document.createElement('button');
@@ -139,30 +214,7 @@
       blockBtn.textContent = '🚫 1 haftaga blok';
       btnRow.appendChild(blockBtn);
 
-      blockBtn.addEventListener('click', async () => {
-        const modal = document.getElementById('incomingModal');
-        if (modal) modal.classList.add('hidden');
-        const badgeEl = document.getElementById('incomingBadge');
-        const senderId = (currentPendingSender && currentPendingSender.id) || (badgeEl ? badgeEl.textContent.trim().toUpperCase() : '');
-        if (!senderId) return;
-
-        tgState.blockedUsers[senderId.toUpperCase()] = Date.now() + ONE_WEEK_MS;
-        saveLocalBridgeState();
-
-        try {
-          await fetch('/api/tg/friend-respond', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              myId: tgState.myId,
-              senderId: senderId.toUpperCase(),
-              action: 'block_1_week'
-            })
-          });
-        } catch (e) {}
-
-        showBridgeToast(`🚫 ${senderId} 1 haftaga bloklandi! 7 kun davomida sizga so'rov yubora olmaydi.`);
-      });
+      blockBtn.addEventListener('click', () => respondToFriendRequest('block_1_week'));
     }
 
     // b) O'zaro Profil Ko'rish va Do'st Taklif Havolasi Modali (#tgMutualProfileModal)
@@ -267,14 +319,10 @@
     }
   }
 
+  // Do'st taklif havolasi — endi @digi_dig_bot Deep-Link orqali
   function buildMyInviteLink() {
     syncFromGameDOM();
-    const base = window.location.origin + window.location.pathname;
-    const params = new URLSearchParams();
-    params.set('friend_ref', tgState.myId);
-    params.set('friend_name', tgState.myName);
-    params.set('friend_elo', String(tgState.elo));
-    return `${base}?${params.toString()}`;
+    return `https://t.me/digi_dig_bot?start=friend_${encodeURIComponent(tgState.myId)}`;
   }
 
   function shareMyInviteLinkOnTelegram() {
@@ -330,7 +378,12 @@
         const data = await res.json();
         if (data && Array.isArray(data.requests) && data.requests.length > 0) {
           const req = data.requests[0];
-          if (getBlockRemaining(req.fromId)) return; // 1 haftalik blokda bo'lsa ko'rsatmaymiz
+
+          // 1 haftalik blokda bo'lsa ko'rsatmaymiz
+          if (getBlockRemaining(req.fromId)) return;
+
+          // So'nggi 60 soniyada allaqachon javob berilgan bo'lsa, qayta modal chiqarilmasin!
+          if (wasRecentlyHandled(req.fromId)) return;
 
           currentPendingSender = { id: req.fromId, name: req.fromName, elo: req.fromElo || 1050 };
           const modal = document.getElementById('incomingModal');
@@ -344,6 +397,7 @@
             badge.textContent = req.fromId;
             text.textContent = `${req.fromName} (${req.fromId}) siz bilan do'stlashmoqchi!`;
             modal.classList.remove('hidden');
+            modal.style.display = '';
           }
         }
       } catch (e) {}
@@ -381,8 +435,9 @@
     let refName = params.get('friend_name') || '';
     let refElo = parseInt(params.get('friend_elo') || '1100', 10);
 
-    if (!refId && startParam.startsWith('friend_')) {
-      refId = startParam.replace('friend_', '');
+    // "friend_DOOM-XXXX" yoki "DOOM-XXXX" formatlarining ikkalasini ham qo'llab-quvvatlash
+    if (!refId && startParam) {
+      refId = startParam.startsWith('friend_') ? startParam.replace('friend_', '') : startParam;
     }
 
     if (refId && refId.toUpperCase() !== tgState.myId.toUpperCase()) {

@@ -264,8 +264,10 @@ app.post("/api/tg/webhook", async (req, res) => {
       const chatId = msg.chat.id;
       const firstName = (msg.from && msg.from.first_name) ? msg.from.first_name : "Jangchi";
       const parts = msg.text.trim().split(/\s+/);
-      const refParam = parts[1] || "";
-      const webAppUrl = refParam ? `${APP_URL}/?friend_ref=${encodeURIComponent(refParam)}` : `${APP_URL}/`;
+      const rawRef = parts[1] || "";
+      // "friend_DOOM-XXXX" formatida kelsa "friend_" prefiksi olib tashlanadi
+      const cleanRef = rawRef.startsWith("friend_") ? rawRef.replace("friend_", "") : rawRef;
+      const webAppUrl = cleanRef ? `${APP_URL}/?friend_ref=${encodeURIComponent(cleanRef)}` : `${APP_URL}/`;
 
       const welcomeText =
         `🪖 <b>Salom, ${firstName}!</b>\n\n` +

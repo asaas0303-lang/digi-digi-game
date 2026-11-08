@@ -2537,8 +2537,11 @@
         const now = performance.now();
         let enemyCloseBehind = false;
         let anyEnemyNear = false;
+        // 3-OPTIMIZATSIYA: botlar indeksini staggered frame keshi uchun hisoblash
+        let _botIdx = 0;
 
         combatants.forEach(c => {
+          const thisBotIdx = _botIdx++;
           // #9 Polga qulab tushish (Ragdoll/Death) animatsiyasi
           if (c.dyingProgress > 0) {
             c.dyingProgress += dt * 1.8;
@@ -2570,15 +2573,22 @@
           if (c.muzzleFlash > 0) c.muzzleFlash--;
 
           // #3: Ko'rinib turgan (hasLineOfSight) dushmanni har doim 1-navbatda nishonga olish!
+          // 3-OPTIMIZATSIYA: Staggered Raycaster — har bot uchun har 3-kadrda bir marta LOS hisoblanadi,
+          // natija c._cachedCanSee da saqlanadi (bot harakati va animatsiyasi har kadrda 60 FPS silliq davom etadi)
           let targetX = null;
           let targetY = null;
           let targetIsPlayer = false;
           let bestDist = 999;
           let bestHasLOS = false;
 
+          const shouldRecalcLOS = (window._frameTick + thisBotIdx) % 3 === 0;
+
           if (c.team !== player.team) {
             const dPlayer = Math.hypot(player.x - c.x, player.y - c.y);
-            const losPlayer = dPlayer < 10.5 && hasLineOfSight(c.x, c.y, player.x, player.y);
+            const losPlayer = shouldRecalcLOS
+              ? (dPlayer < 10.5 && hasLineOfSight(c.x, c.y, player.x, player.y))
+              : (c._cachedLosPlayer !== undefined ? c._cachedLosPlayer : false);
+            if (shouldRecalcLOS) c._cachedLosPlayer = (dPlayer < 10.5 && hasLineOfSight(c.x, c.y, player.x, player.y));
             bestDist = dPlayer;
             bestHasLOS = losPlayer;
             targetX = player.x;
@@ -2599,7 +2609,10 @@
           combatants.forEach(other => {
             if (!other.alive || other.dyingProgress > 0 || other.team === c.team) return;
             const d = Math.hypot(other.x - c.x, other.y - c.y);
-            const losOther = d < 10.5 && hasLineOfSight(c.x, c.y, other.x, other.y);
+            // 3-OPTIMIZATSIYA: LOS hisob-kitob staggered frames bilan keshlanadi
+            const losOther = shouldRecalcLOS
+              ? (d < 10.5 && hasLineOfSight(c.x, c.y, other.x, other.y))
+              : (other._cachedLos && other._cachedLos[c.id] !== undefined ? other._cachedLos[c.id] : d < 10.5 && hasLineOfSight(c.x, c.y, other.x, other.y));
             // Ko'rinib turgan nishon har doim devor ortidagi nishondan ustun!
             if ((losOther && !bestHasLOS) || (losOther === bestHasLOS && d < bestDist)) {
               bestDist = d;
@@ -2612,9 +2625,12 @@
 
           const blockedBySmoke = smokeClouds.some(sm => Math.hypot(sm.x - c.x, sm.y - c.y) < 2.4 || (targetX !== null && Math.hypot(sm.x - targetX, sm.y - targetY) < 2.2));
           const canSeeTarget = !blockedBySmoke && targetX !== null && bestHasLOS && bestDist < 10.0;
-          c.isAiming = canSeeTarget;
+          // Keshlanadi — har 3 kadrda bir yangilanadi, oraliq kadrlarda eski natija ishlatiladi
+          if (shouldRecalcLOS) c._cachedCanSee = canSeeTarget;
+          c.isAiming = shouldRecalcLOS ? canSeeTarget : (c._cachedCanSee !== undefined ? c._cachedCanSee : canSeeTarget);
           c.aimTargetX = targetX;
           c.aimTargetY = targetY;
+
 
           if (c.health <= 22) {
             const hpCrate = pickups.find(p => p.active && p.type === 'health');
