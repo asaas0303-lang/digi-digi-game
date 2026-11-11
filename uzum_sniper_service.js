@@ -761,15 +761,8 @@ function initUzumSniper(app, customDataDir) {
     startMonitoringLoop().catch((e) => console.error("[UzumSniper] Loop start error:", e));
   }, 5000);
 
-  setTimeout(async () => {
-    try {
-      const webhookUrl = `${APP_URL}/api/uzum/webhook`;
-      const res = await uzumTgCall("setWebhook", { url: webhookUrl });
-      console.log(`[UzumSniper] Telegram setWebhook (${webhookUrl}):`, JSON.stringify(res));
-    } catch (e) {
-      console.error("[UzumSniper] setWebhook error:", e.message);
-    }
-  }, 3000);
+  // Telegram Polling bilan konflikt bo'lmasligi uchun webhook o'rnatilmaydi
+  console.log("[UzumSniper] Xizmat mustaqil rejimda (Webhook o'rnatilmagan).");
 
   console.log("[UzumSniper] Xizmat muvaffaqiyatli ishga tushirildi (/api/uzum/webhook).");
 }
