@@ -342,6 +342,14 @@ app.post("/api/tg/webhook", async (req, res) => {
   }
 });
 
+// Uzum Market Price Tracker & Auto-Buy Sniper xizmati (To'liq mustaqil modul)
+try {
+  const { initUzumSniper } = require("./uzum_sniper_service");
+  initUzumSniper(app, DATA_DIR);
+} catch (uzumErr) {
+  console.error("[UzumSniper] Init error:", uzumErr);
+}
+
 app.listen(PORT, async () => {
   console.log(`DIGI DIGI Server running on port ${PORT}`);
 
