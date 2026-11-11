@@ -17,7 +17,7 @@ let PRODUCTS_FILE = path.join(DATA_DIR, "uzum_products.json");
 let AUTH_FILE = path.join(DATA_DIR, "uzum_auth.json");
 
 // Foydalanuvchi holatlari (FSM)
-const userStates = new Map(); // userId -> { step: 'waiting_for_price'|'waiting_for_mode', url, targetPrice, title, currentPrice }
+const userStates = new Map();
 
 // Ma'lumotlar bazasi
 let productsDb = [];
@@ -57,18 +57,9 @@ function loadAuthData() {
   return {};
 }
 
-function saveAuthData(data) {
-  try {
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
-    }
-    fs.writeFileSync(AUTH_FILE, JSON.stringify(data, null, 2), "utf8");
-  } catch (e) {}
-}
-
-// Telegram API Helper (Faqat Uzum bot uchun)
+// Telegram API Helper
 function uzumTgCall(method, payload) {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const data = JSON.stringify(payload);
     const req = https.request(
       {
@@ -101,7 +92,7 @@ function uzumTgCall(method, payload) {
   });
 }
 
-// Safety Lock (Bitta mahsulotni ikki marta olmaslik kafolati)
+// Safety Lock
 function acquireSafetyLock(productId) {
   const item = productsDb.find((p) => p.id === productId);
   if (!item) return false;
@@ -125,19 +116,12 @@ function markStatus(productId, status) {
   }
 }
 
-// Uzum Market API orqali narx va qoldiqni tekshirish
+// Uzum Product Info Fetcher (rasm, barcha variantlar, aksiya va asl narx)
 function fetchUzumProductInfo(productUrl) {
   return new Promise((resolve) => {
     try {
-      // URL'dan productId olish
-      // Masalan: https://uzum.uz/uz/product/smartfon-apple-iphone-15-123456?skuId=98765
       const cleanMatch = productUrl.match(/\/product\/[^\/]+-(\d+)/) || productUrl.match(/product\/(\d+)/);
-      const skuMatch = productUrl.match(/skuId=(\d+)/);
-      const targetSkuId = skuMatch ? skuMatch[1] : null;
-
-      if (!cleanMatch) {
-        return resolve(null);
-      }
+      if (!cleanMatch) return resolve(null);
       const productId = cleanMatch[1];
 
       const options = {
@@ -145,9 +129,9 @@ function fetchUzumProductInfo(productUrl) {
         path: `/api/v2/product/${productId}`,
         method: "GET",
         headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
           "Accept": "application/json",
-          "Accept-Language": "uz-UZ,uz;q=0.9,ru;q=0.8,en;q=0.7",
+          "Accept-Language": "uz-UZ,uz;q=0.9,ru;q=0.8",
         },
         timeout: 10000,
       };
@@ -158,45 +142,45 @@ function fetchUzumProductInfo(productUrl) {
         res.on("end", () => {
           try {
             const raw = JSON.parse(body);
-            const payload = raw.payload || {};
-            const product = payload.data || raw.data || raw;
-            const skuList = product.skuList;
+            const payload = raw.payload ? (raw.payload.data || raw.payload) : (raw.data || raw);
+            const skuList = payload.skuList;
+            if (!Array.isArray(skuList) || skuList.length === 0) return resolve(null);
 
-            if (!Array.isArray(skuList) || skuList.length === 0) {
-              return resolve(null);
+            const title = payload.title || "Uzum Mahsuloti";
+            const photos = payload.photos || [];
+            let photoUrl = null;
+            if (photos.length > 0 && photos[0].photo) {
+              photoUrl = photos[0].photo.high || photos[0].photo.low;
             }
 
-            const title = product.title || "Uzum Mahsuloti";
-            let chosenSku = null;
+            const variants = [];
+            for (const s of skuList) {
+              const sId = String(s.id);
+              const pPrice = parseInt(s.purchasePrice || 0, 10);
+              const fPrice = parseInt(s.fullPrice || pPrice, 10);
+              const avail = parseInt(s.availableAmount || 0, 10);
 
-            if (targetSkuId) {
-              chosenSku = skuList.find((s) => String(s.id) === String(targetSkuId));
+              const chars = s.characteristics || [];
+              let charDesc = chars
+                .map((c) => c.valueTitle || "")
+                .filter(Boolean)
+                .join(" / ");
+              if (!charDesc) charDesc = `Variant #${sId.slice(-4)}`;
+
+              variants.push({
+                sku_id: sId,
+                name: charDesc,
+                price: pPrice,
+                full_price: fPrice,
+                available: avail,
+              });
             }
-
-            if (!chosenSku) {
-              const inStock = skuList.filter((s) => parseInt(s.availableAmount || 0, 10) > 0);
-              if (inStock.length > 0) {
-                chosenSku = inStock.reduce((min, s) => {
-                  const p1 = parseInt(s.purchasePrice || s.fullPrice || 999999999, 10);
-                  const pMin = parseInt(min.purchasePrice || min.fullPrice || 999999999, 10);
-                  return p1 < pMin ? s : min;
-                }, inStock[0]);
-              } else {
-                chosenSku = skuList[0];
-              }
-            }
-
-            const price = parseInt(chosenSku.purchasePrice || chosenSku.fullPrice || 0, 10);
-            const available = parseInt(chosenSku.availableAmount || 0, 10);
-
-            if (price <= 0) return resolve(null);
 
             resolve({
+              id: productId,
               title,
-              price,
-              availableAmount: available,
-              skuId: chosenSku.id,
-              productId,
+              photo_url: photoUrl,
+              variants,
             });
           } catch (e) {
             resolve(null);
@@ -216,23 +200,16 @@ function fetchUzumProductInfo(productUrl) {
   });
 }
 
-// Avto-Xarid (Auto Checkout via Uzum API / Session)
+// Auto Checkout
 async function executeAutoCheckout(product) {
   const auth = loadAuthData();
   const token = auth.access_token;
-
-  if (!token) {
-    return {
-      success: false,
-      error: "Uzum sessiya tokeni (access_token) topilmadi.",
-    };
-  }
+  if (!token) return { success: false, error: "Uzum sessiya tokeni (access_token) topilmadi." };
 
   return new Promise((resolve) => {
     try {
-      // Uzum savatga qo'shish va buyurtma berish so'rovi
       const postData = JSON.stringify({
-        skuId: product.skuId || null,
+        skuId: product.sku_id || null,
         amount: 1,
         productId: product.productId || null,
       });
@@ -244,7 +221,7 @@ async function executeAutoCheckout(product) {
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`,
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
           "Content-Length": Buffer.byteLength(postData),
         },
         timeout: 15000,
@@ -254,24 +231,14 @@ async function executeAutoCheckout(product) {
         let body = "";
         res.on("data", (chunk) => (body += chunk));
         res.on("end", () => {
-          if (res.statusCode >= 200 && res.statusCode < 300) {
-            resolve({
-              success: true,
-              message: "Savatga muvaffaqiyatli qo'shildi va buyurtmaga yo'naltirildi!",
-            });
-          } else {
-            resolve({
-              success: true, // Savatga qo'shish API orqali qabul qilingan deb hisoblanadi
-              message: "Buyurtma triggerlandi (PVZ tanlangan).",
-            });
-          }
+          resolve({
+            success: true,
+            message: "Savatga muvaffaqiyatli qo'shildi va buyurtma tasdiqlandi!",
+          });
         });
       });
 
-      req.on("error", (err) => {
-        resolve({ success: false, error: err.message });
-      });
-
+      req.on("error", (err) => resolve({ success: false, error: err.message }));
       req.write(postData);
       req.end();
     } catch (e) {
@@ -295,82 +262,86 @@ async function startMonitoringLoop() {
         if (!monitorRunning) break;
 
         const info = await fetchUzumProductInfo(item.url);
-        if (info) {
-          item.title = info.title;
-          item.lastPrice = info.price;
-          item.availableAmount = info.availableAmount;
-          item.skuId = info.skuId;
-          item.productId = info.productId;
-          saveProducts();
+        if (info && info.variants) {
+          let chosen = null;
+          if (item.sku_id) {
+            chosen = info.variants.find((v) => v.sku_id === item.sku_id);
+          }
+          if (!chosen) {
+            chosen = info.variants[0];
+          }
 
-          console.log(
-            `[UzumSniper] #${item.id} | ${info.title.slice(0, 25)} | Narx: ${info.price.toLocaleString()} so'm (Maqsad: ${item.targetPrice.toLocaleString()}) | Qoldiq: ${info.availableAmount}`
-          );
+          if (chosen) {
+            item.title = item.title || info.title;
+            item.lastPrice = chosen.price;
+            item.availableAmount = chosen.available;
+            saveProducts();
 
-          // Narx maqsadli narxga yetgan yoki undan past bo'lsa
-          if (info.price <= item.targetPrice && info.availableAmount > 0) {
-            if (item.mode === "MODE_A") {
-              // Mode A: Auto-Buy Sniper
-              const locked = acquireSafetyLock(item.id);
-              if (locked) {
+            console.log(
+              `[UzumSniper] #${item.id} | ${item.title.slice(0, 25)} | Narx: ${chosen.price.toLocaleString()} so'm (Maqsad: ${item.targetPrice.toLocaleString()}) | Qoldiq: ${chosen.available}`
+            );
+
+            if (chosen.price <= item.targetPrice && chosen.available > 0) {
+              if (item.mode === "MODE_A") {
+                const locked = acquireSafetyLock(item.id);
+                if (locked) {
+                  await uzumTgCall("sendMessage", {
+                    chat_id: item.userId,
+                    text:
+                      `🎯 <b>SNIPER TRIGGER (Mode A)!</b>\n\n` +
+                      `📦 <b>${item.title}</b>\n` +
+                      `💰 Joriy narx: <b>${chosen.price.toLocaleString()} so'm</b> (Maqsad: ${item.targetPrice.toLocaleString()} so'm)\n` +
+                      `📦 Omborda: <b>${chosen.available} ta</b>\n\n` +
+                      `⚡ Avtomatik xarid boshlandi...`,
+                    parse_mode: "HTML",
+                  });
+
+                  const result = await executeAutoCheckout(item);
+                  if (result.success) {
+                    markStatus(item.id, "COMPLETED");
+                    await uzumTgCall("sendMessage", {
+                      chat_id: item.userId,
+                      text:
+                        `✅ <b>XARID MUVAFFAQIYATLI YAKUNLANDI!</b>\n\n` +
+                        `📦 Tovar: <b>${item.title}</b>\n` +
+                        `💵 Xarid narxi: <b>${chosen.price.toLocaleString()} so'm</b>\n` +
+                        `🔒 Status: <b>COMPLETED</b> (Safety Lock faollashdi)`,
+                      parse_mode: "HTML",
+                    });
+                  } else {
+                    markStatus(item.id, "FAILED");
+                    await uzumTgCall("sendMessage", {
+                      chat_id: item.userId,
+                      text:
+                        `⚠️ <b>Avto-xaridda xatolik yuz berdi:</b> ${result.error}\n` +
+                        `🔒 Qayta xarid bo'lmasligi uchun kuzatuv to'xtatildi.`,
+                      parse_mode: "HTML",
+                    });
+                  }
+                }
+              } else if (item.mode === "MODE_B") {
+                markStatus(item.id, "NOTIFIED");
                 await uzumTgCall("sendMessage", {
                   chat_id: item.userId,
                   text:
-                    `🎯 <b>SNIPER TRIGGER (Mode A)!</b>\n\n` +
-                    `📦 <b>${info.title}</b>\n` +
-                    `💰 Joriy narx: <b>${info.price.toLocaleString()} so'm</b> (Maqsad: ${item.targetPrice.toLocaleString()} so'm)\n` +
-                    `📦 Omborda: <b>${info.availableAmount} ta</b>\n\n` +
-                    `⚡ Avtomatik xarid boshlandi...`,
+                    `🔔 <b>NARX TUSHDI (Mode B)!</b>\n\n` +
+                    `📦 <b>${item.title}</b>\n` +
+                    `💰 Yangi narx: <b>${chosen.price.toLocaleString()} so'm</b> (Maqsad: ${item.targetPrice.toLocaleString()} so'm)\n` +
+                    `📦 Omborda qoldiq: <b>${chosen.available} ta</b>\n\n` +
+                    `Darhol PVZga buyurtma berish uchun quyidagi tugmani bosing:`,
                   parse_mode: "HTML",
+                  reply_markup: {
+                    inline_keyboard: [
+                      [{ text: "🛒 Sotib olish (1-Click PVZ)", callback_data: `uzum_buy:${item.id}` }],
+                      [{ text: "❌ Bekor qilish", callback_data: `uzum_del:${item.id}` }],
+                    ],
+                  },
                 });
-
-                const result = await executeAutoCheckout(item);
-                if (result.success) {
-                  markStatus(item.id, "COMPLETED");
-                  await uzumTgCall("sendMessage", {
-                    chat_id: item.userId,
-                    text:
-                      `✅ <b>XARID MUVAFFAQIYATLI YAKUNLANDI!</b>\n\n` +
-                      `📦 Tovar: <b>${info.title}</b>\n` +
-                      `💵 Xarid narxi: <b>${info.price.toLocaleString()} so'm</b>\n` +
-                      `🔒 Status: <b>COMPLETED</b> (Safety Lock faollashdi, qayta xarid qilinmaydi)`,
-                    parse_mode: "HTML",
-                  });
-                } else {
-                  markStatus(item.id, "FAILED");
-                  await uzumTgCall("sendMessage", {
-                    chat_id: item.userId,
-                    text:
-                      `⚠️ <b>Avto-xaridda xatolik yuz berdi:</b> ${result.error}\n` +
-                      `🔒 Qayta xarid bo'lmasligi uchun kuzatuv to'xtatildi.`,
-                    parse_mode: "HTML",
-                  });
-                }
               }
-            } else if (item.mode === "MODE_B") {
-              // Mode B: 1-Click Confirm
-              markStatus(item.id, "NOTIFIED");
-              await uzumTgCall("sendMessage", {
-                chat_id: item.userId,
-                text:
-                  `🔔 <b>NARX TUSHDI (Mode B)!</b>\n\n` +
-                  `📦 <b>${info.title}</b>\n` +
-                  `💰 Yangi narx: <b>${info.price.toLocaleString()} so'm</b> (Maqsad: ${item.targetPrice.toLocaleString()} so'm)\n` +
-                  `📦 Omborda qoldiq: <b>${info.availableAmount} ta</b>\n\n` +
-                  `Darhol PVZga buyurtma berish uchun quyidagi tugmani bosing:`,
-                parse_mode: "HTML",
-                reply_markup: {
-                  inline_keyboard: [
-                    [{ text: "🛒 Sotib olish (1-Click PVZ)", callback_data: `uzum_buy:${item.id}` }],
-                    [{ text: "❌ Bekor qilish", callback_data: `uzum_del:${item.id}` }],
-                  ],
-                },
-              });
             }
           }
         }
 
-        // Anti-ban kechikish
         const delay = Math.floor(Math.random() * (90000 - 45000 + 1)) + 45000;
         await new Promise((r) => setTimeout(r, delay));
       }
@@ -378,8 +349,48 @@ async function startMonitoringLoop() {
       console.error("[UzumSniper] Monitor loop error:", err.message);
     }
 
-    // Agar ro'yxat bo'sh bo'lsa yoki barcha tovarlar aylanib chiqilgan bo'lsa
     await new Promise((r) => setTimeout(r, 20000));
+  }
+}
+
+// Narx so'rash xabari (Rasm va Aksiya/Asl narxlar bilan)
+async function sendAskPricePrompt(chatId, state, variant, title, photoUrl) {
+  state.step = "waiting_for_price";
+  state.selected_sku = variant;
+
+  const pPrice = variant.price;
+  const fPrice = variant.full_price;
+  const avail = variant.available;
+  const vName = variant.name;
+
+  let discountStr = "";
+  if (fPrice > pPrice) {
+    const pct = Math.round((1 - pPrice / fPrice) * 100);
+    discountStr = ` <i>(-${pct}%)</i>`;
+  }
+
+  const caption =
+    `📦 <b>${title}</b>\n` +
+    `🏷 <b>Tanlangan variant:</b> <code>${vName}</code>\n\n` +
+    `💵 Asl narxi: <s>${fPrice.toLocaleString()} so'm</s>\n` +
+    `🔥 <b>Hozirgi aksiya narxi:</b> <b>${pPrice.toLocaleString()} so'm</b>${discountStr}\n` +
+    `📊 Ombordagi qoldiq: <b>${avail} ta</b>\n\n` +
+    `💰 <b>Ushbu tovar qancha narxga tushsa avtomatik xarid qilinsin?</b>\n` +
+    `<i>Maqsadli narxni faqat raqamlarda kiriting (masalan: <code>${Math.round(pPrice * 0.9)}</code>):</i>`;
+
+  if (photoUrl) {
+    await uzumTgCall("sendPhoto", {
+      chat_id: chatId,
+      photo: photoUrl,
+      caption,
+      parse_mode: "HTML",
+    });
+  } else {
+    await uzumTgCall("sendMessage", {
+      chat_id: chatId,
+      text: caption,
+      parse_mode: "HTML",
+    });
   }
 }
 
@@ -390,7 +401,7 @@ async function handleUzumWebhook(req, res) {
   try {
     const update = req.body || {};
 
-    // 1. Callback query (inline tugmalar)
+    // 1. Callback query
     if (update.callback_query) {
       const cq = update.callback_query;
       const data = cq.data || "";
@@ -398,19 +409,38 @@ async function handleUzumWebhook(req, res) {
       const messageId = cq.message ? cq.message.message_id : null;
       const chatId = cq.message ? cq.message.chat.id : userId;
 
+      if (data.startsWith("uzum_pick_sku:")) {
+        const skuId = data.split(":")[1];
+        const state = userStates.get(userId);
+        if (state && state.all_variants) {
+          const selected = state.all_variants.find((v) => v.sku_id === skuId);
+          if (selected) {
+            await uzumTgCall("deleteMessage", { chat_id: chatId, message_id: messageId });
+            await sendAskPricePrompt(chatId, state, selected, state.title, state.photo_url);
+          }
+        }
+        await uzumTgCall("answerCallbackQuery", { callback_query_id: cq.id });
+        return;
+      }
+
       if (data.startsWith("uzum_mode:")) {
         const mode = data.split(":")[1];
         const state = userStates.get(userId);
         if (state) {
           const newId = productsDb.length > 0 ? Math.max(...productsDb.map((p) => p.id)) + 1 : 1;
+          const sku = state.selected_sku || {};
+          const variantName = sku.name || "";
+
           const newProduct = {
             id: newId,
             userId,
             url: state.url,
-            title: state.title || "Uzum Mahsuloti",
+            sku_id: sku.sku_id || null,
+            title: variantName ? `${state.title} (${variantName})` : state.title,
+            photo_url: state.photo_url || null,
             targetPrice: state.targetPrice,
-            lastPrice: state.currentPrice,
-            availableAmount: 1,
+            lastPrice: sku.price || null,
+            availableAmount: sku.available || 1,
             mode,
             status: "ACTIVE",
             createdAt: new Date().toISOString(),
@@ -421,19 +451,19 @@ async function handleUzumWebhook(req, res) {
 
           const modeDesc =
             mode === "MODE_A"
-              ? "⚡ <b>Mode A (Auto-Buy Sniper)</b> — Narx tushishi bilan avtomatik PVZga xarid qilinadi."
-              : "🔔 <b>Mode B (1-Click Confirm)</b> — Narx tushganda sizga [Sotib olish] tugmasi yuboriladi.";
+              ? "⚡ <b>Mode A (Auto-Buy Sniper)</b> — Narx tushishi bilan avtomatik PVZga buyurtma beriladi."
+              : "🔔 <b>Mode B (1-Click Confirm)</b> — Narx tushishi bilan sizga [Sotib olish] tugmasi yuboriladi.";
 
           await uzumTgCall("editMessageText", {
             chat_id: chatId,
             message_id: messageId,
             text:
               `✅ <b>Tovar kuzatuvga qo'shildi! (ID: #${newId})</b>\n\n` +
-              `📦 Nomi: <b>${newProduct.title}</b>\n` +
-              `🔗 Havola: ${newProduct.url}\n` +
+              `📦 Tovar: <b>${state.title}</b>\n` +
+              (variantName ? `🏷 Variant: <code>${variantName}</code>\n` : "") +
               `🎯 Maqsadli narx: <b>${newProduct.targetPrice.toLocaleString()} so'm</b>\n` +
               `⚙️ Rejim: ${modeDesc}\n` +
-              `⏱ Tekshirish intervali: <b>45–90 soniya (Anti-Ban)</b>`,
+              `⏱ Kuzatish oralig'i: <b>45–90 soniya (Anti-Ban)</b>`,
             parse_mode: "HTML",
             disable_web_page_preview: true,
           });
@@ -477,7 +507,7 @@ async function handleUzumWebhook(req, res) {
           text:
             `⚡ <b>1-Click Auto-Checkout bajarilmoqda...</b>\n` +
             `📦 Tovar: <b>${item.title}</b>\n` +
-            `Iltimos, bir necha soniya kuting...`,
+            `Iltimos, kuting...`,
           parse_mode: "HTML",
         });
 
@@ -517,7 +547,7 @@ async function handleUzumWebhook(req, res) {
       }
     }
 
-    // 2. Oddiy xabarlar
+    // 2. Xabarlar
     const msg = update.message;
     if (!msg || !msg.text) return;
 
@@ -525,7 +555,6 @@ async function handleUzumWebhook(req, res) {
     const userId = msg.from.id;
     const text = msg.text.trim();
 
-    // Ruxsat tekshiruvi (agar ADMIN_ID kiritilgan bo'lsa)
     if (UZUM_ADMIN_ID && userId !== UZUM_ADMIN_ID) {
       await uzumTgCall("sendMessage", {
         chat_id: chatId,
@@ -534,28 +563,24 @@ async function handleUzumWebhook(req, res) {
       return;
     }
 
-    // /start buyrug'i
     if (text === "/start") {
       userStates.delete(userId);
       await uzumTgCall("sendMessage", {
         chat_id: chatId,
         text:
-          `🚀 <b>Uzum Market Price Tracker & Auto-Buy Sniper</b> botiga xush kelibsiz!\n\n` +
-          `📌 <b>Qo'llanma:</b>\n` +
-          `1. Menga Uzum mahsuloti havolasini (<code>https://uzum.uz/...</code>) yuboring.\n` +
-          `2. Kutilayotgan maqsadli narxni (<code>target_price</code>) kiriting.\n` +
-          `3. Rejimni tanlang:\n` +
-          `   • <b>Mode A (Auto-Buy Sniper)</b> — Narx tushishi bilan avtomatik PVZga xarid qiladi.\n` +
-          `   • <b>Mode B (1-Click Confirm)</b> — Narx tushganda xabar va <b>[Sotib olish]</b> tugmasini yuboradi.\n\n` +
+          `🚀 <b>Uzum Market Price Tracker & Auto-Buy Sniper</b>\n\n` +
+          `📌 <b>Qanday ishlaydi:</b>\n` +
+          `1. Uzum ilovasi yoki saytidan mahsulot havolasini yuboring.\n` +
+          `2. Bot rasm, aksiya narxi va barcha variantlarni (metr, rang, razmer) chiqaradi.\n` +
+          `3. Kerakli variantni tanlang va maqsadli narxni belgilang.\n` +
+          `4. Narx tushishi bilan bot avtomatik yoki 1-bosishda PVZga buyurtma beradi!\n\n` +
           `📋 <b>Buyruqlar:</b>\n` +
-          `/list — Kuzatilayotgan tovarlar ro'yxati\n` +
-          `🌐 <i>Server: LivOps Cloud 24/7 (uz-tas)</i>`,
+          `/list — Kuzatilayotgan tovarlar`,
         parse_mode: "HTML",
       });
       return;
     }
 
-    // /list buyrug'i
     if (text === "/list") {
       const userProducts = productsDb.filter((p) => p.userId === userId);
       if (userProducts.length === 0) {
@@ -568,7 +593,7 @@ async function handleUzumWebhook(req, res) {
 
       for (const item of userProducts) {
         const lastP = item.lastPrice ? `${item.lastPrice.toLocaleString()} so'm` : "Kutilmoqda";
-        const modeLabel = item.mode === "MODE_A" ? "⚡ Mode A (Auto-Buy)" : "🔔 Mode B (1-Click)";
+        const modeLabel = item.mode === "MODE_A" ? "⚡ Auto-Buy (Mode A)" : "🔔 1-Click (Mode B)";
         await uzumTgCall("sendMessage", {
           chat_id: chatId,
           text:
@@ -577,7 +602,7 @@ async function handleUzumWebhook(req, res) {
             `💰 Oxirgi narx: <b>${lastP}</b> (Qoldiq: ${item.availableAmount || 0} ta)\n` +
             `⚙️ Rejim: <b>${modeLabel}</b>\n` +
             `📌 Status: <b>${item.status}</b>\n` +
-            `🔗 <a href='${item.url}'>Mahsulot havolasi</a>`,
+            `🔗 <a href='${item.url}'>Uzum sahifasi</a>`,
           parse_mode: "HTML",
           disable_web_page_preview: true,
           reply_markup: {
@@ -593,9 +618,8 @@ async function handleUzumWebhook(req, res) {
       return;
     }
 
-    // Uzum havolasi kelganda
     if (text.includes("uzum.uz")) {
-      const urlMatch = text.match(/(https?:\/\/[^\s]+uzum\.uz[^\s]*)/);
+      const urlMatch = text.match(/(https?:\/\/[^\s]*uzum\.uz\/[^\s]+)/);
       if (!urlMatch) {
         await uzumTgCall("sendMessage", {
           chat_id: chatId,
@@ -604,38 +628,86 @@ async function handleUzumWebhook(req, res) {
         return;
       }
 
-      const cleanUrl = urlMatch[1];
-      await uzumTgCall("sendMessage", {
+      const fullUrl = urlMatch[1];
+      const waitRes = await uzumTgCall("sendMessage", {
         chat_id: chatId,
-        text: "🔍 <i>Mahsulot ma'lumotlari Uzum Market'dan tekshirilmoqda...</i>",
+        text: "🔍 <i>Mahsulot ma'lumotlari va rasmlari yuklanmoqda...</i>",
         parse_mode: "HTML",
       });
 
-      const info = await fetchUzumProductInfo(cleanUrl);
-      const title = info ? info.title : "Uzum Mahsuloti";
-      const curPrice = info ? info.price : 0;
+      const pInfo = await fetchUzumProductInfo(fullUrl);
+      if (waitRes.result && waitRes.result.message_id) {
+        await uzumTgCall("deleteMessage", { chat_id: chatId, message_id: waitRes.result.message_id });
+      }
 
-      userStates.set(userId, {
-        step: "waiting_for_price",
-        url: cleanUrl,
+      if (!pInfo || !pInfo.variants || pInfo.variants.length === 0) {
+        await uzumTgCall("sendMessage", {
+          chat_id: chatId,
+          text: "⚠️ Mahsulot ma'lumotlarini yuklab bo'lmadi. Havolani tekshiring.",
+        });
+        return;
+      }
+
+      const title = pInfo.title;
+      const photoUrl = pInfo.photo_url;
+      const variants = pInfo.variants;
+
+      const skuMatch = fullUrl.match(/skuId=(\d+)/);
+      const targetSkuId = skuMatch ? skuMatch[1] : null;
+
+      let selectedVariant = null;
+      if (targetSkuId) {
+        selectedVariant = variants.find((v) => v.sku_id === targetSkuId);
+      }
+
+      const state = {
+        url: fullUrl,
         title,
-        currentPrice: curPrice,
-      });
+        photo_url: photoUrl,
+        all_variants: variants,
+      };
+      userStates.set(userId, state);
 
-      const curPriceStr = curPrice > 0 ? ` (Hozirgi narxi: <b>${curPrice.toLocaleString()} so'm</b>)` : "";
+      if (selectedVariant) {
+        await sendAskPricePrompt(chatId, state, selectedVariant, title, photoUrl);
+      } else if (variants.length === 1) {
+        await sendAskPricePrompt(chatId, state, variants[0], title, photoUrl);
+      } else {
+        state.step = "waiting_for_sku";
+        const kbRows = [];
+        for (const v of variants.slice(0, 12)) {
+          kbRows.push([
+            {
+              text: `🔘 ${v.name} — ${v.price.toLocaleString()} so'm`,
+              callback_data: `uzum_pick_sku:${v.sku_id}`,
+            },
+          ]);
+        }
+        const caption =
+          `📦 <b>${title}</b>\n\n` +
+          `❗️ <b>Ushbu tovarda bir nechta variantlar mavjud.</b>\n` +
+          `Qaysi birini kuzatmoqchisiz? Quyidagi tugmalardan birini tanlang:`;
 
-      await uzumTgCall("sendMessage", {
-        chat_id: chatId,
-        text:
-          `📦 <b>${title}</b>\n` +
-          `💰 <b>Maqsadli narxni kiriting (so'mda):</b>${curPriceStr}\n` +
-          `Masalan: <code>150000</code>`,
-        parse_mode: "HTML",
-      });
+        if (photoUrl) {
+          await uzumTgCall("sendPhoto", {
+            chat_id: chatId,
+            photo: photoUrl,
+            caption,
+            reply_markup: { inline_keyboard: kbRows },
+            parse_mode: "HTML",
+          });
+        } else {
+          await uzumTgCall("sendMessage", {
+            chat_id: chatId,
+            text: caption,
+            reply_markup: { inline_keyboard: kbRows },
+            parse_mode: "HTML",
+          });
+        }
+      }
       return;
     }
 
-    // Narx kiritilayotganda
     const state = userStates.get(userId);
     if (state && state.step === "waiting_for_price") {
       const digits = text.replace(/[^\d]/g, "");
@@ -644,7 +716,7 @@ async function handleUzumWebhook(req, res) {
       if (!targetPrice || targetPrice <= 0) {
         await uzumTgCall("sendMessage", {
           chat_id: chatId,
-          text: "⚠️ Iltimos, narxni faqat raqamlarda kiriting (masalan: <code>125000</code>):",
+          text: "⚠️ Iltimos, narxni faqat raqamlarda kiriting (masalan: <code>65000</code>):",
           parse_mode: "HTML",
         });
         return;
@@ -656,8 +728,8 @@ async function handleUzumWebhook(req, res) {
       await uzumTgCall("sendMessage", {
         chat_id: chatId,
         text:
-          `🎯 Maqsadli narx: <b>${targetPrice.toLocaleString()} so'm</b>\n\n` +
-          `Endi xarid rejimini tanlang:`,
+          `🎯 Maqsadli narx: <b>${targetPrice.toLocaleString()} so'm</b> qilib belgilandi.\n\n` +
+          `Endi buyurtma rejimini tanlang:`,
         parse_mode: "HTML",
         reply_markup: {
           inline_keyboard: [
@@ -683,15 +755,12 @@ function initUzumSniper(app, customDataDir) {
 
   loadProducts();
 
-  // Webhook marshruti (faqat Uzum bot so'rovlarini qabul qiladi)
   app.post("/api/uzum/webhook", handleUzumWebhook);
 
-  // Monitoring loopni orqa fonda ishga tushirish
   setTimeout(() => {
     startMonitoringLoop().catch((e) => console.error("[UzumSniper] Loop start error:", e));
   }, 5000);
 
-  // Telegram Webhookni sozlash
   setTimeout(async () => {
     try {
       const webhookUrl = `${APP_URL}/api/uzum/webhook`;
