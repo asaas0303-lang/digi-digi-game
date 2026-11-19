@@ -388,14 +388,17 @@ const WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 const WS_PONG_FRAME = Buffer.from([0x81, 0x01, 0x70]); // FIN=1, Text, 1 bayt: "p"
 const WS_CTRL_PONG = Buffer.from([0x8a, 0x00]);
 
-httpServer.on("upgrade", (req, socket) => {
+httpServer.on("upgrade", (req, socket, head) => {
+  console.log("[WS] Upgrade event received:", req.url, "key:", req.headers["sec-websocket-key"]);
   try {
     if (!req.url || !req.url.startsWith("/ws/ping")) {
+      console.log("[WS] Rejected URL:", req.url);
       socket.destroy();
       return;
     }
     const wsKey = req.headers["sec-websocket-key"];
     if (!wsKey) {
+      console.log("[WS] Missing key");
       socket.destroy();
       return;
     }
@@ -407,8 +410,9 @@ httpServer.on("upgrade", (req, socket) => {
       "Connection: Upgrade\r\n" +
       "Sec-WebSocket-Accept: " + acceptKey + "\r\n\r\n"
     );
+    console.log("[WS] 101 Switching Protocols sent successfully");
 
-    socket.on("data", (buf) => {
+    const onData = (buf) => {
       try {
         if (!buf || buf.length < 2) return;
         const opcode = buf[0] & 0x0f;
@@ -420,10 +424,16 @@ httpServer.on("upgrade", (req, socket) => {
           socket.write(WS_PONG_FRAME);
         }
       } catch (e) {}
-    });
+    };
 
-    socket.on("error", () => {});
+    socket.on("data", onData);
+    if (head && head.length > 0) onData(head);
+
+    socket.on("error", (err) => {
+      console.log("[WS] Socket error:", err.message);
+    });
   } catch (e) {
+    console.error("[WS] Handler error:", e);
     try { socket.destroy(); } catch (_) {}
   }
 });
