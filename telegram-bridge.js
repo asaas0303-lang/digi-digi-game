@@ -606,7 +606,10 @@
     }
 
     startNotificationsPolling();
-    // Har 15 soniyada muntazam sinxronizatsiya
-    setInterval(() => syncWithServer(false), 15000);
+    // Har 15 soniyada muntazam sinxronizatsiya (3D jang paytida tarmoq va diskni band qilmaslik uchun pauza qilinadi)
+    setInterval(() => {
+      if (isGameActiveNow()) return;
+      syncWithServer(false);
+    }, 15000);
   });
 })();

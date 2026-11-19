@@ -9,6 +9,17 @@ const path = require("path");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+app.disable("x-powered-by");
+
+// 0) Ultra-tezkor Zero-Overhead Ping endpointi (static/json middleware dan OLDIN - 0 disk I/O, 0 ETag, 0 bayt)
+app.get("/api/tg/ping", (req, res) => {
+  res.writeHead(204, {
+    "Cache-Control": "no-store",
+    "Connection": "keep-alive"
+  });
+  res.end();
+});
 const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000; // 7 kun (1 hafta)
 
 const BOT_TOKEN = process.env.BOT_TOKEN || "9299427859:AAHPfHEA_Ze5r_ulGYaAprh3Gp7-EznE3Zs";
@@ -58,10 +69,10 @@ let _saveTimer = null;
 function saveDb() {
   if (_saveTimer) clearTimeout(_saveTimer);
   _saveTimer = setTimeout(() => {
-    fs.promises.writeFile(DB_FILE, JSON.stringify(db, null, 2), "utf8").catch(err => {
+    fs.promises.writeFile(DB_FILE, JSON.stringify(db), "utf8").catch(err => {
       console.error("DB save error:", err);
     });
-  }, 300);
+  }, 1000);
 }
 
 loadDb();
@@ -89,12 +100,7 @@ function tgApiCall(method, payload) {
   });
 }
 
-// 0) Tezkor Ping o'lchash endpointi
-app.get("/api/tg/ping", (req, res) => {
-  res.setHeader("Connection", "keep-alive");
-  res.setHeader("Cache-Control", "no-store");
-  res.status(200).send("1");
-});
+// (Eski ping endpointi yuqoriga ko'chirildi - bu blok o'chirildi)
 
 // 1) O'yinchi profilini va o'yin ma'lumotlarini (tangalar, skinlar, ELO, bloklar) saqlash va olish
 app.post("/api/tg/sync", (req, res) => {
@@ -350,7 +356,7 @@ try {
   console.error("[UzumSniper] Init error:", uzumErr);
 }
 
-app.listen(PORT, async () => {
+const httpServer = app.listen(PORT, async () => {
   console.log(`DIGI DIGI Server running on port ${PORT}`);
 
   try {
@@ -367,3 +373,6 @@ app.listen(PORT, async () => {
     console.error("Telegram init error:", err.message);
   }
 });
+
+httpServer.keepAliveTimeout = 65000;
+httpServer.headersTimeout = 66000;

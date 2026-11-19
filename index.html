@@ -5337,8 +5337,17 @@
       requestAnimationFrame(loop);
 
       let _pingWarmedUp = false;
+      let _pingInFlight = false;
+      const _pingSamples = [];
+      function medianOf(arr) {
+        const s = arr.slice().sort((a, b) => a - b);
+        const m = Math.floor(s.length / 2);
+        return s.length % 2 ? s[m] : Math.round((s[m - 1] + s[m]) / 2);
+      }
       async function pingCheck() {
         if (!isEnabled || !isInActiveGame()) return;
+        if (_pingInFlight) return;
+        _pingInFlight = true;
         try {
           if (!_pingWarmedUp) {
             _pingWarmedUp = true;
@@ -5348,16 +5357,21 @@
           const res = await fetch('/api/tg/ping?t=' + Date.now(), { cache: 'no-store' });
           const t1 = performance.now();
           if (res.ok) {
-            curPing = Math.round(t1 - t0);
+            const raw = Math.round(t1 - t0);
+            _pingSamples.push(raw);
+            if (_pingSamples.length > 3) _pingSamples.shift();
+            curPing = _pingSamples.length >= 3 ? medianOf(_pingSamples) : raw;
             elPing.textContent = 'Ping: ' + curPing + ' ms';
             elPing.className = curPing < 90 ? 'font-bold text-emerald-400' : (curPing < 180 ? 'font-bold text-amber-400' : 'font-bold text-red-400');
           }
         } catch (e) {
           elPing.textContent = 'Ping: --';
           elPing.className = 'font-bold text-red-400';
+        } finally {
+          _pingInFlight = false;
         }
       }
-      setInterval(pingCheck, 4000);
+      setInterval(pingCheck, 3000);
 
       ['touchstart', 'pointerdown', 'mousedown'].forEach(function(evtName) {
         hud.addEventListener(evtName, function(e) { e.stopPropagation(); });
