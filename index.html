@@ -752,12 +752,12 @@
     </div>
 
     <!-- ==================== AAA SUZUVCHI YUQORI TAKTIK HUD ==================== -->
-    <div class="absolute top-0 inset-x-0 z-30 pointer-events-none px-2 pt-1.5 flex items-start justify-between gap-1.5">
+    <div class="absolute top-0 inset-x-0 z-30 pointer-events-none px-1.5 sm:px-2 pt-1.5 flex items-start justify-between">
 
       <!-- YUQORI-CHAP: Ixcham Minimap + Kompas + Qutisiz Micro FPS/Ping -->
-      <div class="flex flex-col items-start gap-1 pointer-events-none shrink-0">
-        <div class="tac-minimap-frame p-0.5 w-[72px] sm:w-[86px]">
-          <div class="flex items-center justify-center gap-1 bg-black/75 py-0.5 px-1 border-b border-zinc-800/90 text-[8px] sm:text-[9px] font-mono font-bold text-amber-300 tracking-wide">
+      <div class="flex flex-col items-start gap-1 pointer-events-none shrink-0 z-10">
+        <div class="tac-minimap-frame p-0.5 w-[64px] sm:w-[84px]">
+          <div class="flex items-center justify-center gap-0.5 bg-black/75 py-0.5 px-0.5 border-b border-zinc-800/90 text-[7.5px] sm:text-[9px] font-mono font-bold text-amber-300 tracking-tight">
             <svg class="w-2.5 h-2.5 text-amber-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="9"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" fill="currentColor" stroke="none"/></svg>
             <span id="hudCompass">N • 0°</span>
           </div>
@@ -778,41 +778,39 @@
         </div>
       </div>
 
-      <!-- YUQORI-MARKAZ: Burchakli AAA TDM Hisob Tablosi -->
-      <div class="flex items-stretch shrink-0 drop-shadow-[0_4px_12px_rgba(0,0,0,0.85)] mt-0.5">
-        <div class="tac-score-red px-2.5 sm:px-3.5 py-1 min-w-[58px] sm:min-w-[74px] text-center flex flex-col justify-center">
-          <span class="block text-[7px] sm:text-[8px] font-black uppercase tracking-wider text-red-300 leading-none">T-FORCE</span>
-          <span id="hudRedScore" class="font-mono font-black text-base sm:text-xl text-red-400 leading-tight mt-0.5">0</span>
+      <!-- YUQORI-MARKAZ: Aniq markazlashtirilgan Burchakli AAA TDM Hisob Tablosi -->
+      <div class="absolute top-1.5 left-1/2 -translate-x-1/2 flex items-stretch drop-shadow-[0_4px_12px_rgba(0,0,0,0.85)] z-10 pointer-events-none">
+        <div class="tac-score-red px-2 sm:px-3.5 py-0.5 sm:py-1 min-w-[48px] sm:min-w-[70px] text-center flex flex-col justify-center">
+          <span class="block text-[6.5px] sm:text-[8px] font-black uppercase tracking-wider text-red-300 leading-none">T-FORCE</span>
+          <span id="hudRedScore" class="font-mono font-black text-sm sm:text-xl text-red-400 leading-tight mt-0.5">0</span>
         </div>
-        <div class="tac-score-center px-2 sm:px-3 py-1 min-w-[58px] sm:min-w-[70px] text-center flex flex-col justify-center -mx-1.5 z-10">
+        <div class="tac-score-center px-1.5 sm:px-3 py-0.5 sm:py-1 min-w-[50px] sm:min-w-[68px] text-center flex flex-col justify-center -mx-1 z-10">
           <span id="hudTimer" class="font-mono font-extrabold text-zinc-100 leading-none">02:00</span>
-          <span id="hudModeBadge" class="block text-[7px] font-mono uppercase text-amber-400/90 leading-none mt-1 tracking-wider">5V5 TDM</span>
+          <span id="hudModeBadge" class="block text-[6.5px] sm:text-[7px] font-mono uppercase text-amber-400/90 leading-none mt-1 tracking-wider">5V5 TDM</span>
         </div>
-        <div class="tac-score-blue px-2.5 sm:px-3.5 py-1 min-w-[58px] sm:min-w-[74px] text-center flex flex-col justify-center">
-          <span class="block text-[7px] sm:text-[8px] font-black uppercase tracking-wider text-sky-300 leading-none">CT-SPEC</span>
-          <span id="hudBlueScore" class="font-mono font-black text-base sm:text-xl text-sky-400 leading-tight mt-0.5">0</span>
+        <div class="tac-score-blue px-2 sm:px-3.5 py-0.5 sm:py-1 min-w-[48px] sm:min-w-[70px] text-center flex flex-col justify-center">
+          <span class="block text-[6.5px] sm:text-[8px] font-black uppercase tracking-wider text-sky-300 leading-none">CT-SPEC</span>
+          <span id="hudBlueScore" class="font-mono font-black text-sm sm:text-xl text-sky-400 leading-tight mt-0.5">0</span>
         </div>
       </div>
 
-      <!-- YUQORI-O'NG: 3 ta Minimalist Taktik Tugma + Tagida Shaffof KillFeed -->
-      <div class="flex flex-col items-end gap-1.5 shrink-0">
-        <div class="flex items-center gap-1 pointer-events-auto">
-          <button id="btnToggleScoreboard" class="tac-top-btn h-7 sm:h-8 px-2 flex items-center gap-1 text-zinc-100 text-[10px] sm:text-xs font-extrabold tracking-wide" title="Jadval (TAB)">
-            <svg class="w-3.5 h-3.5 text-zinc-200" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="10" width="4" height="11" rx="1"/><rect x="10" y="4" width="4" height="17" rx="1"/><rect x="17" y="13" width="4" height="8" rx="1"/></svg>
-            <span>K/D</span>
-          </button>
-          <button id="btnInGameWeapon" class="tac-top-btn w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center text-zinc-100" title="Qurol almashtirish (1/2/3/4)">
-            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 16l-4-4 4-4"/><path d="M3 12h14"/><path d="M17 8l4 4-4 4"/><path d="M21 12H7"/></svg>
-          </button>
-          <button id="btnExitToLobby" class="tac-top-btn w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center text-zinc-100 hover:text-red-400" title="Lobbiga qaytish">
-            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="4" width="4.5" height="16" rx="1"/><rect x="14.5" y="4" width="4.5" height="16" rx="1"/></svg>
-          </button>
-        </div>
-
-        <!-- Shaffof KillFeed (Qalin qutisiz) -->
-        <div id="killFeedBox" class="flex flex-col items-end gap-1 max-w-[175px] sm:max-w-[230px] pointer-events-none"></div>
+      <!-- YUQORI-O'NG: 3 ta Ixcham Taktik Tugma (Har doim 100% ekran ichida ko'rinadi!) -->
+      <div class="flex items-center gap-1 pointer-events-auto shrink-0 z-20">
+        <button id="btnToggleScoreboard" class="tac-top-btn h-7 sm:h-8 px-1.5 sm:px-2 flex items-center gap-0.5 sm:gap-1 text-zinc-100 text-[9px] sm:text-xs font-extrabold tracking-wide" title="Jadval (TAB)">
+          <svg class="w-3 h-3 sm:w-3.5 sm:h-3.5 text-zinc-200" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="10" width="4" height="11" rx="1"/><rect x="10" y="4" width="4" height="17" rx="1"/><rect x="17" y="13" width="4" height="8" rx="1"/></svg>
+          <span>K/D</span>
+        </button>
+        <button id="btnInGameWeapon" class="tac-top-btn w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center text-zinc-100" title="Qurol almashtirish (1/2/3/4)">
+          <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 16l-4-4 4-4"/><path d="M3 12h14"/><path d="M17 8l4 4-4 4"/><path d="M21 12H7"/></svg>
+        </button>
+        <button id="btnExitToLobby" class="tac-top-btn w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center text-zinc-100 hover:text-red-400" title="Lobbiga qaytish">
+          <svg class="w-3 h-3 sm:w-3.5 sm:h-3.5" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="4" width="4.5" height="16" rx="1"/><rect x="14.5" y="4" width="4.5" height="16" rx="1"/></svg>
+        </button>
       </div>
     </div>
+
+    <!-- Shaffof KillFeed (Tugmalardan mustaqil, o'ng chetdan chiqib ketmaydi!) -->
+    <div id="killFeedBox" class="absolute top-[40px] sm:top-[44px] right-1.5 sm:right-2 z-25 flex flex-col items-end gap-1 max-w-[195px] sm:max-w-[260px] pointer-events-none"></div>
 
     <!-- ==================== TAKTIK HARAKAT TUGMALARI (Status chizig'i ustida) ==================== -->
     <div class="absolute bottom-[158px] sm:bottom-[170px] inset-x-0 z-30 pointer-events-none px-2.5 flex items-end justify-between">
@@ -3323,96 +3321,155 @@
         const ctxD = cDiff.getContext('2d');
         const ctxB = cBump.getContext('2d');
 
-        // Qorong'u tsement/ohak choki
-        ctxD.fillStyle = '#141210';
+        // Chuqur qorong'u ohak/tsement choklari
+        ctxD.fillStyle = '#15100b';
         ctxD.fillRect(0, 0, 512, 512);
-        ctxB.fillStyle = '#181818';
+        ctxB.fillStyle = '#161616';
         ctxB.fillRect(0, 0, 512, 512);
 
-        const rows = 16;
-        const cols = 8;
+        const rows = 14;
+        const cols = 6;
         const bh = 512 / rows;
         const bw = 512 / cols;
+        const mortar = 3.2;
 
         for (let r = 0; r < rows; r++) {
-          const offset = (r % 2 === 1) ? bw / 2 : 0;
+          const offset = (r % 2 === 1) ? bw * 0.5 : 0;
           for (let c = -1; c <= cols; c++) {
             const x = c * bw + offset;
             const y = r * bh;
-            const shade = 34 + Math.floor(Math.random() * 22);
-            const warm = Math.floor(Math.random() * 12);
-            ctxD.fillStyle = `rgb(${shade + warm + 6}, ${shade + Math.floor(warm * 0.5)}, ${shade - 4})`;
-            ctxD.fillRect(x + 3, y + 3, bw - 6, bh - 6);
+            const bx = x + mortar;
+            const by = y + mortar;
+            const bWidth = bw - mortar * 2;
+            const bHeight = bh - mortar * 2;
 
-            // G'isht yuzasidagi g'adir-budur tosh relfeyi
-            ctxB.fillStyle = `rgb(${155 + Math.floor(Math.random() * 65)}, ${155 + Math.floor(Math.random() * 65)}, ${155 + Math.floor(Math.random() * 65)})`;
-            ctxB.fillRect(x + 4, y + 4, bw - 8, bh - 8);
+            // Tabiiy iliq qumtosh / jigarrang g'isht ohanglari (nuqta-dog'larsiz!)
+            const base = 54 + Math.floor(Math.random() * 34);
+            const warm = 12 + Math.floor(Math.random() * 18);
+            const rr = Math.min(138, base + warm + 12);
+            const gg = Math.min(102, Math.floor(base * 0.78 + warm * 0.45));
+            const bb = Math.max(18, Math.floor(base * 0.44));
 
-            for (let n = 0; n < 28; n++) {
-              const nx = x + 4 + Math.random() * (bw - 8);
-              const ny = y + 4 + Math.random() * (bh - 8);
-              ctxD.fillStyle = Math.random() > 0.5 ? 'rgba(0,0,0,0.32)' : 'rgba(180,145,110,0.12)';
-              ctxD.fillRect(nx, ny, 3, 3);
-              ctxB.fillStyle = Math.random() > 0.5 ? '#ffffff' : '#555555';
-              ctxB.fillRect(nx, ny, 3, 3);
+            const grad = ctxD.createLinearGradient(bx, by, bx, by + bHeight);
+            grad.addColorStop(0, `rgb(${Math.min(155, rr + 14)}, ${Math.min(118, gg + 10)}, ${Math.min(72, bb + 6)})`);
+            grad.addColorStop(0.55, `rgb(${rr}, ${gg}, ${bb})`);
+            grad.addColorStop(1, `rgb(${Math.max(16, rr - 20)}, ${Math.max(12, gg - 15)}, ${Math.max(8, bb - 10)})`);
+            ctxD.fillStyle = grad;
+            ctxD.fillRect(bx, by, bWidth, bHeight);
+
+            // Yuqori qirra yorug'i va pastki qirra soyasi (haqiqiy 3D bo'rtma g'isht hissi)
+            ctxD.fillStyle = 'rgba(255, 220, 165, 0.08)';
+            ctxD.fillRect(bx, by, bWidth, 2);
+            ctxD.fillStyle = 'rgba(0, 0, 0, 0.24)';
+            ctxD.fillRect(bx, by + bHeight - 2, bWidth, 2);
+
+            // Nafis gorizontal tosh tolalari (keskin 3x3 nuqtalar o'rniga!)
+            for (let g = 0; g < 6; g++) {
+              const gx = bx + Math.random() * (bWidth - 10);
+              const gy = by + 2 + Math.random() * (bHeight - 4);
+              const gw = 5 + Math.random() * 14;
+              ctxD.fillStyle = Math.random() > 0.5 ? 'rgba(0,0,0,0.11)' : 'rgba(225,180,120,0.06)';
+              ctxD.fillRect(gx, gy, gw, 1.5);
             }
+
+            // Silliq va tabiiy rel'yef (BumpMap: oq chaqnaydigan nuqtalarsiz!)
+            const bTone = 165 + Math.floor(Math.random() * 40);
+            ctxB.fillStyle = `rgb(${bTone}, ${bTone}, ${bTone})`;
+            ctxB.fillRect(bx + 1, by + 1, bWidth - 2, bHeight - 2);
+            ctxB.fillStyle = `rgb(${Math.max(90, bTone - 35)}, ${Math.max(90, bTone - 35)}, ${Math.max(90, bTone - 35)})`;
+            ctxB.fillRect(bx + 2, by + bHeight - 3, bWidth - 4, 2);
           }
         }
-        // CS:GO Dust2 / Mirage uslubidagi pastki beton plintus va yuqori taktik karniz chizig'i (Qora dog'larsiz toza tekstura!)
-        ctxD.fillStyle = 'rgba(28, 25, 22, 0.88)';
-        ctxD.fillRect(0, 468, 512, 44);
-        ctxD.fillStyle = 'rgba(120, 98, 74, 0.35)';
-        ctxD.fillRect(0, 464, 512, 4);
-        ctxD.fillStyle = 'rgba(24, 22, 20, 0.75)';
-        ctxD.fillRect(0, 0, 512, 22);
+
+        // Pastki va yuqori nozik arxitektura soyasi (koridor burchaklariga chuqurlik beradi)
+        const topAo = ctxD.createLinearGradient(0, 0, 0, 48);
+        topAo.addColorStop(0, 'rgba(8, 6, 4, 0.72)');
+        topAo.addColorStop(1, 'rgba(8, 6, 4, 0)');
+        ctxD.fillStyle = topAo;
+        ctxD.fillRect(0, 0, 512, 48);
+
+        const botAo = ctxD.createLinearGradient(0, 444, 0, 512);
+        botAo.addColorStop(0, 'rgba(8, 6, 4, 0)');
+        botAo.addColorStop(1, 'rgba(8, 6, 4, 0.78)');
+        ctxD.fillStyle = botAo;
+        ctxD.fillRect(0, 444, 512, 68);
 
         const tDiff = new THREE.CanvasTexture(cDiff);
         const tBump = new THREE.CanvasTexture(cBump);
         tDiff.wrapS = tDiff.wrapT = THREE.RepeatWrapping;
         tBump.wrapS = tBump.wrapT = THREE.RepeatWrapping;
+        const maxAniso = (threeRenderer && threeRenderer.capabilities) ? Math.min(4, threeRenderer.capabilities.getMaxAnisotropy()) : 1;
+        tDiff.anisotropy = maxAniso;
+        tBump.anisotropy = maxAniso;
         return { map: tDiff, bumpMap: tBump };
       }
 
       function generateWetFloorTextures() {
         const cDiff = document.createElement('canvas');
         const cRough = document.createElement('canvas');
-        cDiff.width = cRough.width = 512;
-        cDiff.height = cRough.height = 512;
+        const cBump = document.createElement('canvas');
+        cDiff.width = cRough.width = cBump.width = 512;
+        cDiff.height = cRough.height = cBump.height = 512;
         const ctxD = cDiff.getContext('2d');
         const ctxR = cRough.getContext('2d');
+        const ctxB = cBump.getContext('2d');
 
-        ctxD.fillStyle = '#181614';
+        // Qorong'u nam tosh choklari
+        ctxD.fillStyle = '#120e0a';
         ctxD.fillRect(0, 0, 512, 512);
-        // Quruq joylar xira (roughness = 210), nam ko'lmaklar oynadek yaltiroq (roughness = 25)!
-        ctxR.fillStyle = '#d0d0d0';
+        ctxR.fillStyle = '#a8a8a8';
         ctxR.fillRect(0, 0, 512, 512);
+        ctxB.fillStyle = '#181818';
+        ctxB.fillRect(0, 0, 512, 512);
 
-        const tiles = 8;
+        // 4x4 realistik yirik tosh plitalar (mayda 8x8 katak o'rniga!)
+        const tiles = 4;
         const ts = 512 / tiles;
         for (let r = 0; r < tiles; r++) {
           for (let c = 0; c < tiles; c++) {
-            const v = 24 + Math.floor(Math.random() * 14);
-            ctxD.fillStyle = `rgb(${v + 3}, ${v}, ${v - 2})`;
-            ctxD.fillRect(c * ts + 2, r * ts + 2, ts - 4, ts - 4);
+            const tx = c * ts + 3;
+            const ty = r * ts + 3;
+            const tw = ts - 6;
+            const v = 34 + Math.floor(Math.random() * 18);
+            const warm = 6 + Math.floor(Math.random() * 8);
+            ctxD.fillStyle = `rgb(${v + warm + 4}, ${v + Math.floor(warm * 0.5)}, ${Math.max(14, v - 4)})`;
+            ctxD.fillRect(tx, ty, tw, tw);
+
+            // Tosh ustidagi tabiiy yeyilgan to'qimalar
+            for (let s = 0; s < 10; s++) {
+              const sx = tx + Math.random() * (tw - 14);
+              const sy = ty + Math.random() * (tw - 14);
+              ctxD.fillStyle = Math.random() > 0.5 ? 'rgba(0,0,0,0.16)' : 'rgba(180,135,85,0.08)';
+              ctxD.fillRect(sx, sy, 8 + Math.random() * 18, 4 + Math.random() * 10);
+            }
+
+            const rTone = 110 + Math.floor(Math.random() * 55);
+            ctxR.fillStyle = `rgb(${rTone}, ${rTone}, ${rTone})`;
+            ctxR.fillRect(tx, ty, tw, tw);
+
+            const bTone = 160 + Math.floor(Math.random() * 35);
+            ctxB.fillStyle = `rgb(${bTone}, ${bTone}, ${bTone})`;
+            ctxB.fillRect(tx + 1, ty + 1, tw - 2, tw - 2);
           }
         }
 
-        // Nam va yorug'likni aks ettiruvchi ko'lmaklar (Wet Puddles reflecting lantern light!)
-        for (let p = 0; p < 18; p++) {
+        // Oltin fonus nurini oynadek aks ettiruvchi nam ko'lmaklar (Wet Glossy Puddles)
+        for (let p = 0; p < 14; p++) {
           const px = Math.random() * 512;
           const py = Math.random() * 512;
-          const pr = 30 + Math.random() * 65;
-          const gR = ctxR.createRadialGradient(px, py, 4, px, py, pr);
-          gR.addColorStop(0, 'rgb(18, 18, 18)'); // Juda silliq/nam ko'lmak (yuqori aks ettirish)
-          gR.addColorStop(1, 'rgba(210, 210, 210, 0)');
+          const pr = 42 + Math.random() * 78;
+          const gR = ctxR.createRadialGradient(px, py, 6, px, py, pr);
+          gR.addColorStop(0, 'rgb(14, 14, 14)');
+          gR.addColorStop(0.55, 'rgb(34, 34, 34)');
+          gR.addColorStop(1, 'rgba(155, 155, 155, 0)');
           ctxR.fillStyle = gR;
           ctxR.beginPath();
           ctxR.arc(px, py, pr, 0, Math.PI * 2);
           ctxR.fill();
 
-          const gD = ctxD.createRadialGradient(px, py, 4, px, py, pr);
-          gD.addColorStop(0, 'rgba(10, 12, 14, 0.65)');
-          gD.addColorStop(1, 'rgba(0,0,0,0)');
+          const gD = ctxD.createRadialGradient(px, py, 6, px, py, pr);
+          gD.addColorStop(0, 'rgba(8, 7, 6, 0.52)');
+          gD.addColorStop(1, 'rgba(0, 0, 0, 0)');
           ctxD.fillStyle = gD;
           ctxD.beginPath();
           ctxD.arc(px, py, pr, 0, Math.PI * 2);
@@ -3421,11 +3478,66 @@
 
         const tDiff = new THREE.CanvasTexture(cDiff);
         const tRough = new THREE.CanvasTexture(cRough);
-        tDiff.wrapS = tDiff.wrapT = THREE.RepeatWrapping;
-        tRough.wrapS = tRough.wrapT = THREE.RepeatWrapping;
-        tDiff.repeat.set(MAP_SIZE, MAP_SIZE);
-        tRough.repeat.set(MAP_SIZE, MAP_SIZE);
-        return { map: tDiff, roughnessMap: tRough };
+        const tBump = new THREE.CanvasTexture(cBump);
+        const maxAniso = (threeRenderer && threeRenderer.capabilities) ? Math.min(4, threeRenderer.capabilities.getMaxAnisotropy()) : 1;
+        [tDiff, tRough, tBump].forEach(t => {
+          t.wrapS = t.wrapT = THREE.RepeatWrapping;
+          t.repeat.set(MAP_SIZE, MAP_SIZE);
+          t.anisotropy = maxAniso;
+        });
+        return { map: tDiff, roughnessMap: tRough, bumpMap: tBump };
+      }
+
+      function generateCeilingTextures() {
+        const cDiff = document.createElement('canvas');
+        const cBump = document.createElement('canvas');
+        cDiff.width = cBump.width = 512;
+        cDiff.height = cBump.height = 512;
+        const ctxD = cDiff.getContext('2d');
+        const ctxB = cBump.getContext('2d');
+
+        ctxD.fillStyle = '#18120c';
+        ctxD.fillRect(0, 0, 512, 512);
+        ctxB.fillStyle = '#303030';
+        ctxB.fillRect(0, 0, 512, 512);
+
+        // Eski tosh-suvoq shift plitalari (cho'zilib ketmaydi!)
+        const slabs = 2;
+        const ss = 512 / slabs;
+        for (let r = 0; r < slabs; r++) {
+          for (let c = 0; c < slabs; c++) {
+            const sx = c * ss + 4;
+            const sy = r * ss + 4;
+            const sw = ss - 8;
+            const v = 42 + Math.floor(Math.random() * 18);
+            ctxD.fillStyle = `rgb(${v + 16}, ${v + 4}, ${Math.max(12, v - 10)})`;
+            ctxD.fillRect(sx, sy, sw, sw);
+
+            ctxB.fillStyle = `rgb(${155 + Math.floor(Math.random() * 35)}, ${155 + Math.floor(Math.random() * 35)}, ${155 + Math.floor(Math.random() * 35)})`;
+            ctxB.fillRect(sx, sy, sw, sw);
+
+            for (let m = 0; m < 26; m++) {
+              const mx = sx + Math.random() * (sw - 20);
+              const my = sy + Math.random() * (sw - 20);
+              const mw = 10 + Math.random() * 32;
+              const mh = 8 + Math.random() * 24;
+              ctxD.fillStyle = Math.random() > 0.5 ? 'rgba(0,0,0,0.16)' : 'rgba(165,120,70,0.08)';
+              ctxD.fillRect(mx, my, mw, mh);
+              ctxB.fillStyle = Math.random() > 0.5 ? 'rgba(110,110,110,0.35)' : 'rgba(205,205,205,0.28)';
+              ctxB.fillRect(mx, my, mw, mh);
+            }
+          }
+        }
+
+        const tDiff = new THREE.CanvasTexture(cDiff);
+        const tBump = new THREE.CanvasTexture(cBump);
+        const maxAniso = (threeRenderer && threeRenderer.capabilities) ? Math.min(4, threeRenderer.capabilities.getMaxAnisotropy()) : 1;
+        [tDiff, tBump].forEach(t => {
+          t.wrapS = t.wrapT = THREE.RepeatWrapping;
+          t.repeat.set(MAP_SIZE, MAP_SIZE);
+          t.anisotropy = maxAniso;
+        });
+        return { map: tDiff, bumpMap: tBump };
       }
 
       function generateCrateTexture() {
@@ -3458,7 +3570,7 @@
         // 1-OPTIMIZATSIYA: Smart Retina PixelRatio (1.5x chegara)
         threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
         threeRenderer.toneMapping = THREE.ACESFilmicToneMapping;
-        threeRenderer.toneMappingExposure = 1.08;
+        threeRenderer.toneMappingExposure = 1.12;
 
         // 4-OPTIMIZATSIYA: Sahnada castShadow chiroq yo'qligi uchun ortiqcha ShadowMap pass o'chirildi (0% sifat o'zgarishi)
         threeRenderer.shadowMap.enabled = false;
@@ -3467,16 +3579,16 @@
 
         threeScene = new THREE.Scene();
         threeScene.background = new THREE.Color(0x050404);
-        threeScene.fog = new THREE.FogExp2(0x070504, 0.14);
+        threeScene.fog = new THREE.FogExp2(0x060403, 0.13);
 
         threeCamera = new THREE.PerspectiveCamera(75, 1, 0.03, 28);
 
         // Xira ambient yorug'lik (qorong'u burchaklar uchun)
-        const ambLight = new THREE.AmbientLight(0x3a3028, 0.95);
+        const ambLight = new THREE.AmbientLight(0x4a3520, 0.90);
         threeScene.add(ambLight);
 
         // O'yinchining o'q uzganda yonadigan dinamik yorug'ligi va xira fonari
-        gunPointLight = new THREE.PointLight(0xffaa44, 0.55, 7.5, 2.0);
+        gunPointLight = new THREE.PointLight(0xffb454, 0.58, 7.8, 1.9);
         threeScene.add(gunPointLight);
 
         // 2-OPTIMIZATSIYA: Persistent Muzzle Light (Shader recompilation oldini olish uchun doimiy sahnada qoladi)
@@ -3505,15 +3617,16 @@
 
         const brickTex = generateBrickTextures();
         const floorTex = generateWetFloorTextures();
+        const ceilTex = generateCeilingTextures();
         const crateTex = generateCrateTexture();
 
         const wallHeight = 1.82;
         const wallMat = new THREE.MeshStandardMaterial({
           map: brickTex.map,
           bumpMap: brickTex.bumpMap,
-          bumpScale: 0.045,
-          roughness: 0.82,
-          metalness: 0.08
+          bumpScale: 0.022,
+          roughness: 0.89,
+          metalness: 0.04
         });
 
         // 1. Nam va chiroq nurini aks ettiruvchi Tosh Pol (#1)
@@ -3521,10 +3634,10 @@
         const floorMat = new THREE.MeshStandardMaterial({
           map: floorTex.map,
           roughnessMap: floorTex.roughnessMap,
-          bumpMap: floorTex.map,
-          bumpScale: 0.018,
-          roughness: 0.35,
-          metalness: 0.38
+          bumpMap: floorTex.bumpMap,
+          bumpScale: 0.014,
+          roughness: 0.42,
+          metalness: 0.46
         });
         const floorMesh = new THREE.Mesh(floorGeo, floorMat);
         floorMesh.rotation.x = -Math.PI / 2;
@@ -3536,12 +3649,12 @@
 
         // 2. To'liq Yopiq Tosh va G'isht Shift (Ochiq osmon umuman ko'rinmaydi! #1)
         const ceilMat = new THREE.MeshStandardMaterial({
-          map: brickTex.map,
-          bumpMap: brickTex.bumpMap,
-          bumpScale: 0.035,
-          color: 0x554840,
-          roughness: 0.92,
-          metalness: 0.05
+          map: ceilTex.map,
+          bumpMap: ceilTex.bumpMap,
+          bumpScale: 0.024,
+          color: 0x9c7b5c,
+          roughness: 0.93,
+          metalness: 0.04
         });
         const ceilMesh = new THREE.Mesh(floorGeo, ceilMat);
         ceilMesh.rotation.x = Math.PI / 2;
@@ -3589,7 +3702,7 @@
         const barrelMat = new THREE.MeshStandardMaterial({ color: 0x3b2314, roughness: 0.55, metalness: 0.35 });
 
         const lanternFrameMat = new THREE.MeshStandardMaterial({ color: 0x18181b, metalness: 0.8, roughness: 0.3 });
-        const lanternGlowMat = new THREE.MeshBasicMaterial({ color: 0xffb74d });
+        const lanternGlowMat = new THREE.MeshBasicMaterial({ color: 0xffcc66 });
         const lanternCageGeo = new THREE.CylinderGeometry(0.06, 0.05, 0.18, 6);
         const lanternBulbGeo = new THREE.SphereGeometry(0.042, 8, 8);
         const lanternCapGeo = new THREE.ConeGeometry(0.08, 0.06, 6);
@@ -3652,7 +3765,7 @@
         window._lanternLightPool = [];
         const poolCount = Math.min(4, lanternLights.length);
         for (let i = 0; i < poolCount; i++) {
-          const pLight = new THREE.PointLight(0xff9822, 1.65, 6.8, 1.8);
+          const pLight = new THREE.PointLight(0xff9c2a, 2.0, 8.2, 1.65);
           pLight.position.set(lanternLights[i].x, lanternLights[i].y, lanternLights[i].z);
           pLight.userData.isMazePart = true;
           threeScene.add(pLight);
@@ -4122,7 +4235,7 @@
                 const l = lanternLights[li];
                 const pl = lightPool[k];
                 pl.position.set(l.x, l.y, l.z);
-                pl.intensity = 1.65 + Math.sin(nowSec * 7.5 + l.phase) * 0.15;
+                pl.intensity = 1.95 + Math.sin(nowSec * 7.5 + l.phase) * 0.15;
               }
             }
           }
