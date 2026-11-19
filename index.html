@@ -659,7 +659,7 @@
       <div class="absolute inset-0 pointer-events-none z-10" style="background: radial-gradient(circle at 50% 50%, transparent 48%, rgba(0,0,0,0.82) 100%);"></div>
 
       <!-- 3D EKRAN ICHIDAGI KO'ZGA TASHLANADIGAN JON (HP) VA ZIRH SHKALASI + YURAK URISHI OGOHLANTIRISHI -->
-      <div id="playerVitalBar" class="absolute top-2 left-2 z-25 pointer-events-none flex flex-col gap-1 bg-zinc-950/90 border border-zinc-700/90 rounded-xl px-2.5 py-1.5 shadow-xl backdrop-blur-sm min-w-[138px]">
+      <div id="playerVitalBar" class="absolute top-2 left-2 z-25 pointer-events-none flex flex-col gap-1 bg-zinc-950/90 border border-zinc-700/90 rounded-xl px-2.5 py-1.5 shadow-xl min-w-[138px]">
         <div class="flex items-center justify-between gap-2">
           <span class="text-[10px] font-black text-emerald-400 flex items-center gap-1"><span id="vitalHeartIcon">❤️</span> JON</span>
           <span id="vitalHpText" class="retro-font text-xs text-emerald-400">100 HP</span>
@@ -740,22 +740,22 @@
 
       <!-- CHAP VA O'NG EKRAN CHETIDAGI TAKTIK TUGMALAR (Pastki markazdagi `✦` tugmasidan 100% uzoqda!) -->
       <div class="absolute bottom-2 left-2 z-25 flex flex-col gap-1.5 pointer-events-auto">
-        <button id="touchSprint" class="px-2.5 py-1.5 bg-zinc-900/90 border border-amber-500/80 rounded-xl text-amber-400 font-extrabold text-[10px] shadow-lg backdrop-blur-sm">
+        <button id="touchSprint" class="px-2.5 py-1.5 bg-zinc-900/90 border border-amber-500/80 rounded-xl text-amber-400 font-extrabold text-[10px] shadow-lg">
           TEZ
         </button>
-        <button id="btnThrowGrenade" class="px-2.5 py-1.5 bg-red-950/90 active:bg-red-700 border border-red-500/80 rounded-xl text-red-200 font-bold text-[10px] shadow-lg backdrop-blur-sm">
+        <button id="btnThrowGrenade" class="px-2.5 py-1.5 bg-red-950/90 active:bg-red-700 border border-red-500/80 rounded-xl text-red-200 font-bold text-[10px] shadow-lg">
           💣 Granata (<span id="heCountLabel">2</span>)
         </button>
-        <button id="btnThrowSmoke" class="px-2.5 py-1.5 bg-zinc-900/90 active:bg-zinc-700 border border-zinc-500/80 rounded-xl text-zinc-200 font-bold text-[10px] shadow-lg backdrop-blur-sm">
+        <button id="btnThrowSmoke" class="px-2.5 py-1.5 bg-zinc-900/90 active:bg-zinc-700 border border-zinc-500/80 rounded-xl text-zinc-200 font-bold text-[10px] shadow-lg">
           💨 Tutun (<span id="smokeCountLabel">1</span>)
         </button>
       </div>
 
       <div class="absolute bottom-2 right-2 z-25 flex items-center gap-1.5 pointer-events-auto">
-        <button id="btnReloadWeapon" class="px-2.5 py-1.5 bg-zinc-900/90 active:bg-emerald-700 border border-emerald-500/80 rounded-xl text-emerald-300 font-extrabold text-[10px] shadow-lg backdrop-blur-sm" title="O'qlash (R)">
+        <button id="btnReloadWeapon" class="px-2.5 py-1.5 bg-zinc-900/90 active:bg-emerald-700 border border-emerald-500/80 rounded-xl text-emerald-300 font-extrabold text-[10px] shadow-lg" title="O'qlash (R)">
           🔄 O'QLASH
         </button>
-        <button id="btnToggleAds" class="px-2.5 py-1.5 bg-zinc-900/90 active:bg-sky-700 border border-sky-500/80 rounded-xl text-sky-300 font-extrabold text-[10px] shadow-lg backdrop-blur-sm" title="Optik mo'ljal (Zoom)">
+        <button id="btnToggleAds" class="px-2.5 py-1.5 bg-zinc-900/90 active:bg-sky-700 border border-sky-500/80 rounded-xl text-sky-300 font-extrabold text-[10px] shadow-lg" title="Optik mo'ljal (Zoom)">
           🔭 ZOOM
         </button>
       </div>
@@ -3114,7 +3114,7 @@
         threeCamera = new THREE.PerspectiveCamera(75, 1, 0.03, 28);
 
         // Xira ambient yorug'lik (qorong'u burchaklar uchun)
-        const ambLight = new THREE.AmbientLight(0x3a3028, 0.85);
+        const ambLight = new THREE.AmbientLight(0x3a3028, 0.95);
         threeScene.add(ambLight);
 
         // O'yinchining o'q uzganda yonadigan dinamik yorug'ligi va xira fonari
@@ -3141,6 +3141,7 @@
         });
         toRemove.forEach(obj => threeScene.remove(obj));
         lanternLights = [];
+        window._lanternLightPool = [];
         fighterMeshes.clear();
         pickupMeshes.clear();
 
@@ -3263,11 +3264,12 @@
                 bulbTransforms.push({ x: lx, y: ly, z: lz });
                 capTransforms.push({ x: lx, y: ly + 0.11, z: lz });
 
-                const pLight = new THREE.PointLight(0xff9822, 1.55, 6.2, 1.85);
-                pLight.position.set(hasWestWall ? x + 0.22 : x + 0.5, ly - 0.02, hasNorthWall ? y + 0.22 : y + 0.5);
-                pLight.userData.isMazePart = true;
-                threeScene.add(pLight);
-                lanternLights.push({ light: pLight, phase: Math.random() * 10 });
+                lanternLights.push({
+                  x: hasWestWall ? x + 0.22 : x + 0.5,
+                  y: ly - 0.02,
+                  z: hasNorthWall ? y + 0.22 : y + 0.5,
+                  phase: Math.random() * 10
+                });
               }
 
               // Yo'lak chetlariga haqiqiy 3D yog'och quti va bochkalar (harakatga xalaqit bermaydigan burchaklarda)
@@ -3287,6 +3289,17 @@
         addInstancedBatch(lanternCapGeo, lanternFrameMat, capTransforms);
         addInstancedBatch(crateGeo, crateMat, crateTransforms);
         addInstancedBatch(barrelGeo, barrelMat, barrelTransforms);
+
+        // Eng yaqin 4 ta fonus uchun Dinamik PointLight Hovuzi (20 ta chiroq o'rniga 6 ta -> 3.3x tez PBR shader!)
+        window._lanternLightPool = [];
+        const poolCount = Math.min(4, lanternLights.length);
+        for (let i = 0; i < poolCount; i++) {
+          const pLight = new THREE.PointLight(0xff9822, 1.65, 6.8, 1.8);
+          pLight.position.set(lanternLights[i].x, lanternLights[i].y, lanternLights[i].z);
+          pLight.userData.isMazePart = true;
+          threeScene.add(pLight);
+          window._lanternLightPool.push(pLight);
+        }
 
         // 4. Havoda suzib yuruvchi chang zarralari (Dust Motes in Lantern Light)
         const dustGeo = new THREE.BufferGeometry();
@@ -3593,7 +3606,7 @@
         const initGeo = (swatWalkGeometries && swatWalkGeometries[0]) ? swatWalkGeometries[0] : new THREE.BoxGeometry(0.4, 1.18, 0.4);
         const initMat = isAlly ? swatBlueMat : swatRedMat;
         const bodyMesh = new THREE.Mesh(initGeo, initMat);
-        bodyMesh.castShadow = true;
+        bodyMesh.castShadow = false;
         bodyMesh.receiveShadow = false;
         actorHolder.add(bodyMesh);
 
@@ -3608,9 +3621,9 @@
         actorHolder.add(rifleGrp);
 
         // Oyoq osti 3D soyasi (Ambient Occlusion Shadow)
-        const shadowGeo = new THREE.CircleGeometry(0.30, 16);
-        const shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.68 });
-        const shadowMesh = new THREE.Mesh(shadowGeo, shadowMat);
+        if (!window._sharedShadowGeo) window._sharedShadowGeo = new THREE.CircleGeometry(0.30, 12);
+        if (!window._sharedShadowMat) window._sharedShadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.68 });
+        const shadowMesh = new THREE.Mesh(window._sharedShadowGeo, window._sharedShadowMat);
         shadowMesh.rotation.x = -Math.PI / 2;
         shadowMesh.position.y = 0.01;
         group.add(shadowMesh);
@@ -3639,18 +3652,26 @@
             rebuildThreeMazeScene();
           }
 
-          if (threeRenderer.domElement.width !== w || threeRenderer.domElement.height !== h) {
-            threeRenderer.setSize(w, h, false);
+          const vpW = webglCanvas.clientWidth || w;
+          const vpH = webglCanvas.clientHeight || h;
+          if (vpW > 0 && vpH > 0 && (window._lastThreeVpW !== vpW || window._lastThreeVpH !== vpH)) {
+            window._lastThreeVpW = vpW;
+            window._lastThreeVpH = vpH;
+            threeRenderer.setSize(vpW, vpH, false);
           }
 
-          // #10: Mobil vertikal ekranda kengroq CS:GO FOV (84 gradus)
-          const aspect = w / h;
+          // #10: Mobil vertikal ekranda kengroq CS:GO FOV (84 gradus) — faqat o'zgarganda projectionMatrix yangilanadi
+          const aspect = vpW / Math.max(1, vpH);
           const baseFovDeg = aspect < 1 ? 84 : 70;
-          threeCamera.fov = player.adsZoom ? baseFovDeg * 0.62 : baseFovDeg;
-          threeCamera.aspect = aspect;
-          threeCamera.updateProjectionMatrix();
+          const targetFov = player.adsZoom ? baseFovDeg * 0.62 : baseFovDeg;
+          if (threeCamera.fov !== targetFov || Math.abs(threeCamera.aspect - aspect) > 0.001) {
+            threeCamera.fov = targetFov;
+            threeCamera.aspect = aspect;
+            threeCamera.updateProjectionMatrix();
+          }
 
-          const fogLevel = parseInt(document.getElementById('fogSlider').value, 10) || 2;
+          if (!window._fogSliderEl) window._fogSliderEl = document.getElementById('fogSlider');
+          const fogLevel = window._fogSliderEl ? (parseInt(window._fogSliderEl.value, 10) || 2) : 2;
           threeScene.fog.density = fogLevel === 3 ? 0.16 : (fogLevel === 2 ? 0.105 : 0.065);
 
           // #1: Kamera balandligi (camY = 1.04m) + O'q tekkanda kamera titrashi (hitShake) va vertikal mo'ljal (pitch)!
@@ -3675,9 +3696,39 @@
           }
 
           const nowSec = performance.now() * 0.001;
-          lanternLights.forEach(item => {
-            item.light.intensity = 1.55 + Math.sin(nowSec * 7.5 + item.phase) * 0.15;
-          });
+          const lightPool = window._lanternLightPool;
+          if (lightPool && lightPool.length > 0 && lanternLights.length > 0) {
+            const topIdx = [-1, -1, -1, -1];
+            const topD2 = [1e9, 1e9, 1e9, 1e9];
+            const px = player.x;
+            const pz = player.y;
+            for (let i = 0; i < lanternLights.length; i++) {
+              const l = lanternLights[i];
+              const dx = l.x - px;
+              const dz = l.z - pz;
+              const d2 = dx * dx + dz * dz;
+              for (let k = 0; k < lightPool.length; k++) {
+                if (d2 < topD2[k]) {
+                  for (let s = lightPool.length - 1; s > k; s--) {
+                    topD2[s] = topD2[s - 1];
+                    topIdx[s] = topIdx[s - 1];
+                  }
+                  topD2[k] = d2;
+                  topIdx[k] = i;
+                  break;
+                }
+              }
+            }
+            for (let k = 0; k < lightPool.length; k++) {
+              const li = topIdx[k];
+              if (li >= 0) {
+                const l = lanternLights[li];
+                const pl = lightPool[k];
+                pl.position.set(l.x, l.y, l.z);
+                pl.intensity = 1.65 + Math.sin(nowSec * 7.5 + l.phase) * 0.15;
+              }
+            }
+          }
 
           if (dustSystem) {
             dustSystem.rotation.y = nowSec * 0.02;
@@ -3721,7 +3772,8 @@
                 const normPhase = (((c.walkCycle / (Math.PI * 2)) % 1) + 1) % 1;
                 frameIdx = Math.floor(normPhase * 16) % 16;
               }
-              bm.geometry = swatWalkGeometries[frameIdx];
+              const nextGeo = swatWalkGeometries[frameIdx];
+              if (bm.geometry !== nextGeo) bm.geometry = nextGeo;
             }
 
             // #3: 3D Miltiq askar qo'lida 0° to'ppa-to'g'ri oldinga (+Z) qaratilgan + otganda Recoil
@@ -3764,7 +3816,8 @@
             // #2: Askar har doim o'zining haqiqiy 3D SWAT teksturasida qoladi (pushti siluet yo'q!)
             const isAlly = (c.team === player.team);
             if (swatBlueMat && swatRedMat) {
-              bm.material = isAlly ? swatBlueMat : swatRedMat;
+              const nextMat = isAlly ? swatBlueMat : swatRedMat;
+              if (bm.material !== nextMat) bm.material = nextMat;
             }
 
             if (ud.flashMesh) {
