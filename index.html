@@ -625,7 +625,7 @@
             <span id="hudRedScore" class="retro-font text-xs sm:text-base text-red-500 inline-block">0</span>
           </div>
           <div class="text-center border-x border-zinc-800 px-2">
-            <span id="hudModeBadge" class="block text-[8px] font-mono uppercase text-amber-400">RAUND 1/5</span>
+            <span id="hudModeBadge" class="block text-[8px] font-mono uppercase text-amber-400">TDM • VAQT</span>
             <span id="hudTimer" class="font-mono text-xs sm:text-sm font-bold text-zinc-100">02:00</span>
           </div>
           <div class="text-center">
@@ -831,18 +831,88 @@
 
     </div>
 
-    <!-- Raund / O'yin Tugashi Modal Oynasi -->
-    <div id="matchEndModal" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
-      <div class="bg-zinc-950 border-2 border-red-600 rounded-2xl max-w-md w-full p-5 text-center shadow-2xl blood-glow">
-        <div id="matchEndIcon" class="text-4xl mb-2">🏆</div>
-        <h2 id="matchEndTitle" class="retro-font text-base sm:text-xl text-amber-400 mb-2">QIZIL JAMOA G'OLIB!</h2>
-        <p id="matchEndSummary" class="text-xs sm:text-sm text-zinc-300 mb-2">Siz labirint ichida 6 ta raqibni yo'q qildingiz!</p>
-        <div id="matchMvpBox" class="bg-amber-500/15 border border-amber-500/40 rounded-xl px-3 py-2 mb-4 text-xs font-bold text-amber-300">⭐ MVP (Eng yaxshi o'yinchi): Sardor_UZ</div>
-        <div class="flex gap-2.5">
-          <button id="btnRematch" class="flex-1 bg-red-600 hover:bg-red-500 text-white font-bold text-xs py-2.5 px-4 rounded-xl transition">
+    <!-- O'yin Tugashi: PUBG TDM Uslubidagi Yakuniy Natija va 2 Jamoali Jadval -->
+    <div id="matchEndModal" class="hidden fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center p-2.5 sm:p-4">
+      <div id="matchEndCard" class="bg-zinc-950 border-2 border-amber-500/80 rounded-2xl max-w-2xl w-full max-h-[92vh] flex flex-col overflow-hidden shadow-2xl">
+        <!-- Yuqori Sarlavha, Yirik Hisob va MVP -->
+        <div class="shrink-0 bg-gradient-to-b from-zinc-900 to-zinc-950 border-b border-zinc-800 px-3.5 py-3 text-center">
+          <div class="flex items-center justify-center gap-2 mb-0.5">
+            <span id="matchEndIcon" class="text-2xl sm:text-3xl">🏆</span>
+            <h2 id="matchEndTitle" class="retro-font text-sm sm:text-lg text-amber-400 tracking-wide">G'ALABA!</h2>
+          </div>
+          <p id="matchEndSummary" class="text-[11px] sm:text-xs text-zinc-400 mb-2.5">Vaqt tugadi! Yakuniy jang natijalari</p>
+
+          <!-- 2 Jamoa Yirik Hisob Tablosi -->
+          <div class="grid grid-cols-3 items-center bg-black/65 border border-zinc-800 rounded-xl px-3 py-2 mb-2">
+            <div class="text-left">
+              <div class="text-[9px] sm:text-[10px] font-extrabold text-red-400 uppercase tracking-wider">🔴 T-FORCE</div>
+              <div id="matchEndRedScore" class="retro-font text-xl sm:text-2xl text-red-500 leading-tight">0</div>
+            </div>
+            <div class="text-center">
+              <span class="inline-block text-[8px] sm:text-[9px] font-mono uppercase text-zinc-400 bg-zinc-900 border border-zinc-700 rounded-md px-2 py-0.5">YAKUNIY HISOB</span>
+            </div>
+            <div class="text-right">
+              <div class="text-[9px] sm:text-[10px] font-extrabold text-blue-400 uppercase tracking-wider">CT-SPEC 🔵</div>
+              <div id="matchEndBlueScore" class="retro-font text-xl sm:text-2xl text-blue-500 leading-tight">0</div>
+            </div>
+          </div>
+
+          <!-- Match MVP va Mukofotlar -->
+          <div class="flex flex-wrap items-center justify-center gap-1.5 text-[10px] sm:text-xs font-bold">
+            <div id="matchMvpBox" class="bg-amber-500/15 border border-amber-500/40 rounded-lg px-2.5 py-1 text-amber-300">⭐ Match MVP: -</div>
+            <div id="matchEndRewardBox" class="bg-emerald-500/15 border border-emerald-500/40 rounded-lg px-2.5 py-1 text-emerald-300">💰 +0 | 📈 +0 ELO</div>
+          </div>
+        </div>
+
+        <!-- 2 Jamoa O'yinchilarining Batafsil Statistikasi (PUBG TDM Jadvali) -->
+        <div class="flex-1 overflow-y-auto p-2.5 sm:p-3 space-y-2.5 sm:space-y-0 sm:grid sm:grid-cols-2 sm:gap-3">
+          <!-- QIZIL JAMOA -->
+          <div class="bg-red-950/20 border border-red-500/35 rounded-xl overflow-hidden">
+            <div class="bg-red-950/65 border-b border-red-500/30 px-2.5 py-1.5 flex items-center justify-between">
+              <span class="text-[11px] font-black text-red-400 tracking-wide">🔴 T-FORCE (QIZIL)</span>
+              <span id="matchEndRedTeamTotal" class="font-mono text-[11px] font-bold text-red-200">0 Frag</span>
+            </div>
+            <table class="w-full text-left text-[11px] border-collapse">
+              <thead>
+                <tr class="text-[9px] uppercase text-zinc-400 border-b border-zinc-800/80 bg-black/35">
+                  <th class="py-1 px-2 w-6">#</th>
+                  <th class="py-1 px-1.5">O'yinchi</th>
+                  <th class="py-1 px-1.5 text-center text-emerald-400">Kill</th>
+                  <th class="py-1 px-1.5 text-center text-zinc-400">O'lim</th>
+                  <th class="py-1 px-2 text-right text-amber-300">K/D</th>
+                </tr>
+              </thead>
+              <tbody id="matchEndRedList" class="divide-y divide-zinc-800/60"></tbody>
+            </table>
+          </div>
+
+          <!-- KO'K JAMOA -->
+          <div class="bg-blue-950/20 border border-blue-500/35 rounded-xl overflow-hidden">
+            <div class="bg-blue-950/65 border-b border-blue-500/30 px-2.5 py-1.5 flex items-center justify-between">
+              <span class="text-[11px] font-black text-blue-400 tracking-wide">🔵 CT-SPEC (KO'K)</span>
+              <span id="matchEndBlueTeamTotal" class="font-mono text-[11px] font-bold text-blue-200">0 Frag</span>
+            </div>
+            <table class="w-full text-left text-[11px] border-collapse">
+              <thead>
+                <tr class="text-[9px] uppercase text-zinc-400 border-b border-zinc-800/80 bg-black/35">
+                  <th class="py-1 px-2 w-6">#</th>
+                  <th class="py-1 px-1.5">O'yinchi</th>
+                  <th class="py-1 px-1.5 text-center text-emerald-400">Kill</th>
+                  <th class="py-1 px-1.5 text-center text-zinc-400">O'lim</th>
+                  <th class="py-1 px-2 text-right text-amber-300">K/D</th>
+                </tr>
+              </thead>
+              <tbody id="matchEndBlueList" class="divide-y divide-zinc-800/60"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Pastki Doimiy Tugmalar -->
+        <div class="shrink-0 bg-zinc-900/95 border-t border-zinc-800 px-3 py-2.5 flex gap-2.5">
+          <button id="btnRematch" class="flex-1 bg-red-600 hover:bg-red-500 active:scale-95 text-white font-bold text-xs py-2.5 px-4 rounded-xl transition shadow-lg">
             🔄 Qayta O'ynash
           </button>
-          <button id="btnEndToLobby" class="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs py-2.5 px-4 rounded-xl transition">
+          <button id="btnEndToLobby" class="flex-1 bg-zinc-800 hover:bg-zinc-700 active:scale-95 text-zinc-100 font-bold text-xs py-2.5 px-4 rounded-xl transition border border-zinc-700">
             🏠 Lobbiga Qaytish
           </button>
         </div>
@@ -2453,57 +2523,159 @@
         updateHud();
       }
 
-      // --- #31 RAUND TIZIMI VA #32 MVP TAQDIRLASH ---
+      // --- #31 UZLUKSIZ VAQTGA ASOSLANGAN TDM REJIMI VA #32 PUBG USLUBIDAGI YAKUNIY JADVAL ---
       function checkMatchWinCondition() {
-        const winTarget = gameMode === '1v1' ? 7 : 20;
-        if (redScore >= winTarget || blueScore >= winTarget) {
-          finishMatch(redScore >= winTarget ? 'red' : 'blue');
-        }
+        // O'yin taymer 00:00 ga yetmaguncha to'xtamaydi! G'olib faqat vaqt tugaganda aniqlanadi.
+        return;
       }
 
       function finishMatch(winnerTeam) {
         gameRunning = false;
+        stopAllMovement();
         if (animFrameId) cancelAnimationFrame(animFrameId);
         if (matchIntervalId) clearInterval(matchIntervalId);
 
+        const sbModal = document.getElementById('scoreboardModal');
+        if (sbModal) sbModal.classList.add('hidden');
+
         const modal = document.getElementById('matchEndModal');
+        const card = document.getElementById('matchEndCard');
         const title = document.getElementById('matchEndTitle');
         const summary = document.getElementById('matchEndSummary');
         const icon = document.getElementById('matchEndIcon');
         const mvpBox = document.getElementById('matchMvpBox');
+        const rewardBox = document.getElementById('matchEndRewardBox');
+        const redScoreEl = document.getElementById('matchEndRedScore');
+        const blueScoreEl = document.getElementById('matchEndBlueScore');
+        const redTotalEl = document.getElementById('matchEndRedTeamTotal');
+        const blueTotalEl = document.getElementById('matchEndBlueTeamTotal');
+        const redListEl = document.getElementById('matchEndRedList');
+        const blueListEl = document.getElementById('matchEndBlueList');
 
-        // #32 Eng ko'p Frag olgan MVP o'yinchini aniqlash
-        let mvpName = myProfile.name;
-        let mvpKills = player.kills;
-        combatants.forEach(c => {
-          if ((c.kills || 0) > mvpKills) {
-            mvpKills = c.kills;
-            mvpName = c.name;
-          }
-        });
-        if (mvpBox) {
-          mvpBox.textContent = `⭐ Match MVP: ${mvpName} (${mvpKills} Frag)`;
+        const escHtml = (s) => String(s || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+
+        // Barcha jangchilarni yig'ish (Siz + barcha botlar)
+        const allParticipants = [
+          {
+            id: '__SELF__',
+            name: myProfile.name || 'Jangchi',
+            team: player.team,
+            kills: player.kills || 0,
+            deaths: player.deaths || 0,
+            isSelf: true
+          },
+          ...combatants.map(c => ({
+            id: c.id,
+            name: c.name,
+            team: c.team,
+            kills: c.kills || 0,
+            deaths: c.deaths || 0,
+            isSelf: false
+          }))
+        ];
+
+        const sortByPerformance = (a, b) => (b.kills - a.kills) || (a.deaths - b.deaths);
+        const rankedAll = [...allParticipants].sort(sortByPerformance);
+        const mvpRow = rankedAll[0] || allParticipants[0];
+
+        const redTeamRows = allParticipants.filter(p => p.team === 'red').sort(sortByPerformance);
+        const blueTeamRows = allParticipants.filter(p => p.team === 'blue').sort(sortByPerformance);
+
+        const renderTeamRowsHtml = (rows) => rows.map((r, idx) => {
+          const isMvp = mvpRow && r.id === mvpRow.id && r.kills > 0;
+          const kd = (r.kills / Math.max(1, r.deaths)).toFixed(1);
+          const rowBg = r.isSelf
+            ? 'bg-amber-500/20 font-extrabold'
+            : (idx % 2 === 1 ? 'bg-white/[0.02]' : '');
+          const nameCls = r.isSelf ? 'text-amber-300' : 'text-zinc-100';
+          const selfTag = r.isSelf
+            ? '<span class="ml-1 text-[8px] bg-amber-500/30 border border-amber-400/50 text-amber-200 px-1 py-0.5 rounded uppercase">Siz</span>'
+            : '';
+          const mvpTag = isMvp
+            ? '<span class="ml-1 text-[8px] bg-yellow-400/25 border border-yellow-400/60 text-yellow-300 px-1 py-0.5 rounded font-black">👑 MVP</span>'
+            : '';
+          return `
+            <tr class="${rowBg}">
+              <td class="py-1.5 px-2 font-mono text-[10px] text-zinc-500">${idx + 1}</td>
+              <td class="py-1.5 px-1.5 ${nameCls} truncate max-w-[130px]">${escHtml(r.name)}${selfTag}${mvpTag}</td>
+              <td class="py-1.5 px-1.5 text-center font-mono font-bold text-emerald-400">${r.kills}</td>
+              <td class="py-1.5 px-1.5 text-center font-mono text-zinc-400">${r.deaths}</td>
+              <td class="py-1.5 px-2 text-right font-mono text-[10px] text-amber-300">${kd}</td>
+            </tr>
+          `;
+        }).join('');
+
+        if (redScoreEl) redScoreEl.textContent = String(redScore);
+        if (blueScoreEl) blueScoreEl.textContent = String(blueScore);
+        if (redTotalEl) redTotalEl.textContent = `${redScore} Frag`;
+        if (blueTotalEl) blueTotalEl.textContent = `${blueScore} Frag`;
+        if (redListEl) redListEl.innerHTML = renderTeamRowsHtml(redTeamRows);
+        if (blueListEl) blueListEl.innerHTML = renderTeamRowsHtml(blueTeamRows);
+
+        if (mvpBox && mvpRow) {
+          mvpBox.textContent = `⭐ Match MVP: ${mvpRow.name} (${mvpRow.kills} Frag)`;
         }
 
-        const didWin = winnerTeam === player.team;
-        if (didWin) {
-          userStats.elo += 45;
-          userStats.coins += 850;
+        const isDraw = winnerTeam === 'draw';
+        const didWin = !isDraw && winnerTeam === player.team;
+        let coinReward = 250;
+        let eloDelta = -15;
+
+        if (isDraw) {
+          coinReward = 500;
+          eloDelta = 10;
+          userStats.elo += eloDelta;
+          userStats.coins += coinReward;
+        } else if (didWin) {
+          coinReward = 850;
+          eloDelta = 45;
+          userStats.elo += eloDelta;
+          userStats.coins += coinReward;
         } else {
-          userStats.elo = Math.max(800, userStats.elo - 15);
-          userStats.coins += 250;
+          coinReward = 250;
+          eloDelta = -15;
+          userStats.elo = Math.max(800, userStats.elo + eloDelta);
+          userStats.coins += coinReward;
         }
+
         userStats.totalKills = (userStats.totalKills || 0) + (player.kills || 0);
         userStats.botLevel = Math.min(5, Math.max(1, Math.floor((userStats.elo - 900) / 80) + 1));
         saveUserData();
         updateMainMenuWidgets();
-        icon.textContent = didWin ? '🏆' : '💀';
-        title.textContent = winnerTeam === 'red' ? '🔴 T-FORCE (QIZIL) G\'OLIB!' : '🔵 CT-SPEC (KO\'K) G\'OLIB!';
-        summary.textContent = `Hisob: Qizil ${redScore} - ${blueScore} Ko'k. Siz labirintda ${player.kills} ta raqibni yo'q qildingiz!`;
-        modal.classList.remove('hidden');
 
-        // #32 Ovozli g'alaba e'loni
-        announceVoice(winnerTeam === 'red' ? 'Red Force Wins! Counter Strike MVP ' + mvpName : 'Blue Counter Spec Wins! MVP ' + mvpName);
+        if (rewardBox) {
+          const eloSign = eloDelta >= 0 ? `+${eloDelta}` : String(eloDelta);
+          rewardBox.textContent = `💰 +${coinReward} Tanga  |  📈 ${eloSign} ELO`;
+        }
+
+        if (card) {
+          card.classList.remove('border-amber-500/80', 'border-red-600', 'border-emerald-500/80');
+          card.classList.add(isDraw ? 'border-amber-500/80' : (didWin ? 'border-emerald-500/80' : 'border-red-600'));
+        }
+
+        if (isDraw) {
+          icon.textContent = '🤝';
+          title.textContent = 'DURRANG! TENGLIK';
+          title.className = 'retro-font text-sm sm:text-lg text-amber-400 tracking-wide';
+          summary.textContent = `Vaqt tugadi! Hisob teng (${redScore} - ${blueScore}). Siz ${player.kills} ta raqibni yo'q qildingiz!`;
+          announceVoice('Match Draw! MVP ' + (mvpRow ? mvpRow.name : myProfile.name));
+        } else {
+          icon.textContent = didWin ? '🏆' : '💀';
+          title.textContent = winnerTeam === 'red' ? "🔴 T-FORCE (QIZIL) G'OLIB!" : "🔵 CT-SPEC (KO'K) G'OLIB!";
+          title.className = didWin
+            ? 'retro-font text-sm sm:text-lg text-emerald-400 tracking-wide'
+            : 'retro-font text-sm sm:text-lg text-red-400 tracking-wide';
+          summary.textContent = didWin
+            ? `G'ALABA! Siz ${player.kills} frag / ${player.deaths} o'lim natija ko'rsatdingiz!`
+            : `MAG'LUBIYAT! Siz ${player.kills} frag / ${player.deaths} o'lim natija ko'rsatdingiz.`;
+          announceVoice(winnerTeam === 'red' ? 'Red Force Wins! Counter Strike MVP ' + (mvpRow ? mvpRow.name : myProfile.name) : 'Blue Counter Spec Wins! MVP ' + (mvpRow ? mvpRow.name : myProfile.name));
+        }
+
+        modal.classList.remove('hidden');
       }
 
       function updatePlayerMovement(dt) {
@@ -4494,7 +4666,15 @@
         blueScore = 0;
         currentRound = 1;
         matchSecondsLeft = 120;
-        document.getElementById('hudModeBadge').textContent = gameMode === '1v1' ? '1V1 DUEL' : `RAUND ${currentRound}/${maxRounds}`;
+        const modeBadgeEl = document.getElementById('hudModeBadge');
+        if (modeBadgeEl) {
+          modeBadgeEl.textContent = gameMode === '1v1' ? '1V1 DUEL' : (gameMode === '5v5' ? '5V5 TDM' : '4V4 TDM');
+        }
+        const initTimerEl = document.getElementById('hudTimer');
+        if (initTimerEl) {
+          initTimerEl.textContent = '02:00';
+          initTimerEl.className = 'font-mono text-xs sm:text-sm font-bold text-zinc-100';
+        }
 
         stopAllMovement();
         player.spawnShieldUntil = performance.now() + 3000;
@@ -4508,18 +4688,19 @@
           matchSecondsLeft = Math.max(0, matchSecondsLeft - 1);
           const mins = String(Math.floor(matchSecondsLeft / 60)).padStart(2, '0');
           const secs = String(matchSecondsLeft % 60).padStart(2, '0');
-          document.getElementById('hudTimer').textContent = `${mins}:${secs}`;
-          // #31 Raund vaqti tugaganda keyingi raundga o'tish yoki o'yinni yakunlash
+          const timerEl = document.getElementById('hudTimer');
+          if (timerEl) {
+            timerEl.textContent = `${mins}:${secs}`;
+            timerEl.className = (matchSecondsLeft <= 10 && matchSecondsLeft > 0)
+              ? 'font-mono text-xs sm:text-sm font-extrabold text-red-400 animate-pulse'
+              : 'font-mono text-xs sm:text-sm font-bold text-zinc-100';
+          }
+          if (matchSecondsLeft === 10) {
+            showCsEventBanner('⏳ OXIRGI 10 SONIYA!');
+          }
           if (matchSecondsLeft <= 0) {
-            if (currentRound < maxRounds) {
-              currentRound++;
-              matchSecondsLeft = 120;
-              document.getElementById('hudModeBadge').textContent = `RAUND ${currentRound}/${maxRounds}`;
-              spawnCombatants(false);
-              showCsEventBanner(`⚔️ RAUND ${currentRound} BOSHLANDI!`);
-            } else {
-              finishMatch(redScore >= blueScore ? 'red' : 'blue');
-            }
+            const winner = redScore > blueScore ? 'red' : (blueScore > redScore ? 'blue' : 'draw');
+            finishMatch(winner);
           }
         }, 1000);
 
