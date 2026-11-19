@@ -2528,7 +2528,7 @@
 
         const isSprinting = false;
         const taggingMult = now < player.taggedSlowUntil ? 0.68 : 1.0;
-        const maxSpeed = (player.adsZoom ? 2.15 : 4.55) * taggingMult;
+        const maxSpeed = (player.adsZoom ? 1.95 : 3.65) * taggingMult;
 
         let forwardInput = (keys.w ? 1 : 0) - (keys.s ? 1 : 0) - player.moveJoyY;
         let strafeInput = (keys.d ? 1 : 0) - (keys.a ? 1 : 0) + player.moveJoyX;
