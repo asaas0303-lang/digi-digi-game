@@ -389,7 +389,9 @@ const WS_PONG_FRAME = Buffer.from([0x81, 0x01, 0x70]); // FIN=1, Text, 1 bayt: "
 const WS_CTRL_PONG = Buffer.from([0x8a, 0x00]);
 
 httpServer.on("upgrade", (req, socket, head) => {
-  console.log("[WS] Upgrade event received:", req.url, "key:", req.headers["sec-websocket-key"]);
+  console.log("[WS] Upgrade event received:", req.url, "headers:", JSON.stringify(req.headers));
+  socket.on("close", (hadError) => console.log("[WS] Socket closed, hadError:", hadError));
+  socket.on("end", () => console.log("[WS] Socket ended by peer"));
   try {
     if (!req.url || !req.url.startsWith("/ws/ping")) {
       console.log("[WS] Rejected URL:", req.url);
