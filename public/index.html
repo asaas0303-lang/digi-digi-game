@@ -876,6 +876,11 @@
         return curve;
       }
 
+      let masterGain = null;
+      let masterCompressor = null;
+      let _activeAudioVoices = 0;
+      const _soundCooldownMap = {};
+
       function initAudio() {
         try {
           if (!audioCtx) {
@@ -883,43 +888,66 @@
             if (AudioContextClass) {
               audioCtx = new AudioContextClass();
               const sr = audioCtx.sampleRate;
-              whiteNoiseBuf = audioCtx.createBuffer(1, sr * 0.65, sr);
-              const wData = whiteNoiseBuf.getChannelData(0);
-              for (let i = 0; i < wData.length; i++) wData[i] = Math.random() * 2 - 1;
 
-              brownNoiseBuf = audioCtx.createBuffer(1, sr * 0.65, sr);
+              // Master Gain + DynamicsCompressor Limiter (5v5 otishmada ovoz buzilishi va o'chib qolishini 100% to'xtatadi)
+              masterGain = audioCtx.createGain();
+              masterGain.gain.value = 0.72;
+              if (audioCtx.createDynamicsCompressor) {
+                masterCompressor = audioCtx.createDynamicsCompressor();
+                masterCompressor.threshold.setValueAtTime(-10, audioCtx.currentTime);
+                masterCompressor.knee.setValueAtTime(12, audioCtx.currentTime);
+                masterCompressor.ratio.setValueAtTime(12, audioCtx.currentTime);
+                masterCompressor.attack.setValueAtTime(0.003, audioCtx.currentTime);
+                masterCompressor.release.setValueAtTime(0.12, audioCtx.currentTime);
+                masterGain.connect(masterCompressor);
+                masterCompressor.connect(audioCtx.destination);
+              } else {
+                masterGain.connect(audioCtx.destination);
+              }
+
+              // Iliq zarba (tanh saturation) buferga 1 marta singdiriladi -> har o'qda og'ir WaveShaperNode kerak emas!
+              whiteNoiseBuf = audioCtx.createBuffer(1, Math.floor(sr * 0.5), sr);
+              const wData = whiteNoiseBuf.getChannelData(0);
+              for (let i = 0; i < wData.length; i++) {
+                wData[i] = Math.tanh((Math.random() * 2 - 1) * 1.9);
+              }
+
+              brownNoiseBuf = audioCtx.createBuffer(1, Math.floor(sr * 0.5), sr);
               const bData = brownNoiseBuf.getChannelData(0);
               let lastOut = 0.0;
               for (let i = 0; i < bData.length; i++) {
                 const white = Math.random() * 2 - 1;
-                bData[i] = (lastOut + 0.02 * white) / 1.02;
-                lastOut = bData[i];
-                bData[i] *= 3.5;
+                lastOut = (lastOut + 0.02 * white) / 1.02;
+                bData[i] = Math.tanh(lastOut * 4.2);
               }
-              distCurve = makeDistortionCurve(200);
+              distCurve = null;
             }
           }
-          if (audioCtx && audioCtx.state === 'suspended') {
-            audioCtx.resume();
+          if (audioCtx && (audioCtx.state === 'suspended' || audioCtx.state === 'interrupted')) {
+            audioCtx.resume().catch(function(){});
           }
         } catch (e) {}
       }
 
-      // #16 3D Stereo Panner bilan tovushni chap/o'ng quloqqa yo'naltirish
+      // #16 3D Stereo Panner (faqat chap/o'ng sezilarli bo'lganda panner yaratadi va Master Limiter ga ulaydi)
       function connectWithPan(node, panVal) {
-        if (!audioCtx) return;
-        if (audioCtx.createStereoPanner && typeof panVal === 'number' && !isNaN(panVal)) {
+        if (!audioCtx) return null;
+        const dest = masterGain || audioCtx.destination;
+        if (audioCtx.createStereoPanner && typeof panVal === 'number' && !isNaN(panVal) && Math.abs(panVal) > 0.06) {
           const panner = audioCtx.createStereoPanner();
           panner.pan.value = Math.max(-1, Math.min(1, panVal));
           node.connect(panner);
-          panner.connect(audioCtx.destination);
+          panner.connect(dest);
+          return panner;
         } else {
-          node.connect(audioCtx.destination);
+          node.connect(dest);
+          return null;
         }
       }
 
       function triggerNoiseLayer(buf, filterType, startFreq, endFreq, duration, gainVal, delaySec, panVal) {
-        if (!audioCtx || !buf) return;
+        if (!audioCtx || !buf || _activeAudioVoices >= 16) return;
+        _activeAudioVoices++;
         const t0 = audioCtx.currentTime + (delaySec || 0);
         const src = audioCtx.createBufferSource();
         src.buffer = buf;
@@ -931,34 +959,57 @@
           filter.frequency.exponentialRampToValueAtTime(Math.max(30, endFreq), t0 + duration);
         }
 
-        const shaper = audioCtx.createWaveShaper();
-        if (distCurve) shaper.curve = distCurve;
-
         const gain = audioCtx.createGain();
-        gain.gain.setValueAtTime(gainVal, t0);
-        gain.gain.exponentialRampToValueAtTime(0.006, t0 + duration);
+        gain.gain.setValueAtTime(Math.max(0.005, gainVal), t0);
+        gain.gain.exponentialRampToValueAtTime(0.005, t0 + duration);
 
         src.connect(filter);
-        filter.connect(shaper);
-        shaper.connect(gain);
-        connectWithPan(gain, panVal || 0);
+        filter.connect(gain);
+        const panner = connectWithPan(gain, panVal || 0);
+
+        let cleaned = false;
+        src.onended = function() {
+          if (cleaned) return;
+          cleaned = true;
+          _activeAudioVoices = Math.max(0, _activeAudioVoices - 1);
+          try {
+            src.disconnect();
+            filter.disconnect();
+            gain.disconnect();
+            if (panner) panner.disconnect();
+          } catch (e) {}
+        };
 
         src.start(t0);
         src.stop(t0 + duration + 0.01);
       }
 
       function triggerSubPunch(startFreq, endFreq, duration, gainVal, delaySec, panVal) {
-        if (!audioCtx) return;
+        if (!audioCtx || _activeAudioVoices >= 18) return;
+        _activeAudioVoices++;
         const t0 = audioCtx.currentTime + (delaySec || 0);
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.type = 'sine';
         osc.frequency.setValueAtTime(startFreq, t0);
         osc.frequency.exponentialRampToValueAtTime(Math.max(24, endFreq), t0 + duration);
-        gain.gain.setValueAtTime(gainVal, t0);
+        gain.gain.setValueAtTime(Math.max(0.005, gainVal), t0);
         gain.gain.exponentialRampToValueAtTime(0.005, t0 + duration);
         osc.connect(gain);
-        connectWithPan(gain, panVal || 0);
+        const panner = connectWithPan(gain, panVal || 0);
+
+        let cleaned = false;
+        osc.onended = function() {
+          if (cleaned) return;
+          cleaned = true;
+          _activeAudioVoices = Math.max(0, _activeAudioVoices - 1);
+          try {
+            osc.disconnect();
+            gain.disconnect();
+            if (panner) panner.disconnect();
+          } catch (e) {}
+        };
+
         osc.start(t0);
         osc.stop(t0 + duration + 0.01);
       }
@@ -969,61 +1020,78 @@
           initAudio();
           if (!audioCtx) return;
           const vol = Math.max(0.12, Math.min(1.0, distScale));
+          const vScale = vol;
+          const t0 = audioCtx.currentTime;
+          const nowMs = performance.now();
+
+          // Android Audio HAL tiqilib qolmasligi uchun tez-tez takrorlanuvchi bot va qadam tovushlariga aqlli chegara
+          if (type === 'shoot_pistol' && distScale < 0.95) {
+            if (nowMs - (_soundCooldownMap.bot_shoot || 0) < 70 || _activeAudioVoices >= 12) return;
+            _soundCooldownMap.bot_shoot = nowMs;
+          } else if (type === 'step') {
+            if (nowMs - (_soundCooldownMap.step || 0) < 60 || _activeAudioVoices >= 10) return;
+            _soundCooldownMap.step = nowMs;
+          } else if (type === 'hit') {
+            if (nowMs - (_soundCooldownMap.hit || 0) < 40) return;
+            _soundCooldownMap.hit = nowMs;
+          } else if (type === 'shell_drop') {
+            if (nowMs - (_soundCooldownMap.shell || 0) < 75 || _activeAudioVoices >= 10) return;
+            _soundCooldownMap.shell = nowMs;
+          }
 
           if (type === 'shoot_pistol') {
-            triggerSubPunch(195, 42, 0.09, 0.78 * vol, 0, panVal);
-            triggerNoiseLayer(whiteNoiseBuf, 'bandpass', 2400, 620, 0.11, 0.68 * vol, 0, panVal);
-            triggerNoiseLayer(brownNoiseBuf, 'lowpass', 540, 120, 0.16, 0.58 * vol, 0.01, panVal);
-            triggerNoiseLayer(whiteNoiseBuf, 'highpass', 4500, 3900, 0.04, 0.25 * vol, 0.12, panVal);
+            if (distScale < 0.85) {
+              // Uzoq bot otishmasi: 2 ta yengil qatlam (CPU 2x tejaladi, 3D stereo saqlanadi)
+              triggerSubPunch(190, 46, 0.08, 0.55 * vol, 0, panVal);
+              triggerNoiseLayer(whiteNoiseBuf, 'bandpass', 2200, 650, 0.10, 0.50 * vol, 0, panVal);
+            } else {
+              triggerSubPunch(195, 42, 0.09, 0.72 * vol, 0, panVal);
+              triggerNoiseLayer(whiteNoiseBuf, 'bandpass', 2400, 620, 0.11, 0.62 * vol, 0, panVal);
+              triggerNoiseLayer(brownNoiseBuf, 'lowpass', 540, 120, 0.15, 0.50 * vol, 0.01, panVal);
+            }
           } else if (type === 'shoot_shotgun') {
-            triggerSubPunch(150, 26, 0.24, 0.98 * vol, 0, panVal);
-            triggerNoiseLayer(brownNoiseBuf, 'lowpass', 720, 90, 0.36, 0.88 * vol, 0, panVal);
-            triggerNoiseLayer(whiteNoiseBuf, 'bandpass', 1850, 360, 0.25, 0.78 * vol, 0, panVal);
-            triggerNoiseLayer(whiteNoiseBuf, 'bandpass', 3200, 2200, 0.06, 0.35 * vol, 0.28, panVal);
-            triggerNoiseLayer(whiteNoiseBuf, 'bandpass', 2600, 3700, 0.07, 0.38 * vol, 0.38, panVal);
+            triggerSubPunch(150, 26, 0.22, 0.88 * vol, 0, panVal);
+            triggerNoiseLayer(brownNoiseBuf, 'lowpass', 720, 90, 0.30, 0.78 * vol, 0, panVal);
+            triggerNoiseLayer(whiteNoiseBuf, 'bandpass', 1850, 360, 0.22, 0.68 * vol, 0, panVal);
+            triggerNoiseLayer(whiteNoiseBuf, 'bandpass', 2800, 3500, 0.06, 0.30 * vol, 0.28, panVal);
           } else if (type === 'shoot_plasma') {
-            triggerSubPunch(660, 95, 0.16, 0.65 * vol, 0, panVal);
-            triggerNoiseLayer(whiteNoiseBuf, 'bandpass', 3600, 820, 0.14, 0.5 * vol, 0, panVal);
-            triggerSubPunch(1450, 310, 0.12, 0.4 * vol, 0.02, panVal);
+            triggerSubPunch(660, 95, 0.15, 0.60 * vol, 0, panVal);
+            triggerNoiseLayer(whiteNoiseBuf, 'bandpass', 3600, 820, 0.13, 0.45 * vol, 0, panVal);
           } else if (type === 'knife_slash') {
-            triggerNoiseLayer(whiteNoiseBuf, 'highpass', 3200, 1400, 0.09, 0.55 * vol, 0, panVal);
-            triggerSubPunch(280, 90, 0.07, 0.4 * vol, 0.02, panVal);
+            triggerNoiseLayer(whiteNoiseBuf, 'highpass', 3200, 1400, 0.09, 0.50 * vol, 0, panVal);
+            triggerSubPunch(280, 90, 0.07, 0.38 * vol, 0.02, panVal);
           } else if (type === 'reload') {
-            triggerNoiseLayer(whiteNoiseBuf, 'bandpass', 2800, 1900, 0.06, 0.4, 0.0, 0);
-            triggerNoiseLayer(whiteNoiseBuf, 'bandpass', 2200, 3400, 0.07, 0.45, 0.28, 0);
-            triggerSubPunch(220, 140, 0.06, 0.35, 0.52, 0);
+            triggerNoiseLayer(whiteNoiseBuf, 'bandpass', 2800, 1900, 0.06, 0.38, 0.0, 0);
+            triggerNoiseLayer(whiteNoiseBuf, 'bandpass', 2200, 3400, 0.07, 0.42, 0.28, 0);
+            triggerSubPunch(220, 140, 0.06, 0.32, 0.52, 0);
           } else if (type === 'shell_drop') {
-            triggerSubPunch(3800, 2900, 0.035, 0.16 * vol, 0.22, 0.35);
-            triggerSubPunch(4200, 3200, 0.03, 0.12 * vol, 0.31, 0.4);
+            triggerSubPunch(3900, 2900, 0.035, 0.14 * vol, 0.22, 0.35);
           } else if (type === 'grenade_explode') {
-            triggerSubPunch(110, 22, 0.55, 1.0, 0, panVal);
-            triggerNoiseLayer(brownNoiseBuf, 'lowpass', 480, 65, 0.6, 0.95, 0, panVal);
-            triggerNoiseLayer(whiteNoiseBuf, 'bandpass', 1200, 220, 0.45, 0.8, 0.02, panVal);
+            triggerSubPunch(110, 22, 0.45, 0.90, 0, panVal);
+            triggerNoiseLayer(brownNoiseBuf, 'lowpass', 480, 65, 0.48, 0.82, 0, panVal);
+            triggerNoiseLayer(whiteNoiseBuf, 'bandpass', 1200, 220, 0.38, 0.68, 0.02, panVal);
           } else if (type === 'smoke_hiss') {
-            triggerNoiseLayer(whiteNoiseBuf, 'bandpass', 2600, 1600, 0.55, 0.45, 0, panVal);
+            triggerNoiseLayer(whiteNoiseBuf, 'bandpass', 2600, 1600, 0.45, 0.40, 0, panVal);
           } else if (type === 'headshot') {
             // CS Headshot helmet "Dink!" sound
-            triggerSubPunch(1850, 1220, 0.11, 0.65, 0, panVal);
-            triggerNoiseLayer(whiteNoiseBuf, 'highpass', 3500, 2000, 0.08, 0.5, 0, panVal);
+            triggerSubPunch(1850, 1220, 0.11, 0.62, 0, panVal);
+            triggerNoiseLayer(whiteNoiseBuf, 'highpass', 3500, 2000, 0.08, 0.45, 0, panVal);
           } else if (type === 'step') {
             stepFootToggle = !stepFootToggle;
             const pitch = stepFootToggle ? 118 : 98;
             const gravelFreq = stepFootToggle ? 1150 : 940;
-            triggerSubPunch(pitch, 32, 0.08, 0.58 * vol, 0, panVal);
-            triggerNoiseLayer(brownNoiseBuf, 'bandpass', gravelFreq, 420, 0.07, 0.48 * vol, 0.008, panVal);
+            triggerSubPunch(pitch, 32, 0.07, 0.48 * vol, 0, panVal);
+            triggerNoiseLayer(brownNoiseBuf, 'bandpass', gravelFreq, 420, 0.06, 0.38 * vol, 0.008, panVal);
           } else if (type === 'hit') {
-            triggerSubPunch(350, 110, 0.07, 0.55 * vol, 0, panVal);
-            triggerNoiseLayer(whiteNoiseBuf, 'bandpass', 2800, 1200, 0.08, 0.5 * vol, 0, panVal);
+            triggerSubPunch(350, 110, 0.07, 0.50 * vol, 0, panVal);
+            triggerNoiseLayer(whiteNoiseBuf, 'bandpass', 2800, 1200, 0.07, 0.45 * vol, 0, panVal);
           } else if (type === 'hurt') {
-            triggerSubPunch(145, 32, 0.26, 0.95, 0, panVal);
-            triggerNoiseLayer(brownNoiseBuf, 'lowpass', 580, 95, 0.24, 0.82, 0, panVal);
-            triggerNoiseLayer(whiteNoiseBuf, 'bandpass', 1950, 480, 0.12, 0.55, 0, panVal);
+            triggerSubPunch(145, 32, 0.22, 0.85, 0, panVal);
+            triggerNoiseLayer(brownNoiseBuf, 'lowpass', 580, 95, 0.20, 0.72, 0, panVal);
           } else if (type === 'heartbeat') {
             // Haqiqiy "Duk-Duk" yurak urishi tovushi (Lub-Dub)
-            triggerSubPunch(72, 28, 0.14, 0.92, 0.0, 0);
-            triggerNoiseLayer(brownNoiseBuf, 'lowpass', 140, 45, 0.12, 0.55, 0.0, 0);
-            triggerSubPunch(64, 24, 0.16, 0.78, 0.21, 0);
-            triggerNoiseLayer(brownNoiseBuf, 'lowpass', 120, 40, 0.14, 0.45, 0.21, 0);
+            triggerSubPunch(72, 28, 0.13, 0.82, 0.0, 0);
+            triggerSubPunch(64, 24, 0.15, 0.70, 0.21, 0);
           } else if (type === 'case_roulette_tick') {
             // Yoqimli, mayin baraban/kartochka "tik" tovushi (quloqni og'ritmaydigan toza sinus impuls)
             const osc = audioCtx.createOscillator();
@@ -2134,8 +2202,9 @@
         const scoreEl = document.getElementById(killerTeam === 'red' ? 'hudRedScore' : 'hudBlueScore');
         if (scoreEl) {
           scoreEl.classList.remove('score-pop');
-          void scoreEl.offsetWidth;
-          scoreEl.classList.add('score-pop');
+          requestAnimationFrame(() => {
+            scoreEl.classList.add('score-pop');
+          });
         }
       }
 
@@ -3497,59 +3566,68 @@
         }
       }
 
-      // Askarning qo'llariga mahkamlanadigan haqiqiy 3D Taktik Avtomat (M4A1 / AK Karbin + Kollimator + Olov chaqnashi)
+      let _sharedRifleAssets = null;
+      function mergeNonIndexedParts(parts) {
+        let totalVerts = 0;
+        const prepared = parts.map(p => {
+          const raw = p.geo;
+          const g = raw.index ? raw.toNonIndexed() : raw.clone();
+          if (p.rx) g.rotateX(p.rx);
+          if (p.ry) g.rotateY(p.ry);
+          if (p.rz) g.rotateZ(p.rz);
+          if (p.tx || p.ty || p.tz) g.translate(p.tx || 0, p.ty || 0, p.tz || 0);
+          totalVerts += g.attributes.position.count;
+          raw.dispose();
+          return g;
+        });
+        const posArr = new Float32Array(totalVerts * 3);
+        const normArr = new Float32Array(totalVerts * 3);
+        let offset = 0;
+        prepared.forEach(g => {
+          const pa = g.attributes.position.array;
+          const na = g.attributes.normal.array;
+          posArr.set(pa, offset);
+          normArr.set(na, offset);
+          offset += pa.length;
+          g.dispose();
+        });
+        const merged = new THREE.BufferGeometry();
+        merged.setAttribute('position', new THREE.BufferAttribute(posArr, 3));
+        merged.setAttribute('normal', new THREE.BufferAttribute(normArr, 3));
+        return merged;
+      }
+
+      // Askarning qo'llariga mahkamlanadigan haqiqiy 3D Taktik Avtomat (7 bo'lak -> 2 ta birlashtirilgan Draw Call!)
       function create3DSoldierRifle() {
+        if (!_sharedRifleAssets) {
+          const gunMetalMat = new THREE.MeshStandardMaterial({ color: 0x1e2229, roughness: 0.38, metalness: 0.78 });
+          const darkPolyMat = new THREE.MeshStandardMaterial({ color: 0x111317, roughness: 0.68, metalness: 0.22 });
+          const metalGeo = mergeNonIndexedParts([
+            { geo: new THREE.BoxGeometry(0.032, 0.052, 0.19), tx: 0, ty: 0.015, tz: 0.08 },
+            { geo: new THREE.CylinderGeometry(0.008, 0.009, 0.18, 8), rx: Math.PI / 2, tx: 0, ty: 0.020, tz: 0.37 },
+            { geo: new THREE.BoxGeometry(0.026, 0.028, 0.048), tx: 0, ty: 0.052, tz: 0.08 }
+          ]);
+          const polyGeo = mergeNonIndexedParts([
+            { geo: new THREE.BoxGeometry(0.026, 0.056, 0.14), tx: 0, ty: 0.006, tz: -0.075 },
+            { geo: new THREE.BoxGeometry(0.024, 0.068, 0.034), rx: -0.28, tx: 0, ty: -0.035, tz: 0.01 },
+            { geo: new THREE.BoxGeometry(0.024, 0.095, 0.042), rx: 0.22, tx: 0, ty: -0.052, tz: 0.115 },
+            { geo: new THREE.BoxGeometry(0.030, 0.040, 0.16), tx: 0, ty: 0.016, tz: 0.24 }
+          ]);
+          const flashCoreMat = new THREE.MeshBasicMaterial({ color: 0xfff7aa });
+          const flashOuterMat = new THREE.MeshBasicMaterial({ color: 0xff8811, transparent: true, opacity: 0.85, side: THREE.DoubleSide });
+          const coreSphereGeo = new THREE.SphereGeometry(0.020, 6, 6);
+          const coneFlameGeo = new THREE.ConeGeometry(0.024, 0.10, 6);
+          coneFlameGeo.rotateX(Math.PI / 2);
+          coneFlameGeo.translate(0, 0, 0.04);
+          _sharedRifleAssets = { gunMetalMat, darkPolyMat, metalGeo, polyGeo, flashCoreMat, flashOuterMat, coreSphereGeo, coneFlameGeo };
+        }
+        const a = _sharedRifleAssets;
         const rifleGrp = new THREE.Group();
-        const gunMetalMat = new THREE.MeshStandardMaterial({ color: 0x1e2229, roughness: 0.38, metalness: 0.78 });
-        const darkPolyMat = new THREE.MeshStandardMaterial({ color: 0x111317, roughness: 0.68, metalness: 0.22 });
+        rifleGrp.add(new THREE.Mesh(a.metalGeo, a.gunMetalMat));
+        rifleGrp.add(new THREE.Mesh(a.polyGeo, a.darkPolyMat));
 
-        // Asosiy korpus (Receiver)
-        const receiver = new THREE.Mesh(new THREE.BoxGeometry(0.032, 0.052, 0.19), gunMetalMat);
-        receiver.position.set(0, 0.015, 0.08);
-        rifleGrp.add(receiver);
-
-        // Qo'ndoq (Buttstock — o'ng yelkaga tiraladi)
-        const stock = new THREE.Mesh(new THREE.BoxGeometry(0.026, 0.056, 0.14), darkPolyMat);
-        stock.position.set(0, 0.006, -0.075);
-        rifleGrp.add(stock);
-
-        // To'pponcha dastasi (RightHand ichida)
-        const grip = new THREE.Mesh(new THREE.BoxGeometry(0.024, 0.068, 0.034), darkPolyMat);
-        grip.position.set(0, -0.035, 0.01);
-        grip.rotation.x = -0.28;
-        rifleGrp.add(grip);
-
-        // Egik magazin (30-round Magazine)
-        const mag = new THREE.Mesh(new THREE.BoxGeometry(0.024, 0.095, 0.042), darkPolyMat);
-        mag.position.set(0, -0.052, 0.115);
-        mag.rotation.x = 0.22;
-        rifleGrp.add(mag);
-
-        // Old tirsak qismi (Tactical Handguard — LeftHand ushlaydigan joy)
-        const handguard = new THREE.Mesh(new THREE.BoxGeometry(0.030, 0.040, 0.16), darkPolyMat);
-        handguard.position.set(0, 0.016, 0.24);
-        rifleGrp.add(handguard);
-
-        // Temir stvol (Barrel + Muzzle Brake)
-        const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.009, 0.18, 8), gunMetalMat);
-        barrel.rotation.x = Math.PI / 2;
-        barrel.position.set(0, 0.020, 0.37);
-        rifleGrp.add(barrel);
-
-        // Kollimator nishoni (Red-Dot Sight)
-        const optic = new THREE.Mesh(new THREE.BoxGeometry(0.026, 0.028, 0.048), gunMetalMat);
-        optic.position.set(0, 0.052, 0.08);
-        rifleGrp.add(optic);
-
-        // Stvol uchidagi ixcham va realistik CS:GO 3D Olov Chaqnashi (#3)
         const flashGrp = new THREE.Group();
-        const flashCoreMat = new THREE.MeshBasicMaterial({ color: 0xfff7aa });
-        const flashOuterMat = new THREE.MeshBasicMaterial({ color: 0xff8811, transparent: true, opacity: 0.85, side: THREE.DoubleSide });
-        const coreSphere = new THREE.Mesh(new THREE.SphereGeometry(0.020, 6, 6), flashCoreMat);
-        const coneFlame = new THREE.Mesh(new THREE.ConeGeometry(0.024, 0.10, 6), flashOuterMat);
-        coneFlame.rotation.x = Math.PI / 2;
-        coneFlame.position.z = 0.04;
-        flashGrp.add(coreSphere, coneFlame);
+        flashGrp.add(new THREE.Mesh(a.coreSphereGeo, a.flashCoreMat), new THREE.Mesh(a.coneFlameGeo, a.flashOuterMat));
         flashGrp.position.set(0, 0.020, 0.45);
         flashGrp.visible = false;
         rifleGrp.add(flashGrp);
@@ -3910,8 +3988,12 @@
           let botY = Math.floor(halfH + (h * 0.88) / Math.max(0.8, dist));
 
           if (typeof THREE !== 'undefined' && threeCamera) {
-            const vHead = new THREE.Vector3(c.x, 1.21, c.y).project(threeCamera);
-            const vFoot = new THREE.Vector3(c.x, 0.0, c.y).project(threeCamera);
+            if (!window._vHeadTmp) {
+              window._vHeadTmp = new THREE.Vector3();
+              window._vFootTmp = new THREE.Vector3();
+            }
+            const vHead = window._vHeadTmp.set(c.x, 1.21, c.y).project(threeCamera);
+            const vFoot = window._vFootTmp.set(c.x, 0.0, c.y).project(threeCamera);
             if (vHead.z < 1.0) {
               screenX = Math.floor((vHead.x * 0.5 + 0.5) * w);
               topY = Math.floor((-vHead.y * 0.5 + 0.5) * h);
@@ -4000,15 +4082,14 @@
             }
             const alpha = Math.min(1, (arc.ttl / arc.maxTtl) * 1.15);
             const rel = (arc.worldAngle - player.angle) - Math.PI / 2;
-            doomCtx.save();
             doomCtx.beginPath();
             doomCtx.arc(cx, cy, arcRadius, rel - 0.48, rel + 0.48);
-            doomCtx.strokeStyle = `rgba(239, 68, 68, ${alpha.toFixed(2)})`;
-            doomCtx.lineWidth = 7;
-            doomCtx.shadowColor = '#ef4444';
-            doomCtx.shadowBlur = 12;
+            doomCtx.strokeStyle = `rgba(239, 68, 68, ${(alpha * 0.35).toFixed(2)})`;
+            doomCtx.lineWidth = 13;
             doomCtx.stroke();
-            doomCtx.restore();
+            doomCtx.strokeStyle = `rgba(239, 68, 68, ${alpha.toFixed(2)})`;
+            doomCtx.lineWidth = 6;
+            doomCtx.stroke();
           }
         }
 
@@ -4044,35 +4125,59 @@
           }
         }
 
-        const targetLabel = document.getElementById('targetInfoLabel');
-        const chDot = document.getElementById('crosshairDot');
+        if (!window._aimDomCache) {
+          window._aimDomCache = {
+            targetLabel: document.getElementById('targetInfoLabel'),
+            chDot: document.getElementById('crosshairDot'),
+            chTop: document.getElementById('chTop'),
+            chBottom: document.getElementById('chBottom'),
+            chLeft: document.getElementById('chLeft'),
+            chRight: document.getElementById('chRight'),
+            lastText: null,
+            lastMode: null,
+            lastGap: -1
+          };
+        }
+        const ad = window._aimDomCache;
         if (aimedFighter) {
           const isAlly = aimedFighter.team === player.team;
-          targetLabel.classList.remove('hidden');
           const zoneName = lastAimRatioY <= 0.21 ? ' [BOSH / HEADSHOT]' : '';
-          targetLabel.textContent = isAlly
+          const nextText = isAlly
             ? `🛡️ SHERIK: ${aimedFighter.name} (${aimedFighter.health}% HP) — OTMANG!`
             : `🎯 DUSHMAN: ${aimedFighter.name} (${aimedFighter.health}% HP)${zoneName}`;
-          targetLabel.className = isAlly
-            ? 'absolute bottom-3 left-1/2 -translate-x-1/2 z-20 pointer-events-none px-3 py-1 rounded-full text-[11px] font-extrabold bg-emerald-950/90 text-emerald-300 border border-emerald-500'
-            : 'absolute bottom-3 left-1/2 -translate-x-1/2 z-20 pointer-events-none px-3 py-1 rounded-full text-[11px] font-extrabold bg-red-950/90 text-red-300 border border-red-500';
-          chDot.className = isAlly ? 'w-2 h-2 bg-emerald-400 rounded-full shadow-[0_0_8px_#10b981]' : 'w-2 h-2 bg-red-500 rounded-full shadow-[0_0_8px_#ef4444]';
-        } else {
-          targetLabel.classList.add('hidden');
-          chDot.className = 'w-1.5 h-1.5 bg-white/90 rounded-full shadow-[0_0_6px_#ffffff]';
+          const nextMode = isAlly ? 'ally' : 'enemy';
+          if (ad.lastText !== nextText) {
+            ad.lastText = nextText;
+            if (ad.targetLabel) ad.targetLabel.textContent = nextText;
+          }
+          if (ad.lastMode !== nextMode) {
+            ad.lastMode = nextMode;
+            if (ad.targetLabel) {
+              ad.targetLabel.className = isAlly
+                ? 'absolute bottom-3 left-1/2 -translate-x-1/2 z-20 pointer-events-none px-3 py-1 rounded-full text-[11px] font-extrabold bg-emerald-950/90 text-emerald-300 border border-emerald-500'
+                : 'absolute bottom-3 left-1/2 -translate-x-1/2 z-20 pointer-events-none px-3 py-1 rounded-full text-[11px] font-extrabold bg-red-950/90 text-red-300 border border-red-500';
+            }
+            if (ad.chDot) {
+              ad.chDot.className = isAlly
+                ? 'w-2 h-2 bg-emerald-400 rounded-full shadow-[0_0_8px_#10b981]'
+                : 'w-2 h-2 bg-red-500 rounded-full shadow-[0_0_8px_#ef4444]';
+            }
+          }
+        } else if (ad.lastMode !== 'none') {
+          ad.lastMode = 'none';
+          ad.lastText = null;
+          if (ad.targetLabel) ad.targetLabel.classList.add('hidden');
+          if (ad.chDot) ad.chDot.className = 'w-1.5 h-1.5 bg-white/90 rounded-full shadow-[0_0_6px_#ffffff]';
         }
 
-        // Dinamik CS Crosshair
+        // Dinamik CS Crosshair — faqat gap o'zgarganda GPU transform yangilanadi
         const gap = Math.round(7 + player.crosshairBloom + player.currentSpeed * 3.5);
-        const chTop = document.getElementById('chTop');
-        const chBottom = document.getElementById('chBottom');
-        const chLeft = document.getElementById('chLeft');
-        const chRight = document.getElementById('chRight');
-        if (chTop) {
-          chTop.style.transform = `translateY(-${gap}px)`;
-          chBottom.style.transform = `translateY(${gap}px)`;
-          chLeft.style.transform = `translateX(-${gap}px)`;
-          chRight.style.transform = `translateX(${gap}px)`;
+        if (ad.chTop && ad.lastGap !== gap) {
+          ad.lastGap = gap;
+          ad.chTop.style.transform = `translate3d(0px, -${gap}px, 0px)`;
+          ad.chBottom.style.transform = `translate3d(0px, ${gap}px, 0px)`;
+          ad.chLeft.style.transform = `translate3d(-${gap}px, 0px, 0px)`;
+          ad.chRight.style.transform = `translate3d(${gap}px, 0px, 0px)`;
         }
 
         // O'q trasser va uchqunlari
