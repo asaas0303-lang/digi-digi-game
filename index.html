@@ -597,17 +597,6 @@
   <!-- ==================== 2. 3D LABIRINT O'YIN EKRANI (35 TA MUAMMO TUZATILGAN) ==================== -->
   <div id="gameView" class="hidden fixed inset-0 z-30 w-full h-full flex flex-col bg-black overflow-hidden">
     
-    <!-- Minimalist FPS & PING Indikatori (Faqat 3D o'yinda va Sozlamalarda yoqilganda ko'rinadi) -->
-    <div id="digiNetGraphHud" style="position:absolute; top:4px; left:12px; z-index:45; text-shadow: 0 1px 2px rgba(0,0,0,0.95);" class="hidden items-center gap-1.5 text-[9px] font-mono tracking-tight opacity-75 hover:opacity-100 select-none cursor-pointer transition">
-      <span id="ngFps" class="font-bold text-emerald-400">FPS 60</span>
-      <span class="text-white/30">·</span>
-      <span id="ngMs" class="text-slate-300">16.6ms</span>
-      <span class="text-white/30">·</span>
-      <span id="ngPing" class="font-bold text-emerald-400">PING --ms</span>
-      <span class="text-white/30">·</span>
-      <span id="ngGpu" class="text-amber-300/90">DC 0</span>
-    </div>
-    
     <!-- YUQORI COMPACT HUD SATRI (#21 Kattaroq Radar, #28 Kompas, #35 Ixcham yonma-yon tugmalar) -->
     <div class="shrink-0 bg-zinc-950/95 border-b border-red-900/60 px-2 py-1.5 flex items-center justify-between gap-1.5 z-30">
       
@@ -685,6 +674,15 @@
           </div>
           <span id="vitalArmorText" class="font-mono text-[9px] font-bold text-sky-300">50%</span>
         </div>
+      </div>
+
+      <!-- Tartibli FPS va PING ko'rsatkichi (Faqat 3D o'yinda va Sozlamalarda yoqilganda JON/ZIRH qutisi tagida ko'rinadi) -->
+      <div id="digiNetGraphHud" style="top: 78px; left: 8px;" class="hidden absolute z-30 pointer-events-auto items-center gap-2 bg-zinc-950/85 border border-zinc-700/80 rounded-lg px-2.5 py-1 shadow-lg text-[11px] font-mono tracking-tight select-none cursor-pointer transition">
+        <span id="ngFps" class="font-bold text-emerald-400">FPS: 60</span>
+        <span class="text-zinc-600">|</span>
+        <span id="ngPing" class="font-bold text-emerald-400">Ping: -- ms</span>
+        <span id="ngMs" class="hidden">16.6ms</span>
+        <span id="ngGpu" class="hidden">DC 0</span>
       </div>
 
       <!-- Jon kam qolganda (<=45%) chiqadigan qizil yurak urishi ogohlantirishi -->
@@ -5242,7 +5240,8 @@
       const elGpu = document.getElementById('ngGpu');
       const toggleEl = document.getElementById('toggleNetGraph');
       const gameViewEl = document.getElementById('gameView');
-      if (!hud || !elFps || !elMs || !elPing || !elGpu) return;
+      const vitalBarEl = document.getElementById('playerVitalBar');
+      if (!hud || !elFps || !elPing) return;
 
       // Standart holatda O'CHIQ (false) bo'ladi, faqat foydalanuvchi yoqsa '1' saqlanadi
       let isEnabled = localStorage.getItem('digi_show_netgraph') === '1';
@@ -5261,15 +5260,31 @@
         return !gameViewEl.classList.contains('hidden') && gameViewEl.style.display !== 'none';
       }
 
-      function updateHudVisibility() {
-        if (isEnabled && isInActiveGame()) {
-          hud.classList.remove('hidden');
-          hud.classList.add('flex');
-        } else {
-          hud.classList.add('hidden');
-          hud.classList.remove('flex');
+      function positionBelowVitalBar() {
+        if (vitalBarEl && vitalBarEl.offsetHeight > 0) {
+          hud.style.top = (vitalBarEl.offsetTop + vitalBarEl.offsetHeight + 6) + 'px';
+          hud.style.left = vitalBarEl.offsetLeft + 'px';
         }
       }
+
+      let wasVisible = false;
+      function updateHudVisibility() {
+        const shouldShow = isEnabled && isInActiveGame();
+        if (shouldShow) {
+          if (!wasVisible) {
+            hud.classList.remove('hidden');
+            hud.classList.add('flex');
+            positionBelowVitalBar();
+            pingCheck();
+            wasVisible = true;
+          }
+        } else if (wasVisible) {
+          hud.classList.add('hidden');
+          hud.classList.remove('flex');
+          wasVisible = false;
+        }
+      }
+      window.addEventListener('resize', positionBelowVitalBar);
 
       let frameCount = 0;
       let lastFpsUpdate = performance.now();
@@ -5294,17 +5309,20 @@
             if (curFps < minFps && curFps > 0) minFps = curFps;
             const avgMs = frameCount > 0 ? ((now - lastFpsUpdate) / frameCount).toFixed(1) : '16.6';
 
-            elFps.textContent = 'FPS ' + curFps;
+            elFps.textContent = 'FPS: ' + curFps;
             elFps.className = curFps >= 50 ? 'font-bold text-emerald-400' : (curFps >= 30 ? 'font-bold text-amber-400' : 'font-bold text-red-400');
 
-            elMs.textContent = avgMs + 'ms';
-            elMs.className = maxSpike > 60 ? 'text-red-400' : 'text-slate-300';
+            if (elMs) {
+              elMs.textContent = avgMs + 'ms';
+              elMs.className = 'hidden';
+            }
 
             const r = window._mainThreeRenderer;
-            if (r && r.info && r.info.render) {
+            if (elGpu && r && r.info && r.info.render) {
               elGpu.textContent = 'DC ' + r.info.render.calls;
             }
 
+            positionBelowVitalBar();
             frameCount = 0;
             maxSpike = 0;
             lastFpsUpdate = now;
@@ -5331,17 +5349,22 @@
           const t1 = performance.now();
           if (res.ok) {
             curPing = Math.round(t1 - t0);
-            elPing.textContent = curPing + 'ms';
+            elPing.textContent = 'Ping: ' + curPing + ' ms';
             elPing.className = curPing < 90 ? 'font-bold text-emerald-400' : (curPing < 180 ? 'font-bold text-amber-400' : 'font-bold text-red-400');
           }
         } catch (e) {
-          elPing.textContent = 'OFF';
+          elPing.textContent = 'Ping: --';
           elPing.className = 'font-bold text-red-400';
         }
       }
       setInterval(pingCheck, 4000);
 
-      hud.addEventListener('click', function() {
+      ['touchstart', 'pointerdown', 'mousedown'].forEach(function(evtName) {
+        hud.addEventListener(evtName, function(e) { e.stopPropagation(); });
+      });
+
+      hud.addEventListener('click', function(e) {
+        e.stopPropagation();
         const r = window._mainThreeRenderer;
         const dc = (r && r.info && r.info.render) ? r.info.render.calls : 'N/A';
         const tris = (r && r.info && r.info.render) ? r.info.render.triangles : 'N/A';
