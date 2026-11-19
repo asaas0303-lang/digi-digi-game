@@ -740,9 +740,6 @@
 
       <!-- CHAP VA O'NG EKRAN CHETIDAGI TAKTIK TUGMALAR (Pastki markazdagi `✦` tugmasidan 100% uzoqda!) -->
       <div class="absolute bottom-2 left-2 z-25 flex flex-col gap-1.5 pointer-events-auto">
-        <button id="touchSprint" class="px-2.5 py-1.5 bg-zinc-900/90 border border-amber-500/80 rounded-xl text-amber-400 font-extrabold text-[10px] shadow-lg">
-          TEZ
-        </button>
         <button id="btnThrowGrenade" class="px-2.5 py-1.5 bg-red-950/90 active:bg-red-700 border border-red-500/80 rounded-xl text-red-200 font-bold text-[10px] shadow-lg">
           💣 Granata (<span id="heCountLabel">2</span>)
         </button>
@@ -2529,9 +2526,9 @@
           player.recoilPitch = Math.max(0, player.recoilPitch - dt * 0.22);
         }
 
-        const isSprinting = (keys.shift || player.sprintToggle) && !player.adsZoom;
+        const isSprinting = false;
         const taggingMult = now < player.taggedSlowUntil ? 0.68 : 1.0;
-        const maxSpeed = (isSprinting ? 4.15 : (player.adsZoom ? 1.95 : 3.05)) * taggingMult;
+        const maxSpeed = (player.adsZoom ? 2.15 : 4.55) * taggingMult;
 
         let forwardInput = (keys.w ? 1 : 0) - (keys.s ? 1 : 0) - player.moveJoyY;
         let strafeInput = (keys.d ? 1 : 0) - (keys.a ? 1 : 0) + player.moveJoyX;
@@ -2542,8 +2539,11 @@
           strafeInput /= mag;
         }
 
-        const wishDirX = Math.cos(player.angle) * forwardInput + Math.cos(player.angle + Math.PI / 2) * strafeInput * 0.88;
-        const wishDirY = Math.sin(player.angle) * forwardInput + Math.sin(player.angle + Math.PI / 2) * strafeInput * 0.88;
+        // Yo'nalish bo'yicha tabiiy balans: oldinga 100%, yonga 86%, orqaga 76% (orqaga g'alati uchib ketmaydi!)
+        const dirForward = forwardInput >= 0 ? forwardInput : forwardInput * 0.76;
+        const dirStrafe = strafeInput * 0.86;
+        const wishDirX = Math.cos(player.angle) * dirForward + Math.cos(player.angle + Math.PI / 2) * dirStrafe;
+        const wishDirY = Math.sin(player.angle) * dirForward + Math.sin(player.angle + Math.PI / 2) * dirStrafe;
         const targetVx = wishDirX * maxSpeed;
         const targetVy = wishDirY * maxSpeed;
 
@@ -4695,7 +4695,7 @@
         if (rect.width > 0) {
           joyCx = rect.left + rect.width / 2;
           joyCy = rect.top + rect.height / 2;
-          joyMaxR = rect.width * 0.36;
+          joyMaxR = rect.width * 0.42;
         }
       }
 
@@ -4704,22 +4704,25 @@
         let dx = clientX - joyCx;
         let dy = clientY - joyCy;
         const dist = Math.hypot(dx, dy);
+        let knobDx = dx;
+        let knobDy = dy;
         if (dist > joyMaxR && dist > 0) {
-          dx = (dx / dist) * joyMaxR;
-          dy = (dy / dist) * joyMaxR;
+          knobDx = (dx / dist) * joyMaxR;
+          knobDy = (dy / dist) * joyMaxR;
         }
-        joystickKnob.style.transform = `translate3d(${dx.toFixed(1)}px, ${dy.toFixed(1)}px, 0)`;
+        joystickKnob.style.transform = `translate3d(${knobDx.toFixed(1)}px, ${knobDy.toFixed(1)}px, 0)`;
 
-        // PUBG/CS uslubidagi silliq Radial (doiraviy) Deadzone — 360° burilishda o'q sakrashi yo'q!
+        // Markazda sekin va aniq, chetga uzoqlashgan sari silliq tezlashuvchi analog egri chiziq
         const normDist = Math.min(1, dist / joyMaxR);
-        const deadZone = 0.11;
+        const deadZone = 0.10;
         if (normDist < deadZone || dist < 0.001) {
           player.moveJoyX = 0;
           player.moveJoyY = 0;
         } else {
-          const scaled = (normDist - deadZone) / (1 - deadZone);
-          player.moveJoyX = (dx / dist) * scaled;
-          player.moveJoyY = (dy / dist) * scaled;
+          const linear = (normDist - deadZone) / (1 - deadZone);
+          const curved = Math.pow(linear, 1.35);
+          player.moveJoyX = (dx / dist) * curved;
+          player.moveJoyY = (dy / dist) * curved;
         }
       }
 
@@ -4808,14 +4811,6 @@
       fireBtn.addEventListener('pointerup', stopFireButton);
       fireBtn.addEventListener('pointercancel', stopFireButton);
       fireBtn.addEventListener('lostpointercapture', () => { firePointerId = null; keys.fire = false; });
-
-      const sprintBtn = document.getElementById('touchSprint');
-      sprintBtn.addEventListener('click', () => {
-        player.sprintToggle = !player.sprintToggle;
-        sprintBtn.className = player.sprintToggle
-          ? 'px-2 py-1 bg-amber-600 border border-amber-200 rounded-lg text-white font-extrabold text-[9px] shadow'
-          : 'px-2 py-1 bg-zinc-800 border border-amber-500/80 rounded-lg text-amber-400 font-extrabold text-[9px] shadow';
-      });
 
       function bindHoldButton(btnId, keyProp) {
         const el = document.getElementById(btnId);
