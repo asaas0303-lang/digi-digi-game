@@ -560,6 +560,9 @@
       try {
         tg.ready();
         tg.expand();
+        if (typeof tg.disableVerticalSwipes === 'function') {
+          tg.disableVerticalSwipes();
+        }
       } catch (e) {}
       const u = tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user : null;
       if (u) {

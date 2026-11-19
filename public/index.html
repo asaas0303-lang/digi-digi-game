@@ -801,13 +801,13 @@
       
       <!-- CHAP TARAF: Toza 360° Joystik -->
       <div class="flex items-center gap-1.5">
-        <div id="joystickZone" class="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-zinc-900/95 border-2 border-zinc-500 shadow-inner flex items-center justify-center touch-none cursor-pointer shrink-0">
+        <div id="joystickZone" class="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-zinc-900/95 border-2 border-zinc-500 shadow-inner flex items-center justify-center touch-none select-none cursor-pointer shrink-0">
           <div class="absolute inset-2 rounded-full border border-dashed border-zinc-700 pointer-events-none"></div>
           <span class="absolute top-1 left-1/2 -translate-x-1/2 text-[8px] text-zinc-500 font-bold pointer-events-none">▲</span>
           <span class="absolute bottom-1 left-1/2 -translate-x-1/2 text-[8px] text-zinc-500 font-bold pointer-events-none">▼</span>
           <span class="absolute left-1 top-1/2 -translate-y-1/2 text-[8px] text-zinc-500 font-bold pointer-events-none">◄</span>
           <span class="absolute right-1 top-1/2 -translate-y-1/2 text-[8px] text-zinc-500 font-bold pointer-events-none">►</span>
-          <div id="joystickKnob" class="w-11 h-11 rounded-full bg-gradient-to-br from-red-500 to-red-800 border-2 border-red-200 shadow-xl pointer-events-none flex items-center justify-center text-[8px] font-extrabold text-white transition-transform duration-75">
+          <div id="joystickKnob" class="w-11 h-11 rounded-full bg-gradient-to-br from-red-500 to-red-800 border-2 border-red-200 shadow-xl pointer-events-none flex items-center justify-center text-[8px] font-extrabold text-white will-change-transform select-none">
             YURISH
           </div>
         </div>
@@ -4620,10 +4620,14 @@
         keys.left = false;
         keys.right = false;
         keys.fire = false;
-        player.moveJoyX = 0;
-        player.moveJoyY = 0;
-        const knob = document.getElementById('joystickKnob');
-        if (knob) knob.style.transform = 'translate3d(0px, 0px, 0)';
+        if (typeof resetJoystickState === 'function') {
+          resetJoystickState();
+        } else {
+          player.moveJoyX = 0;
+          player.moveJoyY = 0;
+          const knob = document.getElementById('joystickKnob');
+          if (knob) knob.style.transform = 'translate3d(0px, 0px, 0)';
+        }
       }
 
       window.addEventListener('blur', stopAllMovement);
@@ -4682,55 +4686,97 @@
       const joystickZone = document.getElementById('joystickZone');
       const joystickKnob = document.getElementById('joystickKnob');
       let joyPointerId = null;
+      let joyCx = 0;
+      let joyCy = 0;
+      let joyMaxR = 36;
+
+      function cacheJoystickMetrics() {
+        const rect = joystickZone.getBoundingClientRect();
+        if (rect.width > 0) {
+          joyCx = rect.left + rect.width / 2;
+          joyCy = rect.top + rect.height / 2;
+          joyMaxR = rect.width * 0.36;
+        }
+      }
 
       function updateJoystickFromPoint(clientX, clientY) {
-        const rect = joystickZone.getBoundingClientRect();
-        const cx = rect.left + rect.width / 2;
-        const cy = rect.top + rect.height / 2;
-        const maxR = rect.width * 0.36;
-        let dx = clientX - cx;
-        let dy = clientY - cy;
+        if (joyMaxR <= 0) cacheJoystickMetrics();
+        let dx = clientX - joyCx;
+        let dy = clientY - joyCy;
         const dist = Math.hypot(dx, dy);
-        if (dist > maxR && dist > 0) {
-          dx = (dx / dist) * maxR;
-          dy = (dy / dist) * maxR;
+        if (dist > joyMaxR && dist > 0) {
+          dx = (dx / dist) * joyMaxR;
+          dy = (dy / dist) * joyMaxR;
         }
-        joystickKnob.style.transform = `translate3d(${Math.round(dx)}px, ${Math.round(dy)}px, 0)`;
+        joystickKnob.style.transform = `translate3d(${dx.toFixed(1)}px, ${dy.toFixed(1)}px, 0)`;
 
-        const normX = dx / maxR;
-        const normY = dy / maxR;
-        player.moveJoyX = Math.abs(normX) < 0.12 ? 0 : normX;
-        player.moveJoyY = Math.abs(normY) < 0.12 ? 0 : normY;
+        // PUBG/CS uslubidagi silliq Radial (doiraviy) Deadzone — 360° burilishda o'q sakrashi yo'q!
+        const normDist = Math.min(1, dist / joyMaxR);
+        const deadZone = 0.11;
+        if (normDist < deadZone || dist < 0.001) {
+          player.moveJoyX = 0;
+          player.moveJoyY = 0;
+        } else {
+          const scaled = (normDist - deadZone) / (1 - deadZone);
+          player.moveJoyX = (dx / dist) * scaled;
+          player.moveJoyY = (dy / dist) * scaled;
+        }
       }
 
       function resetJoystickState() {
         joyPointerId = null;
         player.moveJoyX = 0;
         player.moveJoyY = 0;
-        joystickKnob.style.transform = 'translate3d(0px, 0px, 0)';
+        if (joystickKnob) joystickKnob.style.transform = 'translate3d(0px, 0px, 0)';
       }
 
       joystickZone.addEventListener('pointerdown', (e) => {
+        if (!gameRunning) return;
         e.preventDefault();
         e.stopPropagation();
+        if (joyPointerId !== null && joyPointerId !== e.pointerId) return;
         joyPointerId = e.pointerId;
+        cacheJoystickMetrics();
         try { joystickZone.setPointerCapture(e.pointerId); } catch (err) {}
         updateJoystickFromPoint(e.clientX, e.clientY);
       });
 
-      joystickZone.addEventListener('pointermove', (e) => {
-        if (e.pointerId !== joyPointerId) return;
+      function onJoyMove(e) {
+        if (joyPointerId === null || e.pointerId !== joyPointerId) return;
+        if (e.buttons === 0 && e.pointerType === 'mouse') {
+          resetJoystickState();
+          return;
+        }
         e.preventDefault();
         updateJoystickFromPoint(e.clientX, e.clientY);
+      }
+
+      function onJoyEnd(e) {
+        if (joyPointerId !== null && (!e || e.pointerId === joyPointerId)) {
+          resetJoystickState();
+        }
+      }
+
+      joystickZone.addEventListener('pointermove', onJoyMove);
+      joystickZone.addEventListener('pointerup', onJoyEnd);
+      joystickZone.addEventListener('pointercancel', onJoyEnd);
+      joystickZone.addEventListener('lostpointercapture', () => {
+        if (joyPointerId !== null) resetJoystickState();
       });
 
-      joystickZone.addEventListener('pointerup', (e) => {
-        if (e.pointerId === joyPointerId) resetJoystickState();
-      });
-      joystickZone.addEventListener('pointercancel', (e) => {
-        if (e.pointerId === joyPointerId) resetJoystickState();
-      });
-      joystickZone.addEventListener('lostpointercapture', resetJoystickState);
+      // Global window zaxira himoyasi: Android WebView da barmoq joystikdan chiqib qo'yib yuborilsa ham 100% nolga qaytadi
+      window.addEventListener('pointermove', onJoyMove, { passive: false });
+      window.addEventListener('pointerup', onJoyEnd);
+      window.addEventListener('pointercancel', onJoyEnd);
+      window.addEventListener('touchend', (e) => {
+        if (joyPointerId !== null && e.touches && e.touches.length === 0) {
+          resetJoystickState();
+        }
+      }, { passive: true });
+      window.addEventListener('touchcancel', () => {
+        if (joyPointerId !== null) resetJoystickState();
+      }, { passive: true });
+      window.addEventListener('resize', cacheJoystickMetrics);
 
       const fireBtn = document.getElementById('touchFire');
       let firePointerId = null;
