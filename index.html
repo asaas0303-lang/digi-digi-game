@@ -3102,9 +3102,8 @@
         threeRenderer.toneMapping = THREE.ACESFilmicToneMapping;
         threeRenderer.toneMappingExposure = 1.08;
 
-        // 4-OPTIMIZATSIYA: ShadowMap (Soyalar) tezligini 2x oshirish
-        threeRenderer.shadowMap.enabled = true;
-        threeRenderer.shadowMap.type = THREE.PCFShadowMap;
+        // 4-OPTIMIZATSIYA: Sahnada castShadow chiroq yo'qligi uchun ortiqcha ShadowMap pass o'chirildi (0% sifat o'zgarishi)
+        threeRenderer.shadowMap.enabled = false;
         window.renderer = threeRenderer;
         window._mainThreeRenderer = threeRenderer;
 
@@ -3193,16 +3192,35 @@
         ceilMesh.updateMatrix();
         threeScene.add(ceilMesh);
 
-        // Shiftdagi tosh arkalar/ustunlar (Ceiling Beams)
-        const beamGeo = new THREE.BoxGeometry(MAP_SIZE, 0.14, 0.24);
-        for (let z = 2; z < MAP_SIZE; z += 2) {
-          const beam = new THREE.Mesh(beamGeo, ceilMat);
-          beam.position.set(MAP_SIZE / 2, wallHeight - 0.07, z);
-          beam.userData.isMazePart = true;
-          beam.matrixAutoUpdate = false;
-          beam.updateMatrix();
-          threeScene.add(beam);
+        // InstancedMesh yordamchi funksiyasi (Three.js r128: 0% sifat yo'qotish, Draw Calls ~196 -> 7!)
+        const _instDummy = new THREE.Object3D();
+        function addInstancedBatch(geo, mat, list) {
+          if (!list || list.length === 0) return null;
+          const inst = new THREE.InstancedMesh(geo, mat, list.length);
+          for (let i = 0; i < list.length; i++) {
+            const t = list[i];
+            _instDummy.position.set(t.x, t.y, t.z);
+            _instDummy.rotation.set(0, t.ry || 0, 0);
+            _instDummy.scale.set(1, 1, 1);
+            _instDummy.updateMatrix();
+            inst.setMatrixAt(i, _instDummy.matrix);
+          }
+          inst.instanceMatrix.needsUpdate = true;
+          inst.frustumCulled = false;
+          inst.matrixAutoUpdate = false;
+          inst.updateMatrix();
+          inst.userData.isMazePart = true;
+          threeScene.add(inst);
+          return inst;
         }
+
+        // Shiftdagi tosh arkalar/ustunlar (Ceiling Beams -> 1 Draw Call)
+        const beamGeo = new THREE.BoxGeometry(MAP_SIZE, 0.14, 0.24);
+        const beamTransforms = [];
+        for (let z = 2; z < MAP_SIZE; z += 2) {
+          beamTransforms.push({ x: MAP_SIZE / 2, y: wallHeight - 0.07, z: z });
+        }
+        addInstancedBatch(beamGeo, ceilMat, beamTransforms);
 
         // 3. G'isht Devorlar, Devordagi Sariq Fonuslar (Lanterns) va Yog'och Qutilar / Bochkalar
         const wallGeo = new THREE.BoxGeometry(1, wallHeight, 1);
@@ -3213,19 +3231,23 @@
 
         const lanternFrameMat = new THREE.MeshStandardMaterial({ color: 0x18181b, metalness: 0.8, roughness: 0.3 });
         const lanternGlowMat = new THREE.MeshBasicMaterial({ color: 0xffb74d });
+        const lanternCageGeo = new THREE.CylinderGeometry(0.06, 0.05, 0.18, 6);
+        const lanternBulbGeo = new THREE.SphereGeometry(0.042, 8, 8);
+        const lanternCapGeo = new THREE.ConeGeometry(0.08, 0.06, 6);
 
+        const wallTransforms = [];
+        const cageTransforms = [];
+        const bulbTransforms = [];
+        const capTransforms = [];
+        const crateTransforms = [];
+        const barrelTransforms = [];
         let lanternCounter = 0;
 
         for (let y = 0; y < MAP_SIZE; y++) {
           for (let x = 0; x < MAP_SIZE; x++) {
             const cell = currentMaze[y][x];
             if (cell > 0) {
-              const m = new THREE.Mesh(wallGeo, wallMat);
-              m.position.set(x + 0.5, wallHeight / 2, y + 0.5);
-              m.userData.isMazePart = true;
-              m.matrixAutoUpdate = false;
-              m.updateMatrix();
-              threeScene.add(m);
+              wallTransforms.push({ x: x + 0.5, y: wallHeight / 2, z: y + 0.5 });
             } else {
               // Ochiq koridorlarda devorga osilgan eski sariq fonuslar (Wall Lanterns) joylashtirish
               const hasNorthWall = (y > 0 && currentMaze[y - 1][x] > 0);
@@ -3237,20 +3259,9 @@
                 const lz = hasNorthWall ? y + 0.08 : y + 0.5;
                 const ly = 1.32;
 
-                // Fonus korpusi va miltillovchi sariq lampasi
-                const lGroup = new THREE.Group();
-                const cage = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.05, 0.18, 6), lanternFrameMat);
-                const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.042, 8, 8), lanternGlowMat);
-                const cap = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.06, 6), lanternFrameMat);
-                cap.position.y = 0.11;
-                lGroup.add(cage);
-                lGroup.add(bulb);
-                lGroup.add(cap);
-                lGroup.position.set(lx, ly, lz);
-                lGroup.userData.isMazePart = true;
-                lGroup.matrixAutoUpdate = false;
-                lGroup.updateMatrix();
-                threeScene.add(lGroup);
+                cageTransforms.push({ x: lx, y: ly, z: lz });
+                bulbTransforms.push({ x: lx, y: ly, z: lz });
+                capTransforms.push({ x: lx, y: ly + 0.11, z: lz });
 
                 const pLight = new THREE.PointLight(0xff9822, 1.55, 6.2, 1.85);
                 pLight.position.set(hasWestWall ? x + 0.22 : x + 0.5, ly - 0.02, hasNorthWall ? y + 0.22 : y + 0.5);
@@ -3262,17 +3273,20 @@
               // Yo'lak chetlariga haqiqiy 3D yog'och quti va bochkalar (harakatga xalaqit bermaydigan burchaklarda)
               if (hasWestWall && ((x * 7 + y * 3) % 5 === 0) && x > 2 && y > 2 && x < 13 && y < 13) {
                 const isBarrel = (x + y) % 2 === 0;
-                const prop = new THREE.Mesh(isBarrel ? barrelGeo : crateGeo, isBarrel ? barrelMat : crateMat);
-                prop.position.set(x + 0.23, isBarrel ? 0.28 : 0.21, y + 0.25);
-                prop.rotation.y = (x * y) * 0.4;
-                prop.userData.isMazePart = true;
-                prop.matrixAutoUpdate = false;
-                prop.updateMatrix();
-                threeScene.add(prop);
+                const tObj = { x: x + 0.23, y: isBarrel ? 0.28 : 0.21, z: y + 0.25, ry: (x * y) * 0.4 };
+                if (isBarrel) barrelTransforms.push(tObj);
+                else crateTransforms.push(tObj);
               }
             }
           }
         }
+
+        addInstancedBatch(wallGeo, wallMat, wallTransforms);
+        addInstancedBatch(lanternCageGeo, lanternFrameMat, cageTransforms);
+        addInstancedBatch(lanternBulbGeo, lanternGlowMat, bulbTransforms);
+        addInstancedBatch(lanternCapGeo, lanternFrameMat, capTransforms);
+        addInstancedBatch(crateGeo, crateMat, crateTransforms);
+        addInstancedBatch(barrelGeo, barrelMat, barrelTransforms);
 
         // 4. Havoda suzib yuruvchi chang zarralari (Dust Motes in Lantern Light)
         const dustGeo = new THREE.BufferGeometry();
@@ -3778,13 +3792,7 @@
             mesh.rotation.y = nowSec * 1.2;
           });
 
-          // 4-OPTIMIZATSIYA: ShadowMap (Soyalar) tezligini 4x oshirish (har 4-kadrda yangilanadi)
           window._frameTick = (window._frameTick || 0) + 1;
-          const currentRenderer = typeof renderer !== 'undefined' ? renderer : threeRenderer;
-          if (currentRenderer.shadowMap && currentRenderer.shadowMap.enabled) {
-            currentRenderer.shadowMap.autoUpdate = false;
-            if (window._frameTick % 4 === 0) currentRenderer.shadowMap.needsUpdate = true;
-          }
 
           threeRenderer.render(threeScene, threeCamera);
         }
@@ -4123,53 +4131,101 @@
       }
 
       // --- #23 KOMPAS, #24 DINAMIK JON RANGI VA #27 SCOREBOARD YANGILASH ---
+      let _hudDomCache = null;
+      const _hudPrev = {
+        ammo: null, hp: null, hpTier: null, armor: null,
+        kills: null, red: null, blue: null, weapon: null, compass: null
+      };
+      const _COMPASS_DIRS = ['E', 'SE', 'S', 'SW', 'W', 'NW', 'N', 'NE'];
+
       function updateHud() {
+        if (!_hudDomCache) {
+          _hudDomCache = {
+            ammo: document.getElementById('hudAmmo'),
+            hp: document.getElementById('hudHealth'),
+            vHpText: document.getElementById('vitalHpText'),
+            vHpFill: document.getElementById('vitalHpFill'),
+            vArmorText: document.getElementById('vitalArmorText'),
+            vArmorFill: document.getElementById('vitalArmorFill'),
+            armor: document.getElementById('hudArmor'),
+            kills: document.getElementById('hudKills'),
+            red: document.getElementById('hudRedScore'),
+            blue: document.getElementById('hudBlueScore'),
+            weapon: document.getElementById('hudWeaponName'),
+            compass: document.getElementById('hudCompass')
+          };
+        }
+        const d = _hudDomCache;
         const w = WEAPONS[selectedWeaponIdx];
-        document.getElementById('hudAmmo').textContent = w.isMelee ? '∞' : `${player.magAmmo}/${player.reserveAmmo}`;
-
-        // #24 Jon 100-70% Yashil, 69-35% Sariq, 34-0% Qizil miltillovchi + 3D Ekran Vital HP Shkalasi!
-        const hpEl = document.getElementById('hudHealth');
-        const hpVal = Math.max(0, player.health);
-        const armorVal = Math.max(0, player.armor);
-        hpEl.textContent = `${hpVal}%`;
-
-        const vHpText = document.getElementById('vitalHpText');
-        const vHpFill = document.getElementById('vitalHpFill');
-        const vArmorText = document.getElementById('vitalArmorText');
-        const vArmorFill = document.getElementById('vitalArmorFill');
-        if (vHpText) vHpText.textContent = `${hpVal} HP`;
-        if (vHpFill) vHpFill.style.width = `${Math.min(100, hpVal)}%`;
-        if (vArmorText) vArmorText.textContent = `${armorVal}%`;
-        if (vArmorFill) vArmorFill.style.width = `${Math.min(100, armorVal)}%`;
-
-        if (hpVal >= 70) {
-          hpEl.className = 'retro-font text-sm sm:text-lg text-emerald-400';
-          if (vHpText) vHpText.className = 'retro-font text-xs text-emerald-400';
-          if (vHpFill) vHpFill.className = 'h-full bg-gradient-to-r from-emerald-500 to-emerald-400 transition-all duration-150';
-        } else if (hpVal >= 45) {
-          hpEl.className = 'retro-font text-sm sm:text-lg text-amber-400';
-          if (vHpText) vHpText.className = 'retro-font text-xs text-amber-400';
-          if (vHpFill) vHpFill.className = 'h-full bg-gradient-to-r from-amber-500 to-yellow-400 transition-all duration-150';
-        } else {
-          hpEl.className = 'retro-font text-sm sm:text-lg text-red-500 animate-pulse';
-          if (vHpText) vHpText.className = 'retro-font text-xs text-red-500 animate-pulse';
-          if (vHpFill) vHpFill.className = 'h-full bg-gradient-to-r from-red-600 to-red-400 animate-pulse transition-all duration-150';
+        const ammoStr = w.isMelee ? '∞' : `${player.magAmmo}/${player.reserveAmmo}`;
+        if (_hudPrev.ammo !== ammoStr) {
+          _hudPrev.ammo = ammoStr;
+          if (d.ammo) d.ammo.textContent = ammoStr;
         }
 
-        document.getElementById('hudArmor').textContent = `${armorVal}%`;
-        document.getElementById('hudKills').textContent = String(player.kills);
-        document.getElementById('hudRedScore').textContent = String(redScore);
-        document.getElementById('hudBlueScore').textContent = String(blueScore);
-        document.getElementById('hudWeaponName').textContent = w.name;
+        const hpVal = Math.max(0, player.health);
+        if (_hudPrev.hp !== hpVal) {
+          _hudPrev.hp = hpVal;
+          if (d.hp) d.hp.textContent = `${hpVal}%`;
+          if (d.vHpText) d.vHpText.textContent = `${hpVal} HP`;
+          if (d.vHpFill) d.vHpFill.style.width = `${Math.min(100, hpVal)}%`;
+
+          const hpTier = hpVal >= 70 ? 2 : (hpVal >= 45 ? 1 : 0);
+          if (_hudPrev.hpTier !== hpTier) {
+            _hudPrev.hpTier = hpTier;
+            if (hpTier === 2) {
+              if (d.hp) d.hp.className = 'retro-font text-sm sm:text-lg text-emerald-400';
+              if (d.vHpText) d.vHpText.className = 'retro-font text-xs text-emerald-400';
+              if (d.vHpFill) d.vHpFill.className = 'h-full bg-gradient-to-r from-emerald-500 to-emerald-400 transition-all duration-150';
+            } else if (hpTier === 1) {
+              if (d.hp) d.hp.className = 'retro-font text-sm sm:text-lg text-amber-400';
+              if (d.vHpText) d.vHpText.className = 'retro-font text-xs text-amber-400';
+              if (d.vHpFill) d.vHpFill.className = 'h-full bg-gradient-to-r from-amber-500 to-yellow-400 transition-all duration-150';
+            } else {
+              if (d.hp) d.hp.className = 'retro-font text-sm sm:text-lg text-red-500 animate-pulse';
+              if (d.vHpText) d.vHpText.className = 'retro-font text-xs text-red-500 animate-pulse';
+              if (d.vHpFill) d.vHpFill.className = 'h-full bg-gradient-to-r from-red-600 to-red-400 animate-pulse transition-all duration-150';
+            }
+          }
+        }
+
+        const armorVal = Math.max(0, player.armor);
+        if (_hudPrev.armor !== armorVal) {
+          _hudPrev.armor = armorVal;
+          const armorStr = `${armorVal}%`;
+          if (d.armor) d.armor.textContent = armorStr;
+          if (d.vArmorText) d.vArmorText.textContent = armorStr;
+          if (d.vArmorFill) d.vArmorFill.style.width = `${Math.min(100, armorVal)}%`;
+        }
+
+        if (_hudPrev.kills !== player.kills) {
+          _hudPrev.kills = player.kills;
+          if (d.kills) d.kills.textContent = String(player.kills);
+        }
+        if (_hudPrev.red !== redScore) {
+          _hudPrev.red = redScore;
+          if (d.red) d.red.textContent = String(redScore);
+        }
+        if (_hudPrev.blue !== blueScore) {
+          _hudPrev.blue = blueScore;
+          if (d.blue) d.blue.textContent = String(blueScore);
+        }
+        if (_hudPrev.weapon !== w.name) {
+          _hudPrev.weapon = w.name;
+          if (d.weapon) d.weapon.textContent = w.name;
+        }
 
         if (window._frameTick % 3 === 0) {
           let normA = ((player.angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
           const deg = Math.round((normA * 180) / Math.PI);
-          const dirs = ['E', 'SE', 'S', 'SW', 'W', 'NW', 'N', 'NE'];
           const dirIdx = Math.round(normA / (Math.PI / 4)) % 8;
-          const compEl = document.getElementById('hudCompass');
-          if (compEl) compEl.textContent = `${dirs[dirIdx]} • ${deg}°`;
-
+          const compStr = `${_COMPASS_DIRS[dirIdx]} • ${deg}°`;
+          if (_hudPrev.compass !== compStr) {
+            _hudPrev.compass = compStr;
+            if (d.compass) d.compass.textContent = compStr;
+          }
+        }
+        if (window._frameTick % 6 === 0) {
           drawMarineFacePortrait();
         }
       }
