@@ -6,6 +6,7 @@ const express = require("express");
 const https = require("https");
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -376,3 +377,53 @@ const httpServer = app.listen(PORT, async () => {
 
 httpServer.keepAliveTimeout = 65000;
 httpServer.headersTimeout = 66000;
+
+// TCP Nagle buferlashini o'chirish (0ms paket ushlanishi)
+httpServer.on("connection", (socket) => {
+  socket.setNoDelay(true);
+});
+
+// Ultra-yengil 3-baytli Native WebSocket Ping tunneli (/ws/ping) - HTTP/Express ustamasisiz
+const WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+const WS_PONG_FRAME = Buffer.from([0x81, 0x01, 0x70]); // FIN=1, Text, 1 bayt: "p"
+const WS_CTRL_PONG = Buffer.from([0x8a, 0x00]);
+
+httpServer.on("upgrade", (req, socket) => {
+  try {
+    if (!req.url || !req.url.startsWith("/ws/ping")) {
+      socket.destroy();
+      return;
+    }
+    const wsKey = req.headers["sec-websocket-key"];
+    if (!wsKey) {
+      socket.destroy();
+      return;
+    }
+    const acceptKey = crypto.createHash("sha1").update(wsKey + WS_GUID).digest("base64");
+    socket.setNoDelay(true);
+    socket.write(
+      "HTTP/1.1 101 Switching Protocols\r\n" +
+      "Upgrade: websocket\r\n" +
+      "Connection: Upgrade\r\n" +
+      "Sec-WebSocket-Accept: " + acceptKey + "\r\n\r\n"
+    );
+
+    socket.on("data", (buf) => {
+      try {
+        if (!buf || buf.length < 2) return;
+        const opcode = buf[0] & 0x0f;
+        if (opcode === 0x8) {
+          socket.end();
+        } else if (opcode === 0x9) {
+          socket.write(WS_CTRL_PONG);
+        } else if (opcode === 0x1 || opcode === 0x2) {
+          socket.write(WS_PONG_FRAME);
+        }
+      } catch (e) {}
+    });
+
+    socket.on("error", () => {});
+  } catch (e) {
+    try { socket.destroy(); } catch (_) {}
+  }
+});
