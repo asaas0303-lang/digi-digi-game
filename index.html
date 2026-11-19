@@ -5281,7 +5281,6 @@
         } else if (wasVisible) {
           hud.classList.add('hidden');
           hud.classList.remove('flex');
-          closeWsPing();
           wasVisible = false;
         }
       }
@@ -5339,11 +5338,6 @@
 
       let _pingWarmedUp = false;
       let _pingInFlight = false;
-      let _ws = null;
-      let _wsReady = false;
-      let _wsPingStart = 0;
-      let _wsWaiting = false;
-      let _lastWsTry = 0;
       const _pingSamples = [];
 
       function applyPingSample(rawMs) {
@@ -5356,76 +5350,8 @@
         elPing.className = curPing < 90 ? 'font-bold text-emerald-400' : (curPing < 180 ? 'font-bold text-amber-400' : 'font-bold text-red-400');
       }
 
-      function closeWsPing() {
-        _wsReady = false;
-        _wsWaiting = false;
-        if (_ws) {
-          try { _ws.close(); } catch (e) {}
-          _ws = null;
-        }
-      }
-
-      function ensureWsPing() {
-        if (!isEnabled || !isInActiveGame()) {
-          closeWsPing();
-          return;
-        }
-        if (_ws && (_ws.readyState === 0 || _ws.readyState === 1)) return;
-        const now = Date.now();
-        if (now - _lastWsTry < 5000) return;
-        _lastWsTry = now;
-        try {
-          const proto = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-          const sock = new WebSocket(proto + window.location.host + '/ws/ping');
-          _ws = sock;
-          sock.onopen = function() {
-            if (_ws !== sock) return;
-            _wsReady = true;
-            _wsWaiting = false;
-            sendWsPing();
-          };
-          sock.onmessage = function() {
-            if (_ws !== sock || !_wsWaiting) return;
-            const rtt = performance.now() - _wsPingStart;
-            _wsWaiting = false;
-            applyPingSample(rtt);
-          };
-          sock.onerror = function() {
-            if (_ws === sock) { _wsReady = false; _wsWaiting = false; }
-          };
-          sock.onclose = function() {
-            if (_ws === sock) { _wsReady = false; _wsWaiting = false; _ws = null; }
-          };
-        } catch (e) {
-          _wsReady = false;
-        }
-      }
-
-      function sendWsPing() {
-        if (!_ws || !_wsReady || _ws.readyState !== 1) return false;
-        const now = performance.now();
-        if (_wsWaiting && (now - _wsPingStart < 4000)) return true;
-        _wsPingStart = now;
-        _wsWaiting = true;
-        try {
-          _ws.send('p');
-          return true;
-        } catch (e) {
-          _wsWaiting = false;
-          return false;
-        }
-      }
-
       async function pingCheck() {
-        if (!isEnabled || !isInActiveGame()) {
-          closeWsPing();
-          return;
-        }
-        ensureWsPing();
-        if (sendWsPing()) return;
-
-        // Zaxira (Fallback): Agar WebSocket hali ulanmagan yoki bloklangan bo'lsa HTTP 204 ishlaydi
-        if (_pingInFlight) return;
+        if (!isEnabled || !isInActiveGame() || _pingInFlight) return;
         _pingInFlight = true;
         try {
           if (!_pingWarmedUp) {
@@ -5445,7 +5371,7 @@
           _pingInFlight = false;
         }
       }
-      setInterval(pingCheck, 2500);
+      setInterval(pingCheck, 3000);
 
       ['touchstart', 'pointerdown', 'mousedown'].forEach(function(evtName) {
         hud.addEventListener(evtName, function(e) { e.stopPropagation(); });
