@@ -3841,16 +3841,88 @@
 
         const lanternFrameMat = new THREE.MeshStandardMaterial({ color: 0x18181b, metalness: 0.8, roughness: 0.3 });
         const lanternGlowMat = new THREE.MeshBasicMaterial({ color: 0xffcc66 });
+        const lanternGlowRedMat = new THREE.MeshBasicMaterial({ color: 0xff7043 });
+        const lanternGlowBlueMat = new THREE.MeshBasicMaterial({ color: 0x60b8ff });
         const lanternCageGeo = new THREE.CylinderGeometry(0.06, 0.05, 0.18, 6);
         const lanternBulbGeo = new THREE.SphereGeometry(0.042, 8, 8);
         const lanternCapGeo = new THREE.ConeGeometry(0.08, 0.06, 6);
 
+        // CS2 / Dust2 uslubidagi mat trafaret (spray-paint) devor belgilari (keshlangan, 0% ortiqcha GPU yuki)
+        if (!window._wallStencilMats) {
+          function makeStencilMat(mainText, subText, accentHex) {
+            const cv = document.createElement('canvas');
+            cv.width = 256;
+            cv.height = 160;
+            const ctx = cv.getContext('2d');
+            ctx.clearRect(0, 0, 256, 160);
+
+            // Eskirgan qorong'u taktik fon qatlami
+            ctx.fillStyle = 'rgba(10, 12, 16, 0.42)';
+            ctx.fillRect(16, 14, 224, 132);
+
+            // Burchakli harbiy qavslar
+            ctx.strokeStyle = accentHex;
+            ctx.globalAlpha = 0.85;
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(18, 36); ctx.lineTo(18, 16); ctx.lineTo(42, 16);
+            ctx.moveTo(214, 16); ctx.lineTo(238, 16); ctx.lineTo(238, 36);
+            ctx.moveTo(18, 124); ctx.lineTo(18, 144); ctx.lineTo(42, 144);
+            ctx.moveTo(214, 144); ctx.lineTo(238, 144); ctx.lineTo(238, 124);
+            ctx.stroke();
+
+            // Asosiy sektor harfi (A, B, MID, T, CT)
+            ctx.globalAlpha = 0.92;
+            ctx.fillStyle = accentHex;
+            ctx.font = '900 72px monospace';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(mainText, 128, 70);
+
+            // Pastki taktik yozuv
+            ctx.globalAlpha = 0.86;
+            ctx.fillStyle = '#e5e7eb';
+            ctx.font = 'bold 21px monospace';
+            ctx.fillText(subText, 128, 122);
+
+            // Haqiqiy harbiy trafaret (stencil) kesimlari — orqasidan g'isht ko'rinib turadi
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.fillStyle = 'rgba(0,0,0,0.9)';
+            ctx.fillRect(46, 68, 164, 3);
+            ctx.globalCompositeOperation = 'source-over';
+
+            const tex = new THREE.CanvasTexture(cv);
+            tex.needsUpdate = true;
+            return new THREE.MeshStandardMaterial({
+              map: tex,
+              transparent: true,
+              opacity: 0.88,
+              roughness: 0.92,
+              metalness: 0.0,
+              depthWrite: false,
+              polygonOffset: true,
+              polygonOffsetFactor: -2,
+              polygonOffsetUnits: -2
+            });
+          }
+          window._wallStencilMats = {
+            T: makeStencilMat('T', 'T-FORCE', '#f97316'),
+            CT: makeStencilMat('CT', 'CT-SPEC', '#38bdf8'),
+            A: makeStencilMat('A', 'SECTOR A ▶', '#f59e0b'),
+            B: makeStencilMat('B', '◀ SECTOR B', '#f59e0b'),
+            MID: makeStencilMat('MID', '◀ A • B ▶', '#e2e8f0')
+          };
+        }
+
         const wallTransforms = [];
         const cageTransforms = [];
-        const bulbTransforms = [];
+        const bulbMidTransforms = [];
+        const bulbRedTransforms = [];
+        const bulbBlueTransforms = [];
         const capTransforms = [];
         const crateTransforms = [];
         const barrelTransforms = [];
+        const stencilBuckets = { T: [], CT: [], A: [], B: [], MID: [] };
         let lanternCounter = 0;
 
         for (let y = 0; y < MAP_SIZE; y++) {
@@ -3859,26 +3931,57 @@
             if (cell > 0) {
               wallTransforms.push({ x: x + 0.5, y: wallHeight / 2, z: y + 0.5 });
             } else {
-              // Ochiq koridorlarda devorga osilgan eski sariq fonuslar (Wall Lanterns) joylashtirish
               const hasNorthWall = (y > 0 && currentMaze[y - 1][x] > 0);
+              const hasSouthWall = (y < MAP_SIZE - 1 && currentMaze[y + 1][x] > 0);
               const hasWestWall = (x > 0 && currentMaze[y][x - 1] > 0);
+              const hasEastWall = (x < MAP_SIZE - 1 && currentMaze[y][x + 1] > 0);
+
+              // Hudud atmosferasi: T-Force (shimoli-g'arb), CT-Spec (janubi-sharq), MID (markaz/koridor)
+              const isRedZone = (x <= 5 && y <= 5);
+              const isBlueZone = (x >= 10 && y >= 10);
+              let placedLanternHere = false;
 
               if ((hasNorthWall || hasWestWall) && ((x + y) % 3 === 0) && lanternCounter < 18) {
                 lanternCounter++;
+                placedLanternHere = true;
                 const lx = hasWestWall ? x + 0.08 : x + 0.5;
                 const lz = hasNorthWall ? y + 0.08 : y + 0.5;
                 const ly = 1.32;
 
                 cageTransforms.push({ x: lx, y: ly, z: lz });
-                bulbTransforms.push({ x: lx, y: ly, z: lz });
+                if (isRedZone) bulbRedTransforms.push({ x: lx, y: ly, z: lz });
+                else if (isBlueZone) bulbBlueTransforms.push({ x: lx, y: ly, z: lz });
+                else bulbMidTransforms.push({ x: lx, y: ly, z: lz });
                 capTransforms.push({ x: lx, y: ly + 0.11, z: lz });
 
                 lanternLights.push({
                   x: hasWestWall ? x + 0.22 : x + 0.5,
                   y: ly - 0.02,
                   z: hasNorthWall ? y + 0.22 : y + 0.5,
-                  phase: Math.random() * 10
+                  phase: Math.random() * 10,
+                  colorHex: isRedZone ? 0xff5a2a : (isBlueZone ? 0x4ca6ff : 0xff9c2a)
                 });
+              }
+
+              // Devorlarga strategik CS sektor belgilarini joylashtirish (fonusga tegmaydi, har zonada max 2 ta)
+              let zoneKey = null;
+              if (isRedZone) zoneKey = 'T';
+              else if (isBlueZone) zoneKey = 'CT';
+              else if (x >= 9 && y <= 6) zoneKey = 'A';
+              else if (x <= 6 && y >= 9) zoneKey = 'B';
+              else if (x >= 6 && x <= 9 && y >= 6 && y <= 9) zoneKey = 'MID';
+
+              if (zoneKey && !placedLanternHere && stencilBuckets[zoneKey].length < 2) {
+                const existing = stencilBuckets[zoneKey];
+                const farEnough = existing.every(p => Math.hypot(p.x - (x + 0.5), p.z - (y + 0.5)) >= 2.2);
+                if (farEnough) {
+                  let st = null;
+                  if (hasNorthWall) st = { x: x + 0.5, y: 1.08, z: y + 0.016, ry: 0 };
+                  else if (hasSouthWall) st = { x: x + 0.5, y: 1.08, z: y + 0.984, ry: Math.PI };
+                  else if (hasWestWall) st = { x: x + 0.016, y: 1.08, z: y + 0.5, ry: Math.PI / 2 };
+                  else if (hasEastWall) st = { x: x + 0.984, y: 1.08, z: y + 0.5, ry: -Math.PI / 2 };
+                  if (st) existing.push(st);
+                }
               }
 
               // Yo'lak chetlariga haqiqiy 3D yog'och quti va bochkalar (harakatga xalaqit bermaydigan burchaklarda)
@@ -3894,16 +3997,27 @@
 
         addInstancedBatch(wallGeo, wallMat, wallTransforms);
         addInstancedBatch(lanternCageGeo, lanternFrameMat, cageTransforms);
-        addInstancedBatch(lanternBulbGeo, lanternGlowMat, bulbTransforms);
+        addInstancedBatch(lanternBulbGeo, lanternGlowMat, bulbMidTransforms);
+        addInstancedBatch(lanternBulbGeo, lanternGlowRedMat, bulbRedTransforms);
+        addInstancedBatch(lanternBulbGeo, lanternGlowBlueMat, bulbBlueTransforms);
         addInstancedBatch(lanternCapGeo, lanternFrameMat, capTransforms);
         addInstancedBatch(crateGeo, crateMat, crateTransforms);
         addInstancedBatch(barrelGeo, barrelMat, barrelTransforms);
 
-        // Eng yaqin 4 ta fonus uchun Dinamik PointLight Hovuzi (20 ta chiroq o'rniga 6 ta -> 3.3x tez PBR shader!)
+        const stencilGeo = new THREE.PlaneGeometry(0.68, 0.42);
+        const stencilKeys = ['T', 'CT', 'A', 'B', 'MID'];
+        for (let si = 0; si < stencilKeys.length; si++) {
+          const sk = stencilKeys[si];
+          addInstancedBatch(stencilGeo, window._wallStencilMats[sk], stencilBuckets[sk]);
+        }
+
+        // Eng yaqin 4 ta fonus uchun Dinamik PointLight Hovuzi (qat'iy 4 chiroq -> 60 FPS PBR shader!)
         window._lanternLightPool = [];
         const poolCount = Math.min(4, lanternLights.length);
         for (let i = 0; i < poolCount; i++) {
-          const pLight = new THREE.PointLight(0xff8e22, 1.55, 7.2, 1.8);
+          const initHex = lanternLights[i].colorHex || 0xff9c2a;
+          const pLight = new THREE.PointLight(initHex, 1.95, 8.2, 1.65);
+          pLight._lastHex = initHex;
           pLight.position.set(lanternLights[i].x, lanternLights[i].y, lanternLights[i].z);
           pLight.userData.isMazePart = true;
           threeScene.add(pLight);
@@ -4386,7 +4500,12 @@
                 const l = lanternLights[li];
                 const pl = lightPool[k];
                 pl.position.set(l.x, l.y, l.z);
-                pl.intensity = 1.52 + Math.sin(nowSec * 7.5 + l.phase) * 0.16;
+                const targetHex = l.colorHex || 0xff9c2a;
+                if (pl._lastHex !== targetHex) {
+                  pl._lastHex = targetHex;
+                  pl.color.setHex(targetHex);
+                }
+                pl.intensity = 1.92 + Math.sin(nowSec * 7.5 + l.phase) * 0.16;
               }
             }
           }
