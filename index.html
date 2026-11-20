@@ -3842,8 +3842,8 @@
 
         const lanternFrameMat = new THREE.MeshStandardMaterial({ color: 0x18181b, metalness: 0.8, roughness: 0.3 });
         const lanternGlowMat = new THREE.MeshBasicMaterial({ color: 0xffcc66 });
-        const lanternGlowRedMat = new THREE.MeshBasicMaterial({ color: 0xff7043 });
-        const lanternGlowBlueMat = new THREE.MeshBasicMaterial({ color: 0x60b8ff });
+        const lanternGlowRedMat = new THREE.MeshBasicMaterial({ color: 0xff6b3d });
+        const lanternGlowBlueMat = new THREE.MeshBasicMaterial({ color: 0x7dd3fc });
         const lanternCageGeo = new THREE.CylinderGeometry(0.06, 0.05, 0.18, 6);
         const lanternBulbGeo = new THREE.SphereGeometry(0.042, 8, 8);
         const lanternCapGeo = new THREE.ConeGeometry(0.08, 0.06, 6);
@@ -3960,7 +3960,7 @@
                   y: ly - 0.02,
                   z: hasNorthWall ? y + 0.22 : y + 0.5,
                   phase: Math.random() * 10,
-                  colorHex: isRedZone ? 0xff5a2a : (isBlueZone ? 0x4ca6ff : 0xff9c2a)
+                  colorHex: isRedZone ? 0xff4d1a : (isBlueZone ? 0x2299ff : 0xff9c2a)
                 });
               }
 
@@ -3975,12 +3975,17 @@
               if (zoneKey && !placedLanternHere && stencilBuckets[zoneKey].length < 2) {
                 const existing = stencilBuckets[zoneKey];
                 const farEnough = existing.every(p => Math.hypot(p.x - (x + 0.5), p.z - (y + 0.5)) >= 2.2);
-                if (farEnough) {
+                const wallNeighbors = (hasNorthWall ? 1 : 0) + (hasSouthWall ? 1 : 0) + (hasWestWall ? 1 : 0) + (hasEastWall ? 1 : 0);
+                if (farEnough && wallNeighbors <= 2) {
                   let st = null;
-                  if (hasNorthWall) st = { x: x + 0.5, y: 1.08, z: y + 0.016, ry: 0 };
-                  else if (hasSouthWall) st = { x: x + 0.5, y: 1.08, z: y + 0.984, ry: Math.PI };
-                  else if (hasWestWall) st = { x: x + 0.016, y: 1.08, z: y + 0.5, ry: Math.PI / 2 };
-                  else if (hasEastWall) st = { x: x + 0.984, y: 1.08, z: y + 0.5, ry: -Math.PI / 2 };
+                  if (hasNorthWall && !hasWestWall && !hasEastWall) st = { x: x + 0.5, y: 1.08, z: y + 0.020, ry: 0 };
+                  else if (hasSouthWall && !hasWestWall && !hasEastWall) st = { x: x + 0.5, y: 1.08, z: y + 0.980, ry: Math.PI };
+                  else if (hasWestWall && !hasNorthWall && !hasSouthWall) st = { x: x + 0.020, y: 1.08, z: y + 0.5, ry: Math.PI / 2 };
+                  else if (hasEastWall && !hasNorthWall && !hasSouthWall) st = { x: x + 0.980, y: 1.08, z: y + 0.5, ry: -Math.PI / 2 };
+                  else if (hasNorthWall) st = { x: x + 0.5, y: 1.08, z: y + 0.020, ry: 0 };
+                  else if (hasSouthWall) st = { x: x + 0.5, y: 1.08, z: y + 0.980, ry: Math.PI };
+                  else if (hasWestWall) st = { x: x + 0.020, y: 1.08, z: y + 0.5, ry: Math.PI / 2 };
+                  else if (hasEastWall) st = { x: x + 0.980, y: 1.08, z: y + 0.5, ry: -Math.PI / 2 };
                   if (st) existing.push(st);
                 }
               }
@@ -4005,7 +4010,7 @@
         addInstancedBatch(crateGeo, crateMat, crateTransforms);
         addInstancedBatch(barrelGeo, barrelMat, barrelTransforms);
 
-        const stencilGeo = new THREE.PlaneGeometry(0.68, 0.42);
+        const stencilGeo = new THREE.PlaneGeometry(0.56, 0.35);
         const stencilKeys = ['T', 'CT', 'A', 'B', 'MID'];
         for (let si = 0; si < stencilKeys.length; si++) {
           const sk = stencilKeys[si];
@@ -4278,12 +4283,12 @@
             { geo: new THREE.BoxGeometry(0.024, 0.095, 0.042), rx: 0.22, tx: 0, ty: -0.052, tz: 0.115 },
             { geo: new THREE.BoxGeometry(0.030, 0.040, 0.16), tx: 0, ty: 0.016, tz: 0.24 }
           ]);
-          const flashCoreMat = new THREE.MeshBasicMaterial({ color: 0xfff7aa });
-          const flashOuterMat = new THREE.MeshBasicMaterial({ color: 0xff8811, transparent: true, opacity: 0.85, side: THREE.DoubleSide });
-          const coreSphereGeo = new THREE.SphereGeometry(0.020, 6, 6);
-          const coneFlameGeo = new THREE.ConeGeometry(0.024, 0.10, 6);
+          const flashCoreMat = new THREE.MeshBasicMaterial({ color: 0xfff7c2 });
+          const flashOuterMat = new THREE.MeshBasicMaterial({ color: 0xff8811, transparent: true, opacity: 0.78, side: THREE.DoubleSide });
+          const coreSphereGeo = new THREE.SphereGeometry(0.011, 6, 6);
+          const coneFlameGeo = new THREE.ConeGeometry(0.014, 0.068, 6);
           coneFlameGeo.rotateX(Math.PI / 2);
-          coneFlameGeo.translate(0, 0, 0.04);
+          coneFlameGeo.translate(0, 0, 0.034);
           _sharedRifleAssets = { gunMetalMat, darkPolyMat, metalGeo, polyGeo, flashCoreMat, flashOuterMat, coreSphereGeo, coneFlameGeo };
         }
         const a = _sharedRifleAssets;
@@ -4293,7 +4298,7 @@
 
         const flashGrp = new THREE.Group();
         flashGrp.add(new THREE.Mesh(a.coreSphereGeo, a.flashCoreMat), new THREE.Mesh(a.coneFlameGeo, a.flashOuterMat));
-        flashGrp.position.set(0, 0.020, 0.45);
+        flashGrp.position.set(0, 0.021, 0.462);
         flashGrp.visible = false;
         rifleGrp.add(flashGrp);
 
@@ -4467,8 +4472,22 @@
           // O'yinchi fonari va o'q chaqnashi yorug'ligi
           if (gunPointLight) {
             gunPointLight.position.set(player.x, camY + 0.04, player.y);
-            gunPointLight.intensity = player.muzzleFlash > 0 ? 3.8 : 0.46;
-            gunPointLight.color.setHex(player.muzzleFlash > 0 ? 0xffaa33 : 0xffddaa);
+            if (player.muzzleFlash > 0) {
+              gunPointLight.intensity = 3.8;
+              if (gunPointLight._lastHex !== 0xffaa33) {
+                gunPointLight._lastHex = 0xffaa33;
+                gunPointLight.color.setHex(0xffaa33);
+              }
+            } else {
+              const inBlueBase = (player.x >= 9.5 && player.y >= 9.5);
+              const inRedBase = (player.x <= 6.5 && player.y <= 6.5);
+              const ambientHex = inBlueBase ? 0x7cc4ff : (inRedBase ? 0xffa06e : 0xffddaa);
+              gunPointLight.intensity = inBlueBase ? 0.56 : (inRedBase ? 0.50 : 0.44);
+              if (gunPointLight._lastHex !== ambientHex) {
+                gunPointLight._lastHex = ambientHex;
+                gunPointLight.color.setHex(ambientHex);
+              }
+            }
           }
 
           const nowSec = performance.now() * 0.001;
@@ -4506,7 +4525,8 @@
                   pl._lastHex = targetHex;
                   pl.color.setHex(targetHex);
                 }
-                pl.intensity = 1.92 + Math.sin(nowSec * 7.5 + l.phase) * 0.16;
+                const baseInt = targetHex === 0x2299ff ? 2.65 : (targetHex === 0xff4d1a ? 2.15 : 1.92);
+                pl.intensity = baseInt + Math.sin(nowSec * 7.5 + l.phase) * 0.16;
               }
             }
           }
@@ -4607,26 +4627,104 @@
             if (ud.flashMesh) {
               ud.flashMesh.visible = (c.muzzleFlash > 0);
               if (c.muzzleFlash > 0) {
+                const fs = 0.85 + Math.random() * 0.30;
+                ud.flashMesh.scale.set(fs, fs, fs);
                 ud.flashMesh.rotation.z = Math.random() * Math.PI;
               }
             }
           });
 
-          // Labirint ichidagi 3D o'q-dori, aptechka va zirh qutilarini yangilash
+          // Labirint ichidagi 3D harbiy o'q-dori, aptechka va zirh qutilarini yangilash (keshlangan Canvas tekstura)
+          if (!window._pickupAssets) {
+            function makePickupMat(kind) {
+              const cv = document.createElement('canvas');
+              cv.width = 128;
+              cv.height = 128;
+              const ctx = cv.getContext('2d');
+              if (kind === 'health') {
+                // Harbiy aptechka qutisi (mat to'q-kulrang + oq tibbiy belbog' + qizil xoch)
+                ctx.fillStyle = '#2c332d';
+                ctx.fillRect(0, 0, 128, 128);
+                ctx.fillStyle = '#d4d8dc';
+                ctx.fillRect(10, 14, 108, 100);
+                ctx.strokeStyle = '#181c19';
+                ctx.lineWidth = 8;
+                ctx.strokeRect(4, 4, 120, 120);
+                ctx.fillStyle = '#dc2626';
+                ctx.fillRect(52, 28, 24, 72);
+                ctx.fillRect(28, 52, 72, 24);
+                ctx.fillStyle = '#3f4740';
+                ctx.fillRect(12, 12, 12, 12);
+                ctx.fillRect(104, 12, 12, 12);
+                ctx.fillRect(12, 104, 12, 12);
+                ctx.fillRect(104, 104, 12, 12);
+              } else if (kind === 'armor') {
+                // Taktik Kevlar zirh keysi (to'q navy-metall + qalqon belgisi)
+                ctx.fillStyle = '#1b2432';
+                ctx.fillRect(0, 0, 128, 128);
+                ctx.fillStyle = '#0f172a';
+                ctx.fillRect(0, 20, 128, 12);
+                ctx.fillRect(0, 96, 128, 12);
+                ctx.strokeStyle = '#334155';
+                ctx.lineWidth = 7;
+                ctx.strokeRect(4, 4, 120, 120);
+                ctx.fillStyle = '#38bdf8';
+                ctx.beginPath();
+                ctx.moveTo(64, 34);
+                ctx.lineTo(92, 46);
+                ctx.lineTo(86, 78);
+                ctx.lineTo(64, 96);
+                ctx.lineTo(42, 78);
+                ctx.lineTo(36, 46);
+                ctx.closePath();
+                ctx.fill();
+                ctx.fillStyle = '#0c4a6e';
+                ctx.fillRect(58, 46, 12, 34);
+              } else {
+                // Harbiy 5.56 o'q-dori temir qutisi (zaytun-po'lat + sariq chiziq + o'q belgisi)
+                ctx.fillStyle = '#2d3321';
+                ctx.fillRect(0, 0, 128, 128);
+                ctx.fillStyle = '#1c2015';
+                ctx.fillRect(0, 18, 128, 12);
+                ctx.fillRect(0, 98, 128, 12);
+                ctx.strokeStyle = '#14170f';
+                ctx.lineWidth = 7;
+                ctx.strokeRect(4, 4, 120, 120);
+                ctx.fillStyle = '#d97706';
+                ctx.fillRect(14, 34, 100, 10);
+                ctx.fillStyle = '#f59e0b';
+                ctx.fillRect(36, 54, 12, 34);
+                ctx.fillRect(58, 54, 12, 34);
+                ctx.fillRect(80, 54, 12, 34);
+                ctx.fillStyle = '#fde68a';
+                ctx.fillRect(38, 46, 8, 8);
+                ctx.fillRect(60, 46, 8, 8);
+                ctx.fillRect(82, 46, 8, 8);
+              }
+              const tex = new THREE.CanvasTexture(cv);
+              tex.needsUpdate = true;
+              return new THREE.MeshStandardMaterial({ map: tex, roughness: 0.74, metalness: 0.16 });
+            }
+            window._pickupAssets = {
+              geo: new THREE.BoxGeometry(0.32, 0.20, 0.24),
+              health: makePickupMat('health'),
+              armor: makePickupMat('armor'),
+              ammo: makePickupMat('ammo')
+            };
+          }
           pickups.forEach((pk, idx) => {
             let mesh = pickupMeshes.get(idx);
             if (!mesh) {
-              const geo = new THREE.BoxGeometry(0.28, 0.22, 0.28);
-              const col = pk.type === 'health' ? 0x10b981 : (pk.type === 'armor' ? 0x2563eb : 0xd97706);
-              const mat = new THREE.MeshStandardMaterial({ color: col, roughness: 0.4, metalness: 0.5 });
-              mesh = new THREE.Mesh(geo, mat);
+              const pa = window._pickupAssets;
+              const mat = pk.type === 'health' ? pa.health : (pk.type === 'armor' ? pa.armor : pa.ammo);
+              mesh = new THREE.Mesh(pa.geo, mat);
               mesh.userData.isMazePart = true;
               threeScene.add(mesh);
               pickupMeshes.set(idx, mesh);
             }
             mesh.visible = pk.active;
-            mesh.position.set(pk.x, 0.12 + Math.sin(nowSec * 3 + idx) * 0.02, pk.y);
-            mesh.rotation.y = nowSec * 1.2;
+            mesh.position.set(pk.x, 0.11 + Math.sin(nowSec * 2.6 + idx) * 0.014, pk.y);
+            mesh.rotation.y = nowSec * 0.85;
           });
 
           window._frameTick = (window._frameTick || 0) + 1;
