@@ -707,12 +707,28 @@
 
       <!-- BIRINCHI SHAXS (FPS) HAQIQIY IKKI QO'L (HARBIY QO'LQOP + YENG) VA 3D QUROL MODELI -->
       <div id="fpsWeaponOverlay" class="absolute -bottom-2 -right-2 w-[56%] max-w-[245px] sm:max-w-[330px] pointer-events-none z-15 origin-bottom-right" style="transform: translate3d(0px, 0px, 0px); will-change: transform;">
-        <!-- Stvol uchidagi o'tkir qirrali taktik olov chaqnashi (0% blur, sof GPU opacity + transform) -->
-        <div id="fpsMuzzleGlow" class="absolute -top-3 -left-2 w-24 h-24 pointer-events-none flex items-center justify-center" style="opacity: 0; transform: scale(0.85) rotate(0deg); will-change: opacity, transform;">
-          <svg viewBox="0 0 100 100" class="w-full h-full overflow-visible">
-            <polygon points="50,2 57,34 86,14 66,43 98,50 66,57 86,86 57,66 50,98 43,66 14,86 34,57 2,50 34,43 14,14 43,34" fill="rgba(251,146,60,0.88)" />
-            <polygon points="50,14 55,40 76,24 60,45 86,50 60,55 76,76 55,60 50,86 45,60 24,76 40,55 14,50 40,45 24,24 45,40" fill="rgba(254,240,138,0.96)" />
-            <circle cx="50" cy="50" r="13" fill="#ffffff" />
+        <!-- Stvol uchidagi tabiiy gradientli taktik alanga (aynan stvol uchida: top 5%, left 16%; 0% blur, sof GPU) -->
+        <div id="fpsMuzzleGlow" class="absolute w-16 h-16 pointer-events-none" style="top: 5%; left: 16%; opacity: 0; transform: translate3d(-50%, -50%, 0px) scale(0.95); will-change: opacity, transform;">
+          <svg viewBox="0 0 100 100" class="w-full h-full block">
+            <defs>
+              <radialGradient id="mfCoreGrad" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#ffffff" stop-opacity="1" />
+                <stop offset="28%" stop-color="#fef08a" stop-opacity="0.92" />
+                <stop offset="62%" stop-color="#f97316" stop-opacity="0.45" />
+                <stop offset="100%" stop-color="#ea580c" stop-opacity="0" />
+              </radialGradient>
+              <radialGradient id="mfRayGrad" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#fffbeb" stop-opacity="0.95" />
+                <stop offset="50%" stop-color="#fb923c" stop-opacity="0.55" />
+                <stop offset="100%" stop-color="#ea580c" stop-opacity="0" />
+              </radialGradient>
+            </defs>
+            <circle cx="50" cy="50" r="46" fill="url(#mfCoreGrad)" />
+            <ellipse cx="50" cy="50" rx="48" ry="8" fill="url(#mfRayGrad)" />
+            <ellipse cx="50" cy="50" rx="8" ry="44" fill="url(#mfRayGrad)" />
+            <ellipse cx="50" cy="50" rx="38" ry="6" transform="rotate(42 50 50)" fill="url(#mfRayGrad)" />
+            <ellipse cx="50" cy="50" rx="38" ry="6" transform="rotate(-42 50 50)" fill="url(#mfRayGrad)" />
+            <circle cx="50" cy="50" r="10" fill="#ffffff" fill-opacity="0.95" />
           </svg>
         </div>
         <!-- Haqiqiy ikki qo'l va taktik miltiq -->
@@ -730,6 +746,13 @@
           <div id="chBottom" class="absolute w-[2px] h-2.5 bg-emerald-400 shadow" style="transform: translateY(8px)"></div>
           <div id="chLeft" class="absolute h-[2px] w-2.5 bg-emerald-400 shadow" style="transform: translateX(-8px)"></div>
           <div id="chRight" class="absolute h-[2px] w-2.5 bg-emerald-400 shadow" style="transform: translateX(8px)"></div>
+          <div id="reloadRingWrap" class="absolute inset-0 flex items-center justify-center pointer-events-none" style="opacity: 0; will-change: opacity;">
+            <svg viewBox="0 0 44 44" class="w-11 h-11 -rotate-90 block">
+              <circle cx="22" cy="22" r="18" fill="none" stroke="rgba(15,23,42,0.72)" stroke-width="2.6" />
+              <circle id="reloadRingArc" cx="22" cy="22" r="18" fill="none" stroke="#facc15" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="113.1" stroke-dashoffset="113.1" />
+            </svg>
+            <span id="reloadRingText" class="absolute top-[46px] text-[10px] font-mono font-bold text-amber-300 tracking-tight" style="text-shadow: 0 1px 2px rgba(0,0,0,0.95);">0.0s</span>
+          </div>
         </div>
       </div>
 
@@ -2268,6 +2291,7 @@
         player.vy = 0;
         player.recoilPitch = 0;
         player.reloadingUntil = 0;
+        player.isReloadPending = false;
         player.heGrenades = 2;
         player.smokeGrenades = 1;
         if (resetScores) {
@@ -2412,12 +2436,31 @@
       }
 
       // --- #10 QAYTA O'QLASH (RELOAD) TIZIMI ---
+      function completeReloadIfReady(now) {
+        if (!player.isReloadPending) return;
+        if (now < player.reloadingUntil) return;
+        player.isReloadPending = false;
+        player.reloadingUntil = 0;
+        if (!gameRunning) return;
+        const w = WEAPONS[selectedWeaponIdx];
+        if (w && !w.isMelee && (player.reloadWeaponIdx === undefined || player.reloadWeaponIdx === selectedWeaponIdx)) {
+          const needed = w.magSize - player.magAmmo;
+          const take = Math.min(needed, player.reserveAmmo);
+          if (take > 0) {
+            player.magAmmo += take;
+            player.reserveAmmo -= take;
+          }
+          updateHud();
+        }
+      }
+
       function reloadWeapon() {
         if (!gameRunning) return;
         const w = WEAPONS[selectedWeaponIdx];
-        if (w.isMelee) return;
+        if (!w || w.isMelee) return;
         const now = performance.now();
-        if (now < player.reloadingUntil) return;
+        completeReloadIfReady(now);
+        if (player.isReloadPending || now < player.reloadingUntil) return;
         if (player.magAmmo >= w.magSize) {
           showToast('Magazin to\'la!', '✅');
           return;
@@ -2427,19 +2470,12 @@
           return;
         }
 
+        player.isReloadPending = true;
+        player.reloadWeaponIdx = selectedWeaponIdx;
         player.reloadingUntil = now + w.reloadTime;
         player.reloadDuration = w.reloadTime;
         player.pumpStage = 14;
         playSound('reload');
-
-        setTimeout(() => {
-          if (!gameRunning) return;
-          const needed = w.magSize - player.magAmmo;
-          const take = Math.min(needed, player.reserveAmmo);
-          player.magAmmo += take;
-          player.reserveAmmo -= take;
-          updateHud();
-        }, w.reloadTime);
       }
 
       // --- #13 PORTLOVCHI GRANATA (HE GRENADE) VA #30 TUTUN GRANATASI (SMOKE) ---
@@ -2475,7 +2511,8 @@
       function fireWeapon() {
         if (!gameRunning) return;
         const now = performance.now();
-        if (now < player.reloadingUntil) return;
+        completeReloadIfReady(now);
+        if (player.isReloadPending || now < player.reloadingUntil) return;
 
         const w = WEAPONS[selectedWeaponIdx];
         if (now - player.lastShotTime < w.cooldown) return;
@@ -2488,7 +2525,12 @@
           player.magAmmo--;
           // Avtomatik o'qlash agar magazin bo'shab qolsa
           if (player.magAmmo === 0 && player.reserveAmmo > 0) {
-            setTimeout(reloadWeapon, 260);
+            if (window._autoReloadTimer) clearTimeout(window._autoReloadTimer);
+            window._autoReloadTimer = setTimeout(() => {
+              if (gameRunning && !player.isReloadPending && player.magAmmo === 0 && player.reserveAmmo > 0) {
+                reloadWeapon();
+              }
+            }, 220);
           }
         }
 
@@ -4630,18 +4672,18 @@
             continue;
           }
           const life = b.ttl / (b.maxTtl || 6); // 1.0 -> 0.0
-          const startX = w * 0.58;
-          const startY = h * 0.72;
+          const sx = player.adsZoom ? w * 0.52 : w * 0.54;
+          const sy = player.adsZoom ? h * 0.58 : h * 0.63;
           const endX = w * 0.50 + (b.angle - player.angle) * w * 1.05;
           const endY = halfH + (b.spreadY || 0);
 
           // Trasser chizig'i boshlanishi va oxiri (o'q uchib ketishi effekti)
           const p1 = 1.0 - life;
           const p0 = Math.max(0, p1 - 0.42);
-          const x0 = startX + (endX - startX) * p0;
-          const y0 = startY + (endY - startY) * p0;
-          const x1 = startX + (endX - startX) * p1;
-          const y1 = startY + (endY - startY) * p1;
+          const x0 = sx + (endX - sx) * p0;
+          const y0 = sy + (endY - sy) * p0;
+          const x1 = sx + (endX - sx) * p1;
+          const y1 = sy + (endY - sy) * p1;
 
           doomCtx.save();
           doomCtx.strokeStyle = b.isHit ? `rgba(255, 235, 140, ${(life * 0.95).toFixed(2)})` : `rgba(255, 190, 80, ${(life * 0.75).toFixed(2)})`;
@@ -4688,41 +4730,7 @@
           doomCtx.restore();
         }
 
-        // 3. Nishon (Crosshair) Markazidagi Taktik Qayta O'qlash Halqasi (Reload Progress Ring)
-        const now = performance.now();
-        if (now < player.reloadingUntil && player.reloadDuration > 0) {
-          const remain = player.reloadingUntil - now;
-          const prog = Math.min(1.0, Math.max(0, 1.0 - (remain / player.reloadDuration)));
-          const cx = w * 0.5;
-          const cy = halfH;
-          const ringR = 20;
 
-          doomCtx.save();
-          // Orqa xira yo'lka
-          doomCtx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
-          doomCtx.lineWidth = 3.0;
-          doomCtx.beginPath();
-          doomCtx.arc(cx, cy, ringR, 0, Math.PI * 2);
-          doomCtx.stroke();
-
-          // Yashil-sariq to'lish yoyi
-          doomCtx.strokeStyle = '#facc15';
-          doomCtx.lineWidth = 3.0;
-          doomCtx.lineCap = 'round';
-          doomCtx.beginPath();
-          const startAngle = -Math.PI / 2;
-          const endAngle = startAngle + prog * Math.PI * 2;
-          doomCtx.arc(cx, cy, ringR, startAngle, endAngle);
-          doomCtx.stroke();
-
-          // Qayta o'qlash foizi / ikonka
-          doomCtx.fillStyle = '#fef08a';
-          doomCtx.font = 'bold 9px monospace';
-          doomCtx.textAlign = 'center';
-          doomCtx.textBaseline = 'middle';
-          doomCtx.fillText(`${Math.round(prog * 100)}%`, cx, cy + 30);
-          doomCtx.restore();
-        }
 
         // 4. Birinchi shaxs (FPS) Ikki Qo'l va 3D Qurol Animatsiyasi (Harbiy qo'lqop, yeng, tebranish, ADS Zoom, Recoil va Reload!)
         drawFirstPersonWeapon(w, h);
@@ -4732,68 +4740,105 @@
       let _lastFpsWeaponTransform = '';
       let _lastFpsMuzzleShown = false;
       let _lastFpsMuzzleTransform = '';
+      let _reloadRingWrapEl = null;
+      let _reloadRingArcEl = null;
+      let _reloadRingTextEl = null;
+      let _lastReloadShown = false;
+      let _lastReloadText = '';
 
       function drawFirstPersonWeapon(w, h) {
+        const now = performance.now();
+        completeReloadIfReady(now);
+
         // Otish qaytishi (recoil) va stvol silkinishining silliq so'nishi (Decay)
-        if (player.weaponRecoil > 0) player.weaponRecoil = Math.max(0, player.weaponRecoil - 2.85);
-        if (player.recoilSide) player.recoilSide *= 0.78;
+        if (player.weaponRecoil > 0.05) player.weaponRecoil *= 0.76;
+        else player.weaponRecoil = 0;
+        if (player.recoilSide && Math.abs(player.recoilSide) > 0.05) player.recoilSide *= 0.76;
+        else player.recoilSide = 0;
         if (player.pumpStage > 0) player.pumpStage = Math.max(0, player.pumpStage - 1);
 
         if (!fpsWeaponOverlay) return;
 
-        const now = performance.now();
         const wObj = WEAPONS[selectedWeaponIdx] || WEAPONS[0];
-        const isReloading = now < player.reloadingUntil;
+        const isReloading = player.isReloadPending && now < player.reloadingUntil && player.reloadDuration > 0;
         let reloadX = 0, reloadY = 0, reloadRot = 0;
 
-        if (isReloading && player.reloadDuration > 0) {
-          const prog = Math.min(1.0, Math.max(0, 1.0 - (player.reloadingUntil - now) / player.reloadDuration));
-          // 3 bosqichli professional CS:GO qayta o'qlash animatsiyasi:
-          // 1) 0..30%: Qurol pastga tushadi va magazin tashlanadi
-          // 2) 30..70%: Yangi magazin kiritiladi va zarba silkinishi
-          // 3) 70..100%: Qurol joyiga qaytib zatvor tortiladi
-          if (prog < 0.30) {
-            const p = prog / 0.30;
-            reloadX = -14 * p;
-            reloadY = 48 * p;
-            reloadRot = -16 * p;
-          } else if (prog < 0.70) {
-            const p = (prog - 0.30) / 0.40;
-            reloadX = -14 + Math.sin(p * Math.PI * 2) * 6;
-            reloadY = 48 - Math.sin(p * Math.PI) * 16;
-            reloadRot = -16 + Math.sin(p * Math.PI) * 10;
-          } else {
-            const p = 1.0 - (prog - 0.70) / 0.30;
-            reloadX = -14 * p;
-            reloadY = 48 * p;
-            reloadRot = -16 * p;
+        // Tiniq 1:1 SVG O'qlash Halqasi (#crosshair markazida, 0 kanvas cho'zilishi, o'qlamaganda 0 DOM yozuv)
+        if (!_reloadRingWrapEl) {
+          _reloadRingWrapEl = document.getElementById('reloadRingWrap');
+          _reloadRingArcEl = document.getElementById('reloadRingArc');
+          _reloadRingTextEl = document.getElementById('reloadRingText');
+        }
+        if (isReloading) {
+          const remainMs = Math.max(0, player.reloadingUntil - now);
+          const prog = Math.min(1.0, Math.max(0, 1.0 - remainMs / player.reloadDuration));
+
+          if (_reloadRingWrapEl && !_lastReloadShown) {
+            _lastReloadShown = true;
+            _reloadRingWrapEl.style.opacity = '1';
           }
+          if (_reloadRingArcEl) {
+            _reloadRingArcEl.style.strokeDashoffset = (113.1 * (1.0 - prog)).toFixed(1);
+          }
+          if (_reloadRingTextEl) {
+            const nextTxt = (remainMs / 1000).toFixed(1) + 's';
+            if (nextTxt !== _lastReloadText) {
+              _lastReloadText = nextTxt;
+              _reloadRingTextEl.textContent = nextTxt;
+            }
+          }
+
+          // 3 bosqichli CS/COD qayta o'qlash animatsiyasi
+          if (prog < 0.28) {
+            const p = prog / 0.28;
+            const ease = p * p * (3 - 2 * p);
+            reloadX = -26 * ease;
+            reloadY = 64 * ease;
+            reloadRot = -22 * ease;
+          } else if (prog < 0.70) {
+            const p = (prog - 0.28) / 0.42;
+            const slap = Math.sin(p * Math.PI);
+            reloadX = -26 + Math.sin(p * Math.PI * 2) * 7;
+            reloadY = 64 - slap * 22;
+            reloadRot = -22 + slap * 10;
+          } else {
+            const p = (prog - 0.70) / 0.30;
+            const inv = 1.0 - (1.0 - Math.pow(1.0 - p, 3));
+            reloadX = -26 * inv;
+            reloadY = 64 * inv;
+            reloadRot = -22 * inv;
+          }
+        } else if (_reloadRingWrapEl && _lastReloadShown) {
+          _lastReloadShown = false;
+          _reloadRingWrapEl.style.opacity = '0';
         }
 
-        // Taktik harakat: 1) Nafas olish (Breathing), 2) Yurish '8' tebranishi (Walk Sway), 3) Otish zarbasi (Kickback)
-        const breatheY = Math.sin(now * 0.0022) * 2.2;
-        const breatheX = Math.cos(now * 0.0011) * 1.4;
-        const walkBobX = Math.cos(player.bobPhase * 0.5) * 5.5 + player.weaponSwayX;
-        const walkBobY = Math.abs(Math.sin(player.bobPhase)) * 4.8;
-        const kickX = (player.recoilSide || 0) + (player.weaponRecoil * 0.45);
-        const kickY = player.weaponRecoil * 1.65;
+        // Taktik harakat: 1) Mayin nafas olish, 2) Yurish '8' chayqalishi, 3) Otish orqaga tepishi
+        const moveAmp = Math.min(1.0, (player.currentSpeed || 0) / 3.4);
+        const adsDamp = player.adsZoom ? 0.35 : 1.0;
+        const breatheX = Math.cos(now * 0.0013) * 1.2 * adsDamp;
+        const breatheY = Math.sin(now * 0.0022) * 1.8 * adsDamp;
+        const walkBobX = Math.cos(player.bobPhase * 0.5) * 7.5 * moveAmp * adsDamp;
+        const walkBobY = Math.abs(Math.sin(player.bobPhase)) * 6.5 * moveAmp * adsDamp;
+        const kickX = (player.recoilSide || 0) * 0.8 + (player.weaponRecoil * 0.85);
+        const kickY = player.weaponRecoil * 1.45;
 
         const adsX = player.adsZoom ? -24 : 0;
         const adsY = player.adsZoom ? -8 : 0;
-        const recoilScale = 1.0 + (player.weaponRecoil * 0.0035);
+        const recoilScale = 1.0 + (player.weaponRecoil * 0.0045);
         const adsScale = (player.adsZoom ? 1.08 : 1.0) * recoilScale;
-        const rotDeg = (player.weaponSwayX * 0.28) + ((player.recoilSide || 0) * 0.65) + reloadRot;
+        const rotDeg = (player.weaponSwayX * 0.30) + ((player.recoilSide || 0) * 0.35) + (player.weaponRecoil * 0.45) + reloadRot;
 
-        const totalX = Math.round(breatheX + walkBobX + kickX + adsX + reloadX);
+        const totalX = Math.round(breatheX + walkBobX + player.weaponSwayX + kickX + adsX + reloadX);
         const totalY = Math.round(breatheY + walkBobY + kickY + adsY + reloadY);
 
-        const nextTransform = `translate3d(${totalX}px, ${totalY}px, 0px) scale(${adsScale.toFixed(3)}) rotate(${rotDeg.toFixed(1)}deg)`;
+        const nextTransform = `translate3d(${totalX}px, ${totalY}px, 0px) scale(${adsScale.toFixed(2)}) rotate(${rotDeg.toFixed(1)}deg)`;
         if (nextTransform !== _lastFpsWeaponTransform) {
           _lastFpsWeaponTransform = nextTransform;
           fpsWeaponOverlay.style.transform = nextTransform;
         }
 
-        // 5 ta Qurol Skini va Qurol Turi filtrlari (100% to'liq saqlangan)
+        // 5 ta Qurol Skini va Qurol Turi filtrlari (100% saqlangan)
         if (fpsWeaponImg) {
           const skinId = userStats.equippedSkinId;
           let nextFilter;
@@ -4812,18 +4857,20 @@
           }
         }
 
-        // Stvol olov chaqnashi (Muzzle Flash) — Dinamik aylanish va masshtab (0% blur, 100% GPU)
+        // Stvol olov chaqnashi — faqat yangi o'q lahzada burchak/masshtab yangilanadi (GPU tejamkor)
         if (fpsMuzzleGlow) {
           const showMuzzle = player.muzzleFlash > 0;
           if (showMuzzle) {
-            player.muzzleFlash--;
-            const angle = player.muzzleAngle || 0;
-            const scale = player.muzzleScale || 1.0;
-            const mTrans = `translate3d(-50%, -50%, 0px) rotate(${angle}deg) scale(${scale})`;
-            if (mTrans !== _lastFpsMuzzleTransform) {
-              _lastFpsMuzzleTransform = mTrans;
-              fpsMuzzleGlow.style.transform = mTrans;
+            if (player.muzzleFlash >= 3) {
+              const angle = player.muzzleAngle || 0;
+              const scale = +(0.82 + ((player.muzzleScale || 1.0) - 0.82) * 0.7).toFixed(2);
+              const mTrans = `translate3d(-50%, -50%, 0px) rotate(${angle}deg) scale(${scale})`;
+              if (mTrans !== _lastFpsMuzzleTransform) {
+                _lastFpsMuzzleTransform = mTrans;
+                fpsMuzzleGlow.style.transform = mTrans;
+              }
             }
+            player.muzzleFlash--;
           }
           if (showMuzzle !== _lastFpsMuzzleShown) {
             _lastFpsMuzzleShown = showMuzzle;
