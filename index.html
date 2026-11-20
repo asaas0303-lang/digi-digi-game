@@ -241,15 +241,15 @@
     <span id="radioTextMsg" class="truncate">[RADIO] O'zimiznikiga otma!</span>
   </div>
 
-  <!-- #2 Headshot / Wallbang / Grenade Kill Banner -->
-  <div id="csEventBanner" class="hidden fixed top-24 left-1/2 -translate-x-1/2 z-40 pointer-events-none bg-red-950/90 border border-amber-400 text-amber-300 px-3.5 py-1 rounded-full shadow-2xl text-xs font-extrabold tracking-wider uppercase">
-    🎯 HEADSHOT! (150 HP)
+  <!-- #2 Headshot / Wallbang / Grenade Kill Banner (Ixcham, KillFeed ostida) -->
+  <div id="csEventBanner" class="hidden fixed top-[132px] left-1/2 -translate-x-1/2 z-40 pointer-events-none bg-red-950/90 border border-amber-400/90 text-amber-300 px-3 py-0.5 rounded-full shadow-lg text-[10px] font-extrabold tracking-wider uppercase whitespace-nowrap">
+    🎯 HEADSHOT!
   </div>
 
-  <!-- Qayta tirilganda 3 soniyalik Himoya Qalqoni (#5) -->
-  <div id="spawnShieldBanner" class="hidden fixed top-36 left-1/2 -translate-x-1/2 z-40 pointer-events-none bg-sky-950/95 border-2 border-sky-400 text-sky-200 px-3.5 py-1 rounded-full shadow-xl text-[11px] font-extrabold tracking-wide flex items-center gap-1.5">
+  <!-- Qayta tirilganda 3 soniyalik Himoya Qalqoni (Ixcham 1 qatorli taktik indikator) -->
+  <div id="spawnShieldBanner" class="hidden fixed top-[162px] left-1/2 -translate-x-1/2 z-40 pointer-events-none bg-sky-950/88 border border-sky-400/85 text-sky-200 px-2.5 py-0.5 rounded-full shadow-md text-[10px] font-bold tracking-wide flex items-center gap-1 whitespace-nowrap">
     <span>🛡️</span>
-    <span>HIMOYA QALQONI FAOL (3s)</span>
+    <span>HIMOYA QALQONI (3s)</span>
   </div>
 
   <!-- Yuqori Xabarnoma (Toast / Taklif oynasi) -->
@@ -274,10 +274,10 @@
     </div>
   </div>
 
-  <!-- Oddiy Toast Xabar -->
-  <div id="toastBox" class="hidden fixed top-16 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-sm bg-zinc-900/95 border border-red-500/70 text-zinc-100 px-3.5 py-2.5 rounded-xl shadow-2xl text-xs font-medium flex items-center gap-2.5">
-    <span id="toastEmoji" class="text-base shrink-0">⚡</span>
-    <span id="toastMsg" class="leading-snug">Xabar</span>
+  <!-- Ixcham Taktik Toast Xabar (KillFeed ostida, markazni yopmaydi) -->
+  <div id="toastBox" class="hidden fixed top-[132px] left-1/2 -translate-x-1/2 z-50 pointer-events-none w-auto max-w-[86%] bg-zinc-950/90 border border-amber-500/60 text-zinc-100 px-2.5 py-1 rounded-lg shadow-xl text-[11px] font-semibold flex items-center gap-1.5">
+    <span id="toastEmoji" class="text-xs shrink-0">⚡</span>
+    <span id="toastMsg" class="leading-tight truncate">Xabar</span>
   </div>
 
   <!-- ==================== 1. DIGI DIGI ASOSIY MENYU EKRANI (7 TA TUGMA + MODALLAR) ==================== -->
@@ -700,9 +700,9 @@
       <!-- Kinematik Vignette (Qorong'u burchaklar va atmosfera) -->
       <div class="absolute inset-0 pointer-events-none z-10" style="background: radial-gradient(circle at 50% 45%, transparent 50%, rgba(0,0,0,0.78) 100%);"></div>
 
-      <!-- Jon kam qolganda (<=45%) chiqadigan qizil yurak urishi ogohlantirishi -->
-      <div id="lowHpWarningBanner" class="hidden absolute top-[62px] left-1/2 -translate-x-1/2 z-30 pointer-events-none px-3 py-0.5 rounded-md bg-red-950/90 border border-red-500/90 text-red-200 font-black text-[10px] sm:text-xs shadow-[0_0_16px_rgba(239,68,68,0.75)] animate-pulse whitespace-nowrap">
-        💓 JON KAM QOLDI! PANOH TOPING!
+      <!-- Jon kam qolganda (<=45%) chiqadigan ixcham qizil ogohlantirish (KillFeed ostida, ustma-ust tushmaydi) -->
+      <div id="lowHpWarningBanner" class="hidden absolute top-[106px] left-1/2 -translate-x-1/2 z-30 pointer-events-none px-2.5 py-0.5 rounded bg-red-950/88 border border-red-500/85 text-red-200 font-black text-[10px] tracking-wide animate-pulse whitespace-nowrap">
+        💓 JON KAM QOLDI!
       </div>
 
       <!-- BIRINCHI SHAXS (FPS) HAQIQIY IKKI QO'L (HARBIY QO'LQOP + YENG) VA 3D QUROL MODELI -->
@@ -1636,7 +1636,7 @@
         if (toastTimer) clearTimeout(toastTimer);
         toastTimer = setTimeout(() => {
           toastBox.classList.add('hidden');
-        }, 2800);
+        }, 2000);
       }
 
       let csBannerTimer = null;
@@ -3242,8 +3242,15 @@
                 player.armor = 50;
                 player.x = player.team === 'red' ? 1.5 : 14.5;
                 player.y = player.team === 'red' ? 1.5 : 14.5;
+                const rw = WEAPONS[selectedWeaponIdx] || WEAPONS[0];
+                if (rw && !rw.isMelee) {
+                  player.magAmmo = rw.magSize;
+                  player.reserveAmmo = rw.reserveAmmo || rw.reserve || (rw.magSize * 3);
+                }
+                player.isReloadPending = false;
+                player.reloadingUntil = 0;
                 player.spawnShieldUntil = performance.now() + 3200;
-                showToast(`Sizni ${c.name} otdi! 3 soniyalik Himoya Qalqoni bilan tirildingiz.`, '🛡️');
+                showToast(`${c.name} sizni yo'q qildi!`, '💀');
                 checkMatchWinCondition();
               }
             } else {
