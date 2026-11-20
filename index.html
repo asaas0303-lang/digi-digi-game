@@ -3036,6 +3036,66 @@
         }
       }
 
+      function findSafeSpawnPoint(team, isForPlayer) {
+        const candidates = team === 'red'
+          ? [
+              { x: 1.5, y: 1.5 }, { x: 4.5, y: 1.5 }, { x: 1.5, y: 4.5 },
+              { x: 7.5, y: 1.5 }, { x: 3.5, y: 3.5 }, { x: 1.5, y: 8.5 },
+              { x: 8.5, y: 1.5 }
+            ]
+          : [
+              { x: 14.5, y: 14.5 }, { x: 11.5, y: 14.5 }, { x: 14.5, y: 11.5 },
+              { x: 8.5, y: 14.5 }, { x: 12.5, y: 12.5 }, { x: 14.5, y: 7.5 },
+              { x: 7.5, y: 14.5 }
+            ];
+
+        let bestPt = null;
+        let bestScore = -1e9;
+        for (let i = 0; i < candidates.length; i++) {
+          const pt = candidates[i];
+          if (isWall(pt.x, pt.y)) continue;
+
+          let score = 0;
+          let minEnemyDist = 999;
+
+          if (!isForPlayer && team !== player.team) {
+            const dp = Math.hypot(pt.x - player.x, pt.y - player.y);
+            if (dp < minEnemyDist) minEnemyDist = dp;
+            // O'yinchining to'g'ridan-to'g'ri ko'z oldida tirilishni qat'iy taqiqlash
+            if (dp < 9.5 && hasLineOfSight(pt.x, pt.y, player.x, player.y)) {
+              score -= 100;
+            }
+          }
+
+          for (let j = 0; j < combatants.length; j++) {
+            const o = combatants[j];
+            if (!o.alive || o.dyingProgress > 0) continue;
+            const d = Math.hypot(pt.x - o.x, pt.y - o.y);
+            if (o.team !== team) {
+              if (d < minEnemyDist) minEnemyDist = d;
+              if (isForPlayer && d < 8.5 && hasLineOfSight(pt.x, pt.y, o.x, o.y)) {
+                score -= 80;
+              }
+            } else if (d < 1.4) {
+              score -= 4;
+            }
+          }
+
+          score += Math.min(minEnemyDist, 10) * 2.5 + Math.random() * 1.2;
+          if (score > bestScore) {
+            bestScore = score;
+            bestPt = pt;
+          }
+        }
+
+        const fallback = bestPt || { x: team === 'red' ? 1.5 : 14.5, y: team === 'red' ? 1.5 : 14.5 };
+        return resolveMazeCollision(
+          fallback.x + (Math.random() - 0.5) * 0.55,
+          fallback.y + (Math.random() - 0.5) * 0.55,
+          0.34
+        );
+      }
+
       // --- #5, #6, #7, #9, #16, #19, #28: COUNTER-STRIKE TAKTIK AI VA FIZIKASI ---
       function updateCombatantsAI(dt) {
         const now = performance.now();
@@ -3062,11 +3122,15 @@
             if (c.respawnTimer <= 0) {
               c.alive = true;
               c.health = 100;
-              const baseX = c.team === 'red' ? (1.5 + (Math.random() > 0.5 ? 3 : 0)) : (14.5 - (Math.random() > 0.5 ? 3 : 0));
-              const baseY = c.team === 'red' ? (1.5 + (Math.random() > 0.5 ? 3 : 0)) : (14.5 - (Math.random() > 0.5 ? 3 : 0));
-              const sp = resolveMazeCollision(baseX + (Math.random() - 0.5) * 0.9, baseY + (Math.random() - 0.5) * 0.9, 0.34);
+              const sp = findSafeSpawnPoint(c.team, false);
               c.x = sp.x;
               c.y = sp.y;
+              c.hitFlash = 0;
+              c.muzzleFlash = 0;
+              c.isAiming = false;
+              c._cachedCanSee = false;
+              c._cachedLosPlayer = false;
+              c.lastAttack = now + 400;
             }
             return;
           }
@@ -3284,8 +3348,9 @@
                 addKillFeed(c.name, c.team, myProfile.name, player.team, '💥');
                 player.health = 100;
                 player.armor = 50;
-                player.x = player.team === 'red' ? 1.5 : 14.5;
-                player.y = player.team === 'red' ? 1.5 : 14.5;
+                const pSp = findSafeSpawnPoint(player.team, true);
+                player.x = pSp.x;
+                player.y = pSp.y;
                 const rw = WEAPONS[selectedWeaponIdx] || WEAPONS[0];
                 if (rw && !rw.isMelee) {
                   player.magAmmo = rw.magSize;
@@ -4380,9 +4445,9 @@
         const actorHolder = new THREE.Group();
         group.add(actorHolder);
 
-        const isAlly = (c.team === player.team);
+        const isBlueTeam = (c.team === 'blue');
         const initGeo = (swatWalkGeometries && swatWalkGeometries[0]) ? swatWalkGeometries[0] : new THREE.BoxGeometry(0.4, 1.18, 0.4);
-        const initMat = isAlly ? swatBlueMat : swatRedMat;
+        const initMat = isBlueTeam ? swatBlueMat : swatRedMat;
         const bodyMesh = new THREE.Mesh(initGeo, initMat);
         bodyMesh.castShadow = false;
         bodyMesh.receiveShadow = false;
@@ -4618,9 +4683,9 @@
             }
 
             // #2: Askar har doim o'zining haqiqiy 3D SWAT teksturasida qoladi (pushti siluet yo'q!)
-            const isAlly = (c.team === player.team);
+            const isBlueTeam = (c.team === 'blue');
             if (swatBlueMat && swatRedMat) {
-              const nextMat = isAlly ? swatBlueMat : swatRedMat;
+              const nextMat = isBlueTeam ? swatBlueMat : swatRedMat;
               if (bm.material !== nextMat) bm.material = nextMat;
             }
 
