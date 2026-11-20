@@ -3037,13 +3037,11 @@
             if (c.respawnTimer <= 0) {
               c.alive = true;
               c.health = 100;
-              if (c.team === 'red') {
-                c.x = 1.5 + (Math.random() > 0.5 ? 3 : 0);
-                c.y = 1.5 + (Math.random() > 0.5 ? 3 : 0);
-              } else {
-                c.x = 14.5 - (Math.random() > 0.5 ? 3 : 0);
-                c.y = 14.5 - (Math.random() > 0.5 ? 3 : 0);
-              }
+              const baseX = c.team === 'red' ? (1.5 + (Math.random() > 0.5 ? 3 : 0)) : (14.5 - (Math.random() > 0.5 ? 3 : 0));
+              const baseY = c.team === 'red' ? (1.5 + (Math.random() > 0.5 ? 3 : 0)) : (14.5 - (Math.random() > 0.5 ? 3 : 0));
+              const sp = resolveMazeCollision(baseX + (Math.random() - 0.5) * 0.9, baseY + (Math.random() - 0.5) * 0.9, 0.34);
+              c.x = sp.x;
+              c.y = sp.y;
             }
             return;
           }
@@ -3134,37 +3132,64 @@
           let repulseX = 0;
           let repulseY = 0;
           const distToPlayer = Math.hypot(c.x - player.x, c.y - player.y);
-          if (distToPlayer < 1.35 && distToPlayer > 0.01) {
-            repulseX += ((c.x - player.x) / distToPlayer) * 2.2;
-            repulseY += ((c.y - player.y) / distToPlayer) * 2.2;
+          if (distToPlayer < 1.45 && distToPlayer > 0.01) {
+            repulseX += ((c.x - player.x) / distToPlayer) * 2.6;
+            repulseY += ((c.y - player.y) / distToPlayer) * 2.6;
           }
+          // Sherik bot o'yinchi nishon chizig'ini to'sib qo'ysa, darhol yon tomonga chetga chiqadi
+          if (c.team === player.team && distToPlayer > 0.45 && distToPlayer < 4.5) {
+            let angDiff = Math.atan2(c.y - player.y, c.x - player.x) - player.angle;
+            while (angDiff < -Math.PI) angDiff += Math.PI * 2;
+            while (angDiff > Math.PI) angDiff -= Math.PI * 2;
+            if (Math.abs(angDiff) < 0.34) {
+              const sideSign = angDiff >= 0 ? 1 : -1;
+              const dodgeAngle = player.angle + (Math.PI / 2) * sideSign;
+              repulseX += Math.cos(dodgeAngle) * 3.8;
+              repulseY += Math.sin(dodgeAngle) * 3.8;
+            }
+          }
+          // Botlar orasida qat'iy masofa saqlash (Separation — hatto d === 0 bo'lsa ham darhol ajraladi!)
           combatants.forEach(other => {
-            if (other === c || !other.alive) return;
+            if (other === c || !other.alive || other.dyingProgress > 0) return;
             const d = Math.hypot(c.x - other.x, c.y - other.y);
-            const minSep = 1.25;
-            if (d < minSep && d > 0.001) {
-              const push = ((minSep - d) / minSep) * 3.2;
-              repulseX += ((c.x - other.x) / d) * push;
-              repulseY += ((c.y - other.y) / d) * push;
+            const minSep = 1.45;
+            if (d < minSep) {
+              const nx = d > 0.001 ? (c.x - other.x) / d : Math.cos(thisBotIdx * 2.1 + now * 0.003);
+              const ny = d > 0.001 ? (c.y - other.y) / d : Math.sin(thisBotIdx * 2.1 + now * 0.003);
+              const push = ((minSep - d) / minSep) * 4.8;
+              repulseX += nx * push;
+              repulseY += ny * push;
             }
           });
 
-          // #4: CS:GO Taktik Strafe (dushmanni ko'rganda bir joyda ustundek qotib turmasdan chapga-o'ngga taktik siljib otish!)
+          // #4: CS:GO Taktik Strafe (individual jang masofasi + o'q yeganda darhol yon siljish + yaqinlashganda orqaga chekinish)
           const botBoost = 1 + (userStats.botLevel - 1) * 0.12;
-          const speed = 1.78 * botBoost * dt;
-          const stopDist = (canSeeTarget && c.health > 22) ? 2.45 : 0.2;
-          let moveForwardX = (bestDist > stopDist ? Math.cos(c.moveDirAngle) : 0) * speed;
-          let moveForwardY = (bestDist > stopDist ? Math.sin(c.moveDirAngle) : 0) * speed;
+          const speed = 1.82 * botBoost * dt;
+          if (!c.preferredDist) c.preferredDist = 2.15 + (thisBotIdx % 4) * 0.65;
+          const stopDist = (canSeeTarget && c.health > 22) ? c.preferredDist : 0.2;
+          let moveForwardX = 0;
+          let moveForwardY = 0;
+          if (bestDist > stopDist) {
+            moveForwardX = Math.cos(c.moveDirAngle) * speed;
+            moveForwardY = Math.sin(c.moveDirAngle) * speed;
+          } else if (canSeeTarget && bestDist < 1.55 && c.health > 22) {
+            moveForwardX = -Math.cos(c.moveDirAngle) * speed * 0.55;
+            moveForwardY = -Math.sin(c.moveDirAngle) * speed * 0.55;
+          }
 
-          if (canSeeTarget && bestDist <= stopDist + 0.8 && c.health > 22) {
-            if (!c.nextStrafeSwitch || now > c.nextStrafeSwitch) {
-              c.strafeSign = (Math.random() < 0.32) ? 0 : (Math.random() < 0.5 ? -1 : 1);
-              c.nextStrafeSwitch = now + 650 + Math.random() * 650;
+          if (canSeeTarget && bestDist <= 7.5 && c.health > 22) {
+            if (c.hitFlash >= 3) {
+              c.strafeSign = c.strafeSign ? -c.strafeSign : (Math.random() < 0.5 ? -1 : 1);
+              c.nextStrafeSwitch = now + 450 + Math.random() * 450;
+            } else if (!c.nextStrafeSwitch || now > c.nextStrafeSwitch) {
+              c.strafeSign = (Math.random() < 0.15) ? 0 : (Math.random() < 0.5 ? -1 : 1);
+              c.nextStrafeSwitch = now + 550 + Math.random() * 650;
             }
             if (c.strafeSign) {
               const strafeAngle = c.moveDirAngle + (Math.PI / 2) * c.strafeSign;
-              moveForwardX += Math.cos(strafeAngle) * speed * 0.62;
-              moveForwardY += Math.sin(strafeAngle) * speed * 0.62;
+              const strafeMult = bestDist <= stopDist + 1.4 ? 0.78 : 0.42;
+              moveForwardX += Math.cos(strafeAngle) * speed * strafeMult;
+              moveForwardY += Math.sin(strafeAngle) * speed * strafeMult;
             }
           }
 
@@ -3180,17 +3205,11 @@
           c.x = resolvedBot.x;
           c.y = resolvedBot.y;
 
-          // #4: Faqat bot haqiqatan joyidan siljigandagina oyoq qadam tashlaydi (To'xtab turganda Moonwalk yo'q!)
+          // #4: Faqat bot haqiqatan joyidan siljigandagina oyoq qadam tashlaydi (Moonwalk yo'q)
           const actualBotMoved = Math.hypot(c.x - prevBotX, c.y - prevBotY);
           c.isMovingNow = actualBotMoved > 0.0025;
           if (c.isMovingNow) {
             c.walkCycle += actualBotMoved * 5.8;
-          }
-
-          const shieldBanner = document.getElementById('spawnShieldBanner');
-          if (shieldBanner) {
-            if (now < player.spawnShieldUntil) shieldBanner.classList.remove('hidden');
-            else shieldBanner.classList.add('hidden');
           }
 
           // #7 Dushman o'q uzganda olov chaqnashi (Muzzle Flash) va #16 3D Spatial Audio
@@ -3271,6 +3290,14 @@
             }
           }
         });
+
+        if (!window._shieldBannerEl) window._shieldBannerEl = document.getElementById('spawnShieldBanner');
+        const showShieldNow = now < player.spawnShieldUntil;
+        if (window._shieldBannerEl && window._lastShieldShown !== showShieldNow) {
+          window._lastShieldShown = showShieldNow;
+          if (showShieldNow) window._shieldBannerEl.classList.remove('hidden');
+          else window._shieldBannerEl.classList.add('hidden');
+        }
 
         const proxEl = document.getElementById('proximityAlert');
         if (anyEnemyNear) proxEl.classList.remove('hidden');
@@ -3991,14 +4018,14 @@
             swatWalkGeometries.push(geo);
           }
 
-          // Teksturalar: 1) Ko'k SWAT (Sherik) va 2) Qizil Jangovar Askar (Dushman — Canvas orqali 0 KB qo'shimcha xotira bilan!)
-          swatBlueMat = new THREE.MeshStandardMaterial({ color: 0xd8e6f2, roughness: 0.62, metalness: 0.16 });
-          swatRedMat = new THREE.MeshStandardMaterial({ color: 0xf2c8c8, roughness: 0.62, metalness: 0.16 });
+          // Teksturalar: 1) Ko'k SWAT (Sherik) va 2) Qizil Jangovar Askar (Dushman — qorong'u muhitga uyg'un mat taktik ranglar!)
+          swatBlueMat = new THREE.MeshStandardMaterial({ color: 0xc2ccd8, roughness: 0.84, metalness: 0.06 });
+          swatRedMat = new THREE.MeshStandardMaterial({ color: 0xd0c2be, roughness: 0.84, metalness: 0.06 });
           swatHitMat = new THREE.MeshBasicMaterial({ color: 0xff4444 });
 
           const img = new Image();
           img.onload = function() {
-            // 1) CT-SPEC Sheriklar uchun boyitilgan CS:GO To'q-Ko'k (Navy SWAT Blue) forma teksturasi
+            // 1) CT-SPEC Sheriklar uchun chuqur mat To'q-Ko'k (Tactical Navy SWAT) forma teksturasi
             const cBlue = document.createElement('canvas');
             cBlue.width = img.width || 512;
             cBlue.height = img.height || 1024;
@@ -4009,9 +4036,14 @@
             for (let i = 0; i < db.length; i += 4) {
               const r = db[i], g = db[i + 1], b = db[i + 2];
               if (b > r + 4) {
-                db[i] = Math.round(r * 0.42);
-                db[i + 1] = Math.min(255, Math.round(g * 0.78 + 14));
-                db[i + 2] = Math.min(255, Math.round(b * 1.45 + 28));
+                db[i] = Math.round(r * 0.34);
+                db[i + 1] = Math.min(210, Math.round(g * 0.58 + 6));
+                db[i + 2] = Math.min(220, Math.round(b * 0.96 + 10));
+              } else {
+                // Yuz va jihozlarni qorong'u koridor yorug'ligiga mos tabiiy soyalash
+                db[i] = Math.round(r * 0.76);
+                db[i + 1] = Math.round(g * 0.74);
+                db[i + 2] = Math.round(b * 0.72);
               }
             }
             ctxB.putImageData(imgDataB, 0, 0);
@@ -4020,9 +4052,10 @@
             blueTex.wrapT = THREE.ClampToEdgeWrapping;
             blueTex.needsUpdate = true;
             swatBlueMat.map = blueTex;
-            swatBlueMat.color.setHex(0xffffff);
+            swatBlueMat.color.setHex(0xc8d2de);
             swatBlueMat.needsUpdate = true;
 
+            // 2) T-SPEC Dushmanlar uchun chuqur mat Qizil-Bordo (Tactical Crimson) forma teksturasi
             const cRed = document.createElement('canvas');
             cRed.width = img.width || 512;
             cRed.height = img.height || 1024;
@@ -4033,9 +4066,13 @@
             for (let i = 0; i < d.length; i += 4) {
               const r = d[i], g = d[i + 1], b = d[i + 2];
               if (b > r + 4) {
-                d[i] = Math.min(255, Math.round(b * 1.48 + 22));
-                d[i + 1] = Math.round(g * 0.40);
-                d[i + 2] = Math.round(r * 0.38);
+                d[i] = Math.min(215, Math.round(b * 1.06 + 10));
+                d[i + 1] = Math.round(g * 0.30);
+                d[i + 2] = Math.round(r * 0.28);
+              } else {
+                d[i] = Math.round(r * 0.76);
+                d[i + 1] = Math.round(g * 0.74);
+                d[i + 2] = Math.round(b * 0.72);
               }
             }
             ctxR.putImageData(imgData, 0, 0);
@@ -4044,7 +4081,7 @@
             redTex.wrapT = THREE.ClampToEdgeWrapping;
             redTex.needsUpdate = true;
             swatRedMat.map = redTex;
-            swatRedMat.color.setHex(0xffffff);
+            swatRedMat.color.setHex(0xd4c4c0);
             swatRedMat.needsUpdate = true;
           };
           img.src = swatAtlasURI;
