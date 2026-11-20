@@ -2511,6 +2511,7 @@
       function fireWeapon() {
         if (!gameRunning) return;
         const now = performance.now();
+        if (player.respawnFireLockUntil && now < player.respawnFireLockUntil) return;
         completeReloadIfReady(now);
         if (player.isReloadPending || now < player.reloadingUntil) return;
 
@@ -2929,9 +2930,33 @@
 
         const prevPx = player.x;
         const prevPy = player.y;
-        const resolvedPlayer = resolveMazeCollision(player.x + moveX, player.y + moveY, 0.36);
-        player.x = resolvedPlayer.x;
-        player.y = resolvedPlayer.y;
+        let resolvedPlayer = resolveMazeCollision(player.x + moveX, player.y + moveY, 0.36);
+        let pxNew = resolvedPlayer.x;
+        let pyNew = resolvedPlayer.y;
+        let pushedByBot = false;
+        for (let i = 0; i < combatants.length; i++) {
+          const c = combatants[i];
+          if (!c.alive || c.dyingProgress > 0) continue;
+          const dx = pxNew - c.x;
+          const dy = pyNew - c.y;
+          const d = Math.hypot(dx, dy);
+          const minBotDist = 0.68;
+          if (d < minBotDist) {
+            const nx = d > 0.001 ? dx / d : Math.cos(player.angle + Math.PI);
+            const ny = d > 0.001 ? dy / d : Math.sin(player.angle + Math.PI);
+            const push = (minBotDist - d);
+            pxNew += nx * push;
+            pyNew += ny * push;
+            pushedByBot = true;
+          }
+        }
+        if (pushedByBot) {
+          resolvedPlayer = resolveMazeCollision(pxNew, pyNew, 0.36);
+          pxNew = resolvedPlayer.x;
+          pyNew = resolvedPlayer.y;
+        }
+        player.x = pxNew;
+        player.y = pyNew;
 
         const movedDist = Math.hypot(player.x - prevPx, player.y - prevPy);
         if (movedDist > 0.002) {
@@ -3269,6 +3294,7 @@
                 player.isReloadPending = false;
                 player.reloadingUntil = 0;
                 player.spawnShieldUntil = performance.now() + 3200;
+                player.respawnFireLockUntil = performance.now() + 350;
                 showToast(`${c.name} sizni yo'q qildi!`, '💀');
                 checkMatchWinCondition();
               }
@@ -4668,10 +4694,11 @@
         const ad = window._aimDomCache;
         if (aimedFighter) {
           const isAlly = aimedFighter.team === player.team;
-          const zoneName = lastAimRatioY <= 0.21 ? ' [BOSH / HEADSHOT]' : '';
+          const isHsZone = !isAlly && lastAimRatioY <= 0.21;
+          const hpPct = Math.max(0, Math.round(aimedFighter.health));
           const nextText = isAlly
-            ? `🛡️ SHERIK: ${aimedFighter.name} (${aimedFighter.health}% HP) — OTMANG!`
-            : `🎯 DUSHMAN: ${aimedFighter.name} (${aimedFighter.health}% HP)${zoneName}`;
+            ? `🛡️ ${aimedFighter.name} • ${hpPct}%`
+            : `${isHsZone ? '🎯' : '●'} ${aimedFighter.name} • ${hpPct}%${isHsZone ? ' HS' : ''}`;
           const nextMode = isAlly ? 'ally' : 'enemy';
           if (ad.lastText !== nextText) {
             ad.lastText = nextText;
@@ -4681,8 +4708,8 @@
             ad.lastMode = nextMode;
             if (ad.targetLabel) {
               ad.targetLabel.className = isAlly
-                ? 'absolute left-1/2 -translate-x-1/2 z-20 pointer-events-none px-3 py-1 rounded-full text-[11px] font-extrabold bg-emerald-950/90 text-emerald-300 border border-emerald-500'
-                : 'absolute left-1/2 -translate-x-1/2 z-20 pointer-events-none px-3 py-1 rounded-full text-[11px] font-extrabold bg-red-950/90 text-red-300 border border-red-500';
+                ? 'absolute left-1/2 -translate-x-1/2 z-20 pointer-events-none px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-950/88 text-emerald-300 border border-emerald-500/80 whitespace-nowrap'
+                : 'absolute left-1/2 -translate-x-1/2 z-20 pointer-events-none px-2 py-0.5 rounded text-[10px] font-bold bg-red-950/88 text-red-300 border border-red-500/80 whitespace-nowrap';
             }
             if (ad.chDot) {
               ad.chDot.className = isAlly
