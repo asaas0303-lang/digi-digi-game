@@ -708,7 +708,7 @@
       <!-- BIRINCHI SHAXS (FPS) HAQIQIY IKKI QO'L (HARBIY QO'LQOP + YENG) VA 3D QUROL MODELI -->
       <div id="fpsWeaponOverlay" class="absolute -bottom-2 -right-2 w-[56%] max-w-[245px] sm:max-w-[330px] pointer-events-none z-15 origin-bottom-right" style="transform: translate3d(0px, 0px, 0px); will-change: transform;">
         <!-- Stvol uchidagi tabiiy gradientli taktik alanga (aynan stvol uchida: top 5%, left 16%; 0% blur, sof GPU) -->
-        <div id="fpsMuzzleGlow" class="absolute w-16 h-16 pointer-events-none" style="top: 5%; left: 16%; opacity: 0; transform: translate3d(-50%, -50%, 0px) scale(0.95); will-change: opacity, transform;">
+        <div id="fpsMuzzleGlow" class="absolute w-16 h-16 pointer-events-none" style="top: -4%; left: 11%; opacity: 0; transform: translate3d(-50%, -50%, 0px) scale(0.95); will-change: opacity, transform;">
           <svg viewBox="0 0 100 100" class="w-full h-full block">
             <defs>
               <radialGradient id="mfCoreGrad" cx="50%" cy="50%" r="50%">
@@ -2613,8 +2613,8 @@
             spreadY: (Math.random() - 0.5) * (player.adsZoom ? 8 : 22),
             isHit: !!bestEnemy,
             color: w.color,
-            maxTtl: 6,
-            ttl: 6
+            maxTtl: 8,
+            ttl: 8
           });
         }
 
@@ -4663,7 +4663,7 @@
           ad.chRight.style.transform = `translate3d(${gap}px, 0px, 0px)`;
         }
 
-        // 1. AAA O'q Trasseri (Tracer) va Zarba Uchqunlari (0% blur, o'tkir lazer va uchqunlar)
+        // 1. AAA O'q Trasseri (Tracer) va Zarba Uchqunlari (0% blur, save/restore siz, stvol uchidan)
         for (let i = bulletSparks.length - 1; i >= 0; i--) {
           const b = bulletSparks[i];
           b.ttl--;
@@ -4671,36 +4671,50 @@
             bulletSparks.splice(i, 1);
             continue;
           }
-          const life = b.ttl / (b.maxTtl || 6); // 1.0 -> 0.0
-          const sx = player.adsZoom ? w * 0.52 : w * 0.54;
-          const sy = player.adsZoom ? h * 0.58 : h * 0.63;
-          const endX = w * 0.50 + (b.angle - player.angle) * w * 1.05;
+          const maxT = b.maxTtl || 8;
+          const life = b.ttl / maxT; // 1.0 -> 0.0
+          const prog = 1.0 - life;
+          const sx = player.adsZoom ? w * 0.51 : w * 0.54;
+          const sy = player.adsZoom ? h * 0.62 : h * 0.68;
+          const endX = w * 0.50 + (b.angle - player.angle) * w * 0.65;
           const endY = halfH + (b.spreadY || 0);
 
-          // Trasser chizig'i boshlanishi va oxiri (o'q uchib ketishi effekti)
-          const p1 = 1.0 - life;
-          const p0 = Math.max(0, p1 - 0.42);
+          const p0 = Math.max(0, prog - 0.55);
+          const p1 = Math.min(1.0, prog + 0.25);
           const x0 = sx + (endX - sx) * p0;
           const y0 = sy + (endY - sy) * p0;
           const x1 = sx + (endX - sx) * p1;
           const y1 = sy + (endY - sy) * p1;
+          const alpha = Math.max(0.24, life * 0.98);
 
-          doomCtx.save();
-          doomCtx.strokeStyle = b.isHit ? `rgba(255, 235, 140, ${(life * 0.95).toFixed(2)})` : `rgba(255, 190, 80, ${(life * 0.75).toFixed(2)})`;
-          doomCtx.lineWidth = 2.4 * life + 0.6;
+          doomCtx.strokeStyle = b.isHit
+            ? `rgba(255, 210, 90, ${(alpha * 0.72).toFixed(2)})`
+            : `rgba(255, 175, 65, ${(alpha * 0.62).toFixed(2)})`;
+          doomCtx.lineWidth = 3.4;
           doomCtx.beginPath();
           doomCtx.moveTo(x0, y0);
           doomCtx.lineTo(x1, y1);
           doomCtx.stroke();
 
-          // Dushman yoki devorga tekkan nuqtada o'tkir uchqun chaqnashi
-          if (life > 0.45) {
-            doomCtx.fillStyle = b.isHit ? '#fef08a' : '#fed7aa';
+          doomCtx.strokeStyle = `rgba(255, 253, 235, ${alpha.toFixed(2)})`;
+          doomCtx.lineWidth = 1.6;
+          doomCtx.beginPath();
+          doomCtx.moveTo(x0, y0);
+          doomCtx.lineTo(x1, y1);
+          doomCtx.stroke();
+
+          if (prog >= 0.35 && prog <= 0.85) {
+            const spA = (1.0 - (prog - 0.35) / 0.50).toFixed(2);
+            const spR = 4.5 + prog * 6.0;
+            doomCtx.strokeStyle = b.isHit ? `rgba(254, 240, 138, ${spA})` : `rgba(253, 186, 116, ${spA})`;
+            doomCtx.lineWidth = 1.4;
             doomCtx.beginPath();
-            doomCtx.arc(endX, endY, (b.isHit ? 3.8 : 2.4) * life, 0, Math.PI * 2);
-            doomCtx.fill();
+            doomCtx.moveTo(endX - spR * 0.65, endY - spR * 0.55);
+            doomCtx.lineTo(endX + spR * 0.45, endY + spR * 0.35);
+            doomCtx.moveTo(endX + spR * 0.65, endY - spR * 0.55);
+            doomCtx.lineTo(endX - spR * 0.35, endY + spR * 0.45);
+            doomCtx.stroke();
           }
-          doomCtx.restore();
         }
 
         // 2. Realistik Havoda Aylanib Tushuvchi Jez Gilzalar (Brass Shells)
