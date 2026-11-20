@@ -228,7 +228,7 @@
 <body class="relative w-full h-full flex flex-col justify-between horror-bg select-none">
 
   <!-- Qon va qo'rqinchli chaqnash qatlami -->
-  <div id="damageFlash" class="fixed inset-0 bg-red-600/0 pointer-events-none z-50 transition-all duration-100"></div>
+  <div id="damageFlash" class="fixed inset-0 pointer-events-none z-50" style="background: radial-gradient(circle at 50% 50%, rgba(220,38,38,0.12) 32%, rgba(185,28,28,0.78) 100%); opacity: 0; transition: opacity 90ms linear; will-change: opacity;"></div>
   <div id="jumpscareBanner" class="hidden fixed inset-0 z-35 pointer-events-none flex items-center justify-center bg-red-950/60 backdrop-blur-[1px]">
     <div class="text-center animate-bounce px-4">
       <p class="retro-font text-red-500 text-base sm:text-2xl drop-shadow-[0_4px_12px_rgba(255,0,0,0.9)]">⚠️ ORQANGIZDA DUSHMAN! ⚠️</p>
@@ -701,7 +701,7 @@
       <div class="absolute inset-0 pointer-events-none z-10" style="background: radial-gradient(circle at 50% 45%, transparent 50%, rgba(0,0,0,0.78) 100%);"></div>
 
       <!-- Jon kam qolganda (<=45%) chiqadigan ixcham qizil ogohlantirish (KillFeed ostida, ustma-ust tushmaydi) -->
-      <div id="lowHpWarningBanner" class="hidden absolute top-[106px] left-1/2 -translate-x-1/2 z-30 pointer-events-none px-2.5 py-0.5 rounded bg-red-950/88 border border-red-500/85 text-red-200 font-black text-[10px] tracking-wide animate-pulse whitespace-nowrap">
+      <div id="lowHpWarningBanner" class="hidden absolute top-[106px] left-1/2 -translate-x-1/2 z-30 pointer-events-none px-2.5 py-0.5 rounded bg-red-950/88 border border-red-500/85 text-red-200 font-black text-[10px] tracking-wide whitespace-nowrap">
         💓 JON KAM QOLDI!
       </div>
 
@@ -802,13 +802,13 @@
           <span id="ngGpu" class="hidden">DC 0</span>
         </div>
 
-        <div id="proximityAlert" class="hidden bg-red-950/90 border border-red-500/80 text-red-200 text-[8px] sm:text-[10px] font-extrabold px-1.5 py-0.5 rounded animate-pulse leading-tight">
+        <div id="proximityAlert" class="hidden bg-red-950/90 border border-red-500/80 text-red-200 text-[8px] sm:text-[10px] font-extrabold px-1.5 py-0.5 rounded leading-tight">
           ⚠️ DUSHMAN YAQIN!
         </div>
       </div>
 
       <!-- YUQORI-MARKAZ: Aniq markazlashtirilgan Burchakli AAA TDM Hisob Tablosi -->
-      <div class="absolute top-1.5 left-1/2 -translate-x-1/2 flex items-stretch drop-shadow-[0_4px_12px_rgba(0,0,0,0.85)] z-10 pointer-events-none">
+      <div class="absolute top-1.5 left-1/2 -translate-x-1/2 flex items-stretch z-10 pointer-events-none">
         <div class="tac-score-red px-2 sm:px-3.5 py-0.5 sm:py-1 min-w-[48px] sm:min-w-[70px] text-center flex flex-col justify-center">
           <span class="block text-[6.5px] sm:text-[8px] font-black uppercase tracking-wider text-red-300 leading-none">T-FORCE</span>
           <span id="hudRedScore" class="font-mono font-black text-sm sm:text-xl text-red-400 leading-tight mt-0.5">0</span>
@@ -874,7 +874,7 @@
       <!-- 1. JON (HP) + Yashil Shkala -->
       <div class="flex flex-col gap-0.5 min-w-[78px] sm:min-w-[104px]">
         <div class="flex items-center gap-1.5 leading-none">
-          <span id="vitalHeartIcon" class="text-emerald-400 font-black text-sm leading-none drop-shadow-[0_0_6px_rgba(16,185,129,0.85)]">✚</span>
+          <span id="vitalHeartIcon" class="text-emerald-400 font-black text-sm leading-none">✚</span>
           <span id="vitalHpText" class="font-mono font-black text-xs sm:text-sm text-zinc-100 tracking-tight">100 HP</span>
           <span id="hudHealth" class="hidden">100%</span>
         </div>
@@ -953,7 +953,7 @@
       <div class="flex items-center pointer-events-auto">
         <button id="touchFire" class="tac-fire-btn relative w-24 h-24 sm:w-28 sm:h-28 rounded-full flex flex-col items-center justify-center text-white touch-none shrink-0">
           <div class="absolute inset-1.5 rounded-full border border-red-400/40 pointer-events-none"></div>
-          <svg class="w-9 h-9 sm:w-10 sm:h-10 pointer-events-none drop-shadow-[0_2px_8px_rgba(239,68,68,0.65)]" viewBox="0 0 48 48" fill="none">
+          <svg class="w-9 h-9 sm:w-10 sm:h-10 pointer-events-none" viewBox="0 0 48 48" fill="none">
             <defs>
               <linearGradient id="bulletMetalGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                 <stop offset="0%" stop-color="#f4f4f5"/>
@@ -3291,10 +3291,11 @@
                   player.magAmmo = rw.magSize;
                   player.reserveAmmo = rw.reserveAmmo || rw.reserve || (rw.magSize * 3);
                 }
+                keys.fire = false;
                 player.isReloadPending = false;
                 player.reloadingUntil = 0;
                 player.spawnShieldUntil = performance.now() + 3200;
-                player.respawnFireLockUntil = performance.now() + 350;
+                player.respawnFireLockUntil = performance.now() + 450;
                 showToast(`${c.name} sizni yo'q qildi!`, '💀');
                 checkMatchWinCondition();
               }
@@ -3340,16 +3341,15 @@
       }
 
       let dmgFlashTimer = null;
+      let _damageFlashEl = null;
       function triggerDamageFlash() {
-        const fl = document.getElementById('damageFlash');
-        if (!fl) return;
-        fl.style.background = 'radial-gradient(circle at 50% 50%, rgba(220,38,38,0.18) 30%, rgba(185,28,28,0.78) 100%)';
-        fl.style.boxShadow = 'inset 0 0 65px rgba(239,68,68,0.95)';
+        if (!_damageFlashEl) _damageFlashEl = document.getElementById('damageFlash');
+        if (!_damageFlashEl) return;
+        _damageFlashEl.style.opacity = '1';
         if (dmgFlashTimer) clearTimeout(dmgFlashTimer);
         dmgFlashTimer = setTimeout(() => {
-          fl.style.background = 'transparent';
-          fl.style.boxShadow = 'none';
-        }, 220);
+          if (_damageFlashEl) _damageFlashEl.style.opacity = '0';
+        }, 180);
       }
 
       const SPRITE_24 = [
@@ -3697,9 +3697,10 @@
       function initThreeEngine() {
         if (threeRenderer || typeof THREE === 'undefined') return;
 
-        threeRenderer = new THREE.WebGLRenderer({ canvas: webglCanvas, antialias: true, powerPreference: 'high-performance' });
-        // 1-OPTIMIZATSIYA: Smart Retina PixelRatio (1.5x chegara)
-        threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+        threeRenderer = new THREE.WebGLRenderer({ canvas: webglCanvas, antialias: true, stencil: false, powerPreference: 'high-performance' });
+        // 1-OPTIMIZATSIYA: Mobil ekranlar uchun 1.18x (Adreno GPU da -38% Fill-Rate, AA saqlanadi), katta ekranlarda 1.5x
+        const _maxGameDpr = Math.min(window.innerWidth, window.innerHeight) <= 520 ? 1.18 : 1.5;
+        threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, _maxGameDpr));
         threeRenderer.toneMapping = THREE.ACESFilmicToneMapping;
         threeRenderer.toneMappingExposure = 0.94;
 
@@ -5173,8 +5174,8 @@
               if (d.vHpText) d.vHpText.className = 'font-mono font-black text-xs sm:text-sm text-amber-300 tracking-tight';
               if (d.vHpFill) d.vHpFill.className = 'h-full bg-gradient-to-r from-amber-500 to-yellow-300 transition-all duration-150';
             } else {
-              if (d.vHpText) d.vHpText.className = 'font-mono font-black text-xs sm:text-sm text-red-400 animate-pulse tracking-tight';
-              if (d.vHpFill) d.vHpFill.className = 'h-full bg-gradient-to-r from-red-600 to-red-400 animate-pulse transition-all duration-150';
+              if (d.vHpText) d.vHpText.className = 'font-mono font-black text-xs sm:text-sm text-red-400 tracking-tight';
+              if (d.vHpFill) d.vHpFill.className = 'h-full bg-gradient-to-r from-red-600 to-red-400 transition-all duration-150';
             }
           }
         }
