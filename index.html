@@ -5520,6 +5520,140 @@
         }
       }
 
+      // ==================== PUBG / STANDOFF 2 YONBOSH (LANDSCAPE) REJIM DVIGATELI ====================
+      window._digiRot90 = false;
+      const _landscapeBannerIds = ['friendlyFireBanner', 'csEventBanner', 'spawnShieldBanner', 'toastBox', 'jumpscareBanner'];
+      let _bannersInGameView = false;
+
+      function isLandscapePrefEnabled() {
+        try {
+          return localStorage.getItem('digi_landscape_mode') !== '0';
+        } catch (e) {
+          return true;
+        }
+      }
+
+      function syncBattleBannersParent(intoGameView) {
+        if (_bannersInGameView === intoGameView) return;
+        const gv = document.getElementById('gameView');
+        const targetParent = (intoGameView && gv) ? gv : document.body;
+        if (!targetParent) return;
+        for (let i = 0; i < _landscapeBannerIds.length; i++) {
+          const el = document.getElementById(_landscapeBannerIds[i]);
+          if (el && el.parentElement !== targetParent) {
+            targetParent.appendChild(el);
+          }
+        }
+        _bannersInGameView = intoGameView;
+      }
+
+      function applyLandscapeLayout() {
+        const gv = document.getElementById('gameView');
+        if (!gv) return;
+        const wantLandscape = gameRunning && isLandscapePrefEnabled();
+
+        if (!wantLandscape) {
+          window._digiRot90 = false;
+          gv.classList.remove('digi-landscape-hud', 'digi-rot-90');
+          gv.style.width = '';
+          gv.style.height = '';
+          gv.style.transform = '';
+          if (gameRunning) {
+            resizeGameCanvas();
+            if (typeof cacheJoystickMetrics === 'function') cacheJoystickMetrics();
+          }
+          return;
+        }
+
+        const vw = window.innerWidth || document.documentElement.clientWidth || 360;
+        const vh = window.innerHeight || document.documentElement.clientHeight || 640;
+        gv.classList.add('digi-landscape-hud');
+
+        if (vh > vw) {
+          // Avto-burilish o'chiq yoki Telegram tik holatda: 90° PUBG yonbosh burish
+          window._digiRot90 = true;
+          gv.classList.add('digi-rot-90');
+          gv.style.width = vh + 'px';
+          gv.style.height = vw + 'px';
+          gv.style.transform = `translate3d(${vw}px, 0px, 0px) rotate(90deg)`;
+        } else {
+          // Tabiiy keng yonbosh ekran (Native Landscape)
+          window._digiRot90 = false;
+          gv.classList.remove('digi-rot-90');
+          gv.style.width = '';
+          gv.style.height = '';
+          gv.style.transform = '';
+        }
+
+        window._lastThreeVpW = 0;
+        window._lastThreeVpH = 0;
+        resizeGameCanvas();
+        if (typeof cacheJoystickMetrics === 'function') cacheJoystickMetrics();
+      }
+
+      function enterBattleLandscape() {
+        syncBattleBannersParent(true);
+        applyLandscapeLayout();
+        const tg = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
+        if (tg && isLandscapePrefEnabled()) {
+          try {
+            if (typeof tg.expand === 'function') tg.expand();
+            if (typeof tg.disableVerticalSwipes === 'function') tg.disableVerticalSwipes();
+            if (typeof tg.unlockOrientation === 'function') tg.unlockOrientation();
+            if (typeof tg.requestFullscreen === 'function' && !tg.isFullscreen) tg.requestFullscreen();
+          } catch (e) {}
+        }
+        setTimeout(() => { if (gameRunning) applyLandscapeLayout(); }, 180);
+        setTimeout(() => { if (gameRunning) applyLandscapeLayout(); }, 450);
+      }
+
+      function exitBattleLandscape() {
+        window._digiRot90 = false;
+        const gv = document.getElementById('gameView');
+        if (gv) {
+          gv.classList.remove('digi-landscape-hud', 'digi-rot-90');
+          gv.style.width = '';
+          gv.style.height = '';
+          gv.style.transform = '';
+        }
+        syncBattleBannersParent(false);
+        const tg = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
+        if (tg) {
+          try {
+            if (typeof tg.exitFullscreen === 'function' && tg.isFullscreen) tg.exitFullscreen();
+          } catch (e) {}
+        }
+      }
+
+      (function bindLandscapeControls() {
+        const toggleEl = document.getElementById('toggleLandscapeMode');
+        if (toggleEl) {
+          toggleEl.checked = isLandscapePrefEnabled();
+          toggleEl.addEventListener('change', () => {
+            try { localStorage.setItem('digi_landscape_mode', toggleEl.checked ? '1' : '0'); } catch (e) {}
+            if (gameRunning) {
+              if (toggleEl.checked) enterBattleLandscape();
+              else applyLandscapeLayout();
+            }
+          });
+        }
+        const onViewportShift = () => {
+          if (gameRunning) applyLandscapeLayout();
+        };
+        window.addEventListener('resize', onViewportShift);
+        window.addEventListener('orientationchange', () => {
+          setTimeout(onViewportShift, 120);
+          setTimeout(onViewportShift, 360);
+        });
+        const tg = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
+        if (tg && typeof tg.onEvent === 'function') {
+          try {
+            tg.onEvent('viewportChanged', onViewportShift);
+            tg.onEvent('fullscreenChanged', () => setTimeout(onViewportShift, 100));
+          } catch (e) {}
+        }
+      })();
+
       function startGameMatch() {
         initAudio();
         document.getElementById('modalOnline').classList.add('hidden');
@@ -5573,12 +5707,14 @@
 
         if (animFrameId) cancelAnimationFrame(animFrameId);
         gameRunning = true;
+        enterBattleLandscape();
         lastFrameTime = performance.now();
         animFrameId = requestAnimationFrame(gameLoop);
       }
 
       function exitToLobby() {
         gameRunning = false;
+        exitBattleLandscape();
         player.spawnShieldUntil = 0;
         const sb = document.getElementById('spawnShieldBanner');
         if (sb) sb.classList.add('hidden');
@@ -5714,10 +5850,12 @@
       arenaViewport.addEventListener('pointermove', (e) => {
         if (!gameRunning || e.pointerId !== lookPointerId) return;
         e.preventDefault();
-        const dx = e.clientX - lastLookX;
-        const dy = e.clientY - lastLookY;
+        const rawDx = e.clientX - lastLookX;
+        const rawDy = e.clientY - lastLookY;
         lastLookX = e.clientX;
         lastLookY = e.clientY;
+        const dx = window._digiRot90 ? rawDy : rawDx;
+        const dy = window._digiRot90 ? -rawDx : rawDy;
         applyScreenLookDelta(dx, dy);
       });
 
@@ -5739,17 +5877,19 @@
 
       function cacheJoystickMetrics() {
         const rect = joystickZone.getBoundingClientRect();
-        if (rect.width > 0) {
+        if (rect.width > 0 && rect.height > 0) {
           joyCx = rect.left + rect.width / 2;
           joyCy = rect.top + rect.height / 2;
-          joyMaxR = rect.width * 0.42;
+          joyMaxR = Math.min(rect.width, rect.height) * 0.42;
         }
       }
 
       function updateJoystickFromPoint(clientX, clientY) {
         if (joyMaxR <= 0) cacheJoystickMetrics();
-        let dx = clientX - joyCx;
-        let dy = clientY - joyCy;
+        const physDx = clientX - joyCx;
+        const physDy = clientY - joyCy;
+        let dx = window._digiRot90 ? physDy : physDx;
+        let dy = window._digiRot90 ? -physDx : physDy;
         const dist = Math.hypot(dx, dy);
         let knobDx = dx;
         let knobDy = dy;
@@ -5831,12 +5971,14 @@
       const fireBtn = document.getElementById('touchFire');
       let firePointerId = null;
       let lastFireAimX = 0;
+      let lastFireAimY = 0;
 
       fireBtn.addEventListener('pointerdown', (e) => {
         e.preventDefault();
         e.stopPropagation();
         firePointerId = e.pointerId;
         lastFireAimX = e.clientX;
+        lastFireAimY = e.clientY;
         keys.fire = true;
         fireWeapon();
         try { fireBtn.setPointerCapture(e.pointerId); } catch (err) {}
@@ -5844,8 +5986,11 @@
 
       fireBtn.addEventListener('pointermove', (e) => {
         if (e.pointerId !== firePointerId) return;
-        const dx = e.clientX - lastFireAimX;
+        const rawDx = e.clientX - lastFireAimX;
+        const rawDy = e.clientY - lastFireAimY;
         lastFireAimX = e.clientX;
+        lastFireAimY = e.clientY;
+        const dx = window._digiRot90 ? rawDy : rawDx;
         player.angle += dx * (player.adsZoom ? 0.007 : 0.012);
       });
 
