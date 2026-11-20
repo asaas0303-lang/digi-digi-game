@@ -223,6 +223,83 @@
         max-width: 340px !important;
       }
     }
+    /* ==================== PUBG / STANDOFF 2 YONBOSH (LANDSCAPE) HUD (0% BLUR -> 60 FPS) ==================== */
+    #gameView.digi-rot-90 {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: auto !important;
+      bottom: auto !important;
+      transform-origin: 0 0 !important;
+    }
+    #gameView.digi-landscape-hud .tac-minimap-frame {
+      width: 66px !important;
+    }
+    #gameView.digi-landscape-hud #lowHpWarningBanner {
+      top: 50px !important;
+    }
+    #gameView.digi-landscape-hud #csEventBanner,
+    #gameView.digi-landscape-hud #toastBox {
+      top: 74px !important;
+    }
+    #gameView.digi-landscape-hud #spawnShieldBanner {
+      top: 100px !important;
+    }
+    #gameView.digi-landscape-hud #killFeedBox {
+      top: 38px !important;
+      max-width: 220px !important;
+    }
+    #gameView.digi-landscape-hud #targetInfoLabel {
+      top: 59% !important;
+    }
+    #gameView.digi-landscape-hud #friendlyFireBanner {
+      top: 66.5% !important;
+    }
+    #gameView.digi-landscape-hud .tac-actions-row {
+      bottom: 112px !important;
+      padding-left: 16px !important;
+      padding-right: 16px !important;
+    }
+    #gameView.digi-landscape-hud .tac-status-row {
+      bottom: 8px !important;
+      left: 50% !important;
+      right: auto !important;
+      transform: translateX(-50%) !important;
+      width: auto !important;
+      max-width: calc(100% - 248px) !important;
+      padding: 4px 10px !important;
+      gap: 8px !important;
+      border-radius: 10px !important;
+      border: 1px solid rgba(161, 161, 170, 0.36) !important;
+    }
+    #gameView.digi-landscape-hud .tac-controls-row {
+      padding: 0 18px 8px 18px !important;
+      background: none !important;
+    }
+    #gameView.digi-landscape-hud .tac-dpad-box {
+      display: none !important;
+    }
+    #gameView.digi-landscape-hud #joystickZone,
+    #gameView.digi-landscape-hud #touchFire {
+      width: 94px !important;
+      height: 94px !important;
+    }
+    #gameView.digi-landscape-hud #fpsWeaponOverlay {
+      bottom: -14px !important;
+      right: 54px !important;
+      width: 28% !important;
+      max-width: 220px !important;
+      z-index: 15 !important;
+    }
+    #gameView.digi-landscape-hud #scoreboardModal {
+      top: 10px !important;
+      bottom: 10px !important;
+      left: 44px !important;
+      right: 44px !important;
+    }
+    #gameView.digi-landscape-hud #matchEndCard {
+      max-height: 94% !important;
+    }
   </style>
 </head>
 <body class="relative w-full h-full flex flex-col justify-between horror-bg select-none">
@@ -541,6 +618,13 @@
             </div>
             <input id="toggleNetGraph" type="checkbox" class="w-5 h-5 accent-amber-500 rounded cursor-pointer">
           </div>
+          <div class="flex items-center justify-between bg-slate-900/90 border border-slate-800 rounded-xl px-3.5 py-2.5 mt-2">
+            <div>
+              <div class="text-xs font-bold text-slate-200">📱 PUBG Yonbosh Ekran (Landscape)</div>
+              <div class="text-[10px] text-slate-400">Jangda keng yonbosh ekran rejimi (Bosh menyu tik qoladi)</div>
+            </div>
+            <input id="toggleLandscapeMode" type="checkbox" checked class="w-5 h-5 accent-amber-500 rounded cursor-pointer">
+          </div>
 
           <div class="bg-slate-950/85 border border-slate-800 rounded-xl p-3 space-y-2.5">
             <h3 class="font-black text-sky-400 uppercase text-[11px]">🔊 Akustika va 3D Ovoz</h3>
@@ -842,7 +926,7 @@
     <div id="killFeedBox" class="absolute top-[40px] sm:top-[44px] right-1.5 sm:right-2 z-25 flex flex-col items-end gap-1 max-w-[195px] sm:max-w-[260px] pointer-events-none"></div>
 
     <!-- ==================== TAKTIK HARAKAT TUGMALARI (Status chizig'i ustida) ==================== -->
-    <div class="absolute bottom-[158px] sm:bottom-[170px] inset-x-0 z-30 pointer-events-none px-2.5 flex items-end justify-between">
+    <div class="tac-actions-row absolute bottom-[158px] sm:bottom-[170px] inset-x-0 z-30 pointer-events-none px-2.5 flex items-end justify-between">
       <!-- Chap: Granata va Tutun -->
       <div class="flex flex-col gap-1.5 pointer-events-auto">
         <button id="btnThrowGrenade" class="tac-action-btn px-2.5 py-1.5 flex items-center gap-1.5 text-[10px] sm:text-xs font-bold tracking-wide">
@@ -869,7 +953,7 @@
     </div>
 
     <!-- ==================== YAGONA NAFIS PASTKI STATUS CHIZIG'I (HP | ZIRH | O'Q | QUROL | FRAG) ==================== -->
-    <div class="tac-status-strip absolute bottom-[114px] sm:bottom-[124px] inset-x-0 z-30 pointer-events-none px-2.5 py-1.5 flex items-center justify-between gap-2">
+    <div class="tac-status-row tac-status-strip absolute bottom-[114px] sm:bottom-[124px] inset-x-0 z-30 pointer-events-none px-2.5 py-1.5 flex items-center justify-between gap-2">
 
       <!-- 1. JON (HP) + Yashil Shkala -->
       <div class="flex flex-col gap-0.5 min-w-[78px] sm:min-w-[104px]">
@@ -922,7 +1006,7 @@
     </div>
 
     <!-- ==================== SHAFFOF PASTKI BOSHQARUV PANELI (3D NAM POL USTIDA) ==================== -->
-    <div class="absolute bottom-0 inset-x-0 z-30 pointer-events-none px-4 pt-1 pb-3 flex items-center justify-between gap-2" style="background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.45) 100%);">
+    <div class="tac-controls-row absolute bottom-0 inset-x-0 z-30 pointer-events-none px-4 pt-1 pb-3 flex items-center justify-between gap-2" style="background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.45) 100%);">
 
       <!-- CHAP TARAF: Metallik 360° Taktik Joystik -->
       <div class="flex items-center gap-1.5 pointer-events-auto">
@@ -938,7 +1022,7 @@
         </div>
 
         <!-- Desktop/Yordamchi mini D-Pad -->
-        <div class="hidden sm:grid grid-cols-2 gap-1">
+        <div class="tac-dpad-box hidden sm:grid grid-cols-2 gap-1">
           <button id="touchForward" class="w-7 h-7 bg-zinc-900/85 border border-zinc-700 text-zinc-300 rounded text-xs font-bold">▲</button>
           <button id="touchBackward" class="w-7 h-7 bg-zinc-900/85 border border-zinc-700 text-zinc-300 rounded text-xs font-bold">▼</button>
           <button id="touchStrafeLeft" class="w-7 h-7 bg-zinc-900/85 border border-zinc-700 text-zinc-300 rounded text-xs font-bold">◄</button>
@@ -2119,9 +2203,11 @@
       function resizeGameCanvas() {
         const viewport = document.getElementById('arenaViewport');
         if (!viewport) return;
-        const rect = viewport.getBoundingClientRect();
-        doomCanvas.width = Math.max(300, Math.min(540, Math.floor(rect.width * 0.8)));
-        doomCanvas.height = Math.max(240, Math.min(440, Math.floor(rect.height * 0.8)));
+        const cw = viewport.clientWidth || window.innerWidth || 360;
+        const ch = viewport.clientHeight || window.innerHeight || 640;
+        const scale = Math.min(0.8, 560 / Math.max(cw, ch));
+        doomCanvas.width = Math.max(220, Math.round(cw * scale));
+        doomCanvas.height = Math.max(200, Math.round(ch * scale));
       }
       window.addEventListener('resize', () => {
         if (gameRunning) resizeGameCanvas();
@@ -5028,8 +5114,13 @@
           const maxT = b.maxTtl || 8;
           const life = b.ttl / maxT; // 1.0 -> 0.0
           const prog = 1.0 - life;
-          const sx = player.adsZoom ? w * 0.53 : w * 0.57;
-          const sy = player.adsZoom ? h * 0.58 : h * 0.61;
+          const isLandTracer = w > h;
+          const sx = isLandTracer
+            ? (player.adsZoom ? w * 0.64 : w * 0.71)
+            : (player.adsZoom ? w * 0.53 : w * 0.57);
+          const sy = isLandTracer
+            ? (player.adsZoom ? h * 0.58 : h * 0.61)
+            : (player.adsZoom ? h * 0.58 : h * 0.61);
           const endX = w * 0.50 + (b.angle - player.angle) * w * 0.65;
           const endY = halfH + (b.spreadY || 0);
 
