@@ -402,6 +402,7 @@ function initMultiplayer(app) {
     p.sseRes = res;
     p.lastSeenAt = Date.now();
 
+    res.write(": " + " ".repeat(4096) + "\n\n");
     res.write(": connected\n\n");
     sseWrite(res, "room", serializeRoom(room));
 
