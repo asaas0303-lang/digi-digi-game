@@ -2596,14 +2596,21 @@
         updateGrenadeLabels();
         playSound('knife_slash');
 
+        const gx0 = player.x + Math.cos(player.angle) * 0.4;
+        const gy0 = player.y + Math.sin(player.angle) * 0.4;
+        const gvx = Math.cos(player.angle) * 5.8;
+        const gvy = Math.sin(player.angle) * 5.8;
         activeGrenades.push({
           kind: kind,
-          x: player.x + Math.cos(player.angle) * 0.4,
-          y: player.y + Math.sin(player.angle) * 0.4,
-          vx: Math.cos(player.angle) * 5.8,
-          vy: Math.sin(player.angle) * 5.8,
+          x: gx0,
+          y: gy0,
+          vx: gvx,
+          vy: gvy,
           timer: 1.15 // 1.15 soniyadan so'ng portlaydi!
         });
+        if (isMpMatch && window.DIGI_MP && typeof window.DIGI_MP.sendGrenade === 'function') {
+          window.DIGI_MP.sendGrenade(kind, gx0, gy0, gvx, gvy);
+        }
       }
 
       // --- #1, #2, #3, #4, #8, #11, #15: CS OTISH VA BALLISTIKA MEXANIKASI ---
@@ -2748,7 +2755,6 @@
           }
 
           const dmg = Math.round(w.damage * distFactor * zoneMult * wallbangMult);
-          bestEnemy.health -= dmg;
           bestEnemy.hitFlash = 4;
 
           // CS:GO Hitmarker (×) va 3D Qon / Dubulg'a uchquni sachrashi (#2)
@@ -2757,40 +2763,47 @@
           if (typeof spawn3DHitEffect === 'function') {
             spawn3DHitEffect(bestEnemy.x, isHeadshotHit ? 1.08 : 0.86, bestEnemy.y, isHeadshotHit);
           }
-
-          // #9 Knockback (devor ichiga kirib ketmasligi uchun resolveMazeCollision bilan!)
-          const kbAngle = Math.atan2(bestEnemy.y - player.y, bestEnemy.x - player.x);
-          const kbResolved = resolveMazeCollision(
-            bestEnemy.x + Math.cos(kbAngle) * 0.22,
-            bestEnemy.y + Math.sin(kbAngle) * 0.22,
-            0.34
-          );
-          bestEnemy.x = kbResolved.x;
-          bestEnemy.y = kbResolved.y;
           playSound('hit');
 
           const ch = document.getElementById('crosshair');
           ch.classList.add('scale-125');
           setTimeout(() => ch.classList.remove('scale-125'), 90);
 
-          if (bestEnemy.health <= 0) {
-            if (isHeadshotHit) {
-              userStats.totalHS = (userStats.totalHS || 0) + 1;
-              showCsEventBanner('🎯 HEADSHOT KILL! (1-TAP)');
+          if (isMpMatch && window.DIGI_MP) {
+            window.DIGI_MP.sendShoot(bestEnemy.id, dmg, isHeadshotHit, bestEnemyWallbang);
+          } else {
+            bestEnemy.health -= dmg;
+            // #9 Knockback (devor ichiga kirib ketmasligi uchun resolveMazeCollision bilan!)
+            const kbAngle = Math.atan2(bestEnemy.y - player.y, bestEnemy.x - player.x);
+            const kbResolved = resolveMazeCollision(
+              bestEnemy.x + Math.cos(kbAngle) * 0.22,
+              bestEnemy.y + Math.sin(kbAngle) * 0.22,
+              0.34
+            );
+            bestEnemy.x = kbResolved.x;
+            bestEnemy.y = kbResolved.y;
+
+            if (bestEnemy.health <= 0) {
+              if (isHeadshotHit) {
+                userStats.totalHS = (userStats.totalHS || 0) + 1;
+                showCsEventBanner('🎯 HEADSHOT KILL! (1-TAP)');
+              }
+              // #9 Darhol g'oyib bo'lmasdan polga yiqilish animatsiyasi boshlanadi!
+              bestEnemy.dyingProgress = 0.05;
+              bestEnemy.deaths = (bestEnemy.deaths || 0) + 1;
+              player.kills++;
+              myProfile.kills = player.kills;
+              if (player.team === 'red') redScore++;
+              else blueScore++;
+              addKillFeed(myProfile.name, player.team, bestEnemy.name, bestEnemy.team, killBadge);
+              checkMatchWinCondition();
             }
-            // #9 Darhol g'oyib bo'lmasdan polga yiqilish animatsiyasi boshlanadi!
-            bestEnemy.dyingProgress = 0.05;
-            bestEnemy.deaths = (bestEnemy.deaths || 0) + 1;
-            player.kills++;
-            myProfile.kills = player.kills;
-            if (player.team === 'red') redScore++;
-            else blueScore++;
-            addKillFeed(myProfile.name, player.team, bestEnemy.name, bestEnemy.team, killBadge);
-            checkMatchWinCondition();
           }
         } else if (hitFriendly && !w.isMelee) {
           player.magAmmo = Math.min(w.magSize, player.magAmmo + 1);
           showFriendlyFireWarning(hitFriendly.name);
+        } else if (isMpMatch && !w.isMelee && window.DIGI_MP) {
+          window.DIGI_MP.sendShoot('', 0, false, false);
         }
         updateHud();
       }
@@ -5545,8 +5558,18 @@
           const dt = Math.min(0.05, Math.max(0.001, (now - lastFrameTime) / 1000));
           lastFrameTime = now;
 
-          updatePlayerMovement(dt);
-          updateCombatantsAI(dt);
+          if (isMpMatch) {
+            if (player.health > 0) {
+              updatePlayerMovement(dt);
+              if (window.DIGI_MP) {
+                window.DIGI_MP.sendState(player.x, player.y, player.angle, player.currentSpeed > 0.15, selectedWeaponIdx);
+              }
+            }
+            updateRemoteCombatants(dt);
+          } else {
+            updatePlayerMovement(dt);
+            updateCombatantsAI(dt);
+          }
           render3DScene();
           if (window._frameTick % 3 === 0) {
             renderMinimap();
@@ -5754,8 +5777,386 @@
         }
       })();
 
+      // ==================== REAL-TIME MULTIPLAYER 3D ARENA KO'PRIGI (3-BOSQICH) ====================
+      let isMpMatch = false;
+
+      function syncMpTimerHud(remSec) {
+        matchSecondsLeft = Math.max(0, Math.floor(Number(remSec) || 0));
+        const mins = String(Math.floor(matchSecondsLeft / 60)).padStart(2, '0');
+        const secs = String(matchSecondsLeft % 60).padStart(2, '0');
+        const timerEl = document.getElementById('hudTimer');
+        if (timerEl) {
+          timerEl.textContent = `${mins}:${secs}`;
+          timerEl.className = (matchSecondsLeft <= 10 && matchSecondsLeft > 0)
+            ? 'font-mono text-xs sm:text-sm font-extrabold text-red-400 animate-pulse'
+            : 'font-mono text-xs sm:text-sm font-bold text-zinc-100';
+        }
+      }
+
+      function syncMpCombatantsFromRoom(snap) {
+        if (!snap || !Array.isArray(snap.players)) return;
+        const myId = window.DIGI_MP ? window.DIGI_MP.getMyId() : myProfile.id;
+        const keepIds = new Set();
+        snap.players.forEach(p => {
+          if (p.id === myId) {
+            player.team = p.team;
+            myProfile.team = p.team;
+            return;
+          }
+          keepIds.add(p.id);
+          let c = combatants.find(x => x.id === p.id);
+          if (!c) {
+            c = {
+              id: p.id,
+              name: p.name || p.id,
+              team: p.team || 'blue',
+              x: p.x || 14.5,
+              y: p.y || 14.5,
+              targetX: p.x || 14.5,
+              targetY: p.y || 14.5,
+              angle: p.a || 0,
+              moveDirAngle: p.a || 0,
+              health: typeof p.hp === 'number' ? p.hp : 100,
+              alive: p.alive !== false,
+              dyingProgress: 0,
+              hitFlash: 0,
+              muzzleFlash: 0,
+              isMovingNow: false,
+              walkCycle: 0,
+              kills: p.kills || 0,
+              deaths: p.deaths || 0,
+              isRemote: true
+            };
+            combatants.push(c);
+          } else {
+            c.name = p.name || c.name;
+            c.team = p.team || c.team;
+          }
+        });
+        for (let i = combatants.length - 1; i >= 0; i--) {
+          if (!keepIds.has(combatants[i].id)) {
+            const removed = combatants[i];
+            const mesh = fighterMeshes.get(removed.id);
+            if (mesh && threeScene) {
+              threeScene.remove(mesh);
+              fighterMeshes.delete(removed.id);
+            }
+            combatants.splice(i, 1);
+          }
+        }
+      }
+
+      function updateRemoteCombatants(dt) {
+        const now = performance.now();
+        const lerpAlpha = Math.min(1, dt * 14);
+        let anyEnemyNear = false;
+
+        for (let i = 0; i < combatants.length; i++) {
+          const c = combatants[i];
+          if (c.dyingProgress > 0) {
+            c.dyingProgress += dt * 1.8;
+            if (c.dyingProgress >= 1.0) {
+              c.dyingProgress = 0;
+              c.alive = false;
+            }
+            continue;
+          }
+          if (!c.alive) continue;
+          if (c.hitFlash > 0) c.hitFlash--;
+          if (c.muzzleFlash > 0) c.muzzleFlash--;
+
+          if (typeof c.targetX === 'number' && typeof c.targetY === 'number') {
+            const dx = c.targetX - c.x;
+            const dy = c.targetY - c.y;
+            const step = Math.hypot(dx, dy);
+            if (step > 3.5) {
+              c.x = c.targetX;
+              c.y = c.targetY;
+            } else {
+              c.x += dx * lerpAlpha;
+              c.y += dy * lerpAlpha;
+            }
+            if (c.isMovingNow || step > 0.025) {
+              c.walkCycle += Math.max(step * 4.5, dt * 7.5);
+            }
+          }
+
+          if (c.team !== player.team && Math.hypot(c.x - player.x, c.y - player.y) < 4.2) {
+            anyEnemyNear = true;
+          }
+        }
+
+        if (!window._shieldBannerEl) window._shieldBannerEl = document.getElementById('spawnShieldBanner');
+        const showShieldNow = now < player.spawnShieldUntil;
+        if (window._shieldBannerEl && window._lastShieldShown !== showShieldNow) {
+          window._lastShieldShown = showShieldNow;
+          if (showShieldNow) window._shieldBannerEl.classList.remove('hidden');
+          else window._shieldBannerEl.classList.add('hidden');
+        }
+        const proxEl = document.getElementById('proximityAlert');
+        if (proxEl) {
+          if (anyEnemyNear) proxEl.classList.remove('hidden');
+          else proxEl.classList.add('hidden');
+        }
+      }
+
+      function startMultiplayerMatch(snap) {
+        if (!snap) return;
+        initAudio();
+        isMpMatch = true;
+        gameMode = snap.mode === '4v4' ? '4v4' : '1v1';
+        if (typeof snap.mazeIdx === 'number') {
+          mazePresetIdx = snap.mazeIdx;
+          loadMaze(mazePresetIdx);
+        }
+
+        document.getElementById('modalOnline').classList.add('hidden');
+        document.getElementById('lobbyView').classList.add('hidden');
+        document.getElementById('gameView').classList.remove('hidden');
+        document.getElementById('matchEndModal').classList.add('hidden');
+        document.getElementById('scoreboardModal').classList.add('hidden');
+        document.getElementById('killFeedBox').innerHTML = '';
+
+        redScore = snap.redScore || 0;
+        blueScore = snap.blueScore || 0;
+        currentRound = 1;
+        syncMpTimerHud(snap.remSec || 120);
+
+        const modeBadgeEl = document.getElementById('hudModeBadge');
+        if (modeBadgeEl) {
+          modeBadgeEl.textContent = gameMode === '1v1' ? 'LIVE 1V1' : 'LIVE 4V4';
+        }
+
+        stopAllMovement();
+        combatants = [];
+        bulletSparks = [];
+        bloodParticles = [];
+        ejectedShells = [];
+        activeGrenades = [];
+        smokeClouds = [];
+        fighterMeshes.forEach(mesh => { if (threeScene) threeScene.remove(mesh); });
+        fighterMeshes.clear();
+
+        pickups = [
+          { x: 7.5, y: 7.5, type: 'health', active: true },
+          { x: 4.5, y: 11.5, type: 'ammo', active: true },
+          { x: 11.5, y: 4.5, type: 'ammo', active: true },
+          { x: 8.5, y: 8.5, type: 'armor', active: true },
+          { x: 4.5, y: 4.5, type: 'armor', active: true },
+          { x: 11.5, y: 11.5, type: 'health', active: true }
+        ];
+
+        const myId = window.DIGI_MP ? window.DIGI_MP.getMyId() : myProfile.id;
+        const meData = (snap.players || []).find(p => p.id === myId);
+        player.team = meData ? meData.team : 'red';
+        myProfile.team = player.team;
+        player.x = meData ? meData.x : (player.team === 'red' ? 1.5 : 14.5);
+        player.y = meData ? meData.y : (player.team === 'red' ? 1.5 : 14.5);
+        player.angle = findOpenCorridorAngle(player.x, player.y);
+        player.angVel = 0;
+        player.pitch = 0;
+        player.health = 100;
+        player.armor = 50;
+        player.kills = 0;
+        player.deaths = 0;
+        myProfile.kills = 0;
+        myProfile.deaths = 0;
+        const w = WEAPONS[selectedWeaponIdx] || WEAPONS[0];
+        player.magAmmo = w.magSize;
+        player.reserveAmmo = w.magSize * 3;
+        player.vx = 0;
+        player.vy = 0;
+        player.recoilPitch = 0;
+        player.reloadingUntil = 0;
+        player.isReloadPending = false;
+        player.heGrenades = 2;
+        player.smokeGrenades = 1;
+        player.spawnShieldUntil = performance.now() + 2600;
+        updateGrenadeLabels();
+
+        syncMpCombatantsFromRoom(snap);
+        resizeGameCanvas();
+        updateHud();
+
+        if (matchIntervalId) clearInterval(matchIntervalId);
+        if (animFrameId) cancelAnimationFrame(animFrameId);
+        gameRunning = true;
+        enterBattleLandscape();
+        lastFrameTime = performance.now();
+        animFrameId = requestAnimationFrame(gameLoop);
+        showCsEventBanner('🌐 JONLI ' + gameMode.toUpperCase() + ' JANG BOSHLANDI!');
+      }
+
+      function bindMultiplayerGameHooks() {
+        if (!window.DIGI_MP || typeof window.DIGI_MP.setGameHooks !== 'function') return;
+        window.DIGI_MP.setGameHooks({
+          onMatchStart: (snap) => {
+            startMultiplayerMatch(snap);
+          },
+          onRoom: (snap) => {
+            if (isMpMatch && gameRunning) {
+              syncMpCombatantsFromRoom(snap);
+            }
+          },
+          onState: (data) => {
+            if (!isMpMatch || !gameRunning || !data) return;
+            redScore = data.rs || 0;
+            blueScore = data.bs || 0;
+            syncMpTimerHud(data.rem);
+            const myId = window.DIGI_MP.getMyId();
+            if (Array.isArray(data.p)) {
+              for (let i = 0; i < data.p.length; i++) {
+                const row = data.p[i];
+                const pid = row[0];
+                if (pid === myId) {
+                  player.kills = row[8] || 0;
+                  player.deaths = row[9] || 0;
+                  myProfile.kills = player.kills;
+                  myProfile.deaths = player.deaths;
+                  continue;
+                }
+                const c = combatants.find(x => x.id === pid);
+                if (!c) continue;
+                c.targetX = row[1];
+                c.targetY = row[2];
+                c.moveDirAngle = row[3];
+                c.angle = row[3];
+                c.health = row[4];
+                const srvAlive = row[5] === 1;
+                if (!srvAlive && c.alive && c.dyingProgress === 0) {
+                  c.dyingProgress = 0.05;
+                } else if (srvAlive && !c.alive) {
+                  c.alive = true;
+                  c.dyingProgress = 0;
+                  c.x = row[1];
+                  c.y = row[2];
+                }
+                c.isMovingNow = row[6] === 1;
+                if (row[7] === 1 && c.muzzleFlash < 3) c.muzzleFlash = 4;
+                c.kills = row[8] || 0;
+                c.deaths = row[9] || 0;
+              }
+            }
+          },
+          onShoot: (data) => {
+            if (!isMpMatch || !gameRunning || !data) return;
+            const c = combatants.find(x => x.id === data.id);
+            if (c) c.muzzleFlash = 5;
+            const relAngle = Math.atan2(data.y - player.y, data.x - player.x) - player.angle;
+            const stereoPan = Math.sin(relAngle);
+            const distGain = Math.max(0.22, 1 - Math.hypot(data.x - player.x, data.y - player.y) / 12);
+            playSound('shoot_pistol', stereoPan, distGain);
+          },
+          onHit: (data) => {
+            if (!isMpMatch || !gameRunning || !data) return;
+            const myId = window.DIGI_MP.getMyId();
+            if (data.targetId === myId) {
+              player.health = Math.max(0, data.hp);
+              player.armor = Math.max(0, data.armor);
+              player.taggedSlowUntil = performance.now() + 420;
+              player.hitShake = 1.0;
+              if (!player.damageArcs) player.damageArcs = [];
+              player.damageArcs.push({
+                worldAngle: Math.atan2(data.sy - player.y, data.sx - player.x),
+                ttl: 28,
+                maxTtl: 28
+              });
+              const relAngle = Math.atan2(data.sy - player.y, data.sx - player.x) - player.angle;
+              playSound('hurt', Math.sin(relAngle), 1.0);
+              triggerDamageFlash();
+              updateHud();
+            } else {
+              const c = combatants.find(x => x.id === data.targetId);
+              if (c) {
+                c.health = data.hp;
+                c.hitFlash = 4;
+              }
+            }
+          },
+          onKill: (data) => {
+            if (!isMpMatch || !gameRunning || !data) return;
+            redScore = data.redScore || 0;
+            blueScore = data.blueScore || 0;
+            addKillFeed(data.killerName, data.killerTeam, data.victimName, data.victimTeam, data.badge || '💥');
+            const myId = window.DIGI_MP.getMyId();
+            if (data.killerId === myId && data.hs) {
+              userStats.totalHS = (userStats.totalHS || 0) + 1;
+              showCsEventBanner('🎯 HEADSHOT KILL! (1-TAP)');
+            }
+            if (data.victimId === myId) {
+              player.health = 0;
+              keys.fire = false;
+              stopAllMovement();
+              showToast(`${data.killerName} sizni yo'q qildi! (3s da tirilasiz)`, '💀');
+            } else {
+              const c = combatants.find(x => x.id === data.victimId);
+              if (c) {
+                c.health = 0;
+                c.dyingProgress = 0.05;
+              }
+            }
+            updateHud();
+          },
+          onRespawn: (data) => {
+            if (!isMpMatch || !gameRunning || !data) return;
+            const myId = window.DIGI_MP.getMyId();
+            if (data.id === myId) {
+              player.x = data.x;
+              player.y = data.y;
+              player.angle = findOpenCorridorAngle(data.x, data.y);
+              player.angVel = 0;
+              player.pitch = 0;
+              player.health = 100;
+              player.armor = 50;
+              const rw = WEAPONS[selectedWeaponIdx] || WEAPONS[0];
+              if (rw && !rw.isMelee) {
+                player.magAmmo = rw.magSize;
+                player.reserveAmmo = rw.magSize * 3;
+              }
+              keys.fire = false;
+              player.isReloadPending = false;
+              player.reloadingUntil = 0;
+              player.spawnShieldUntil = performance.now() + 2600;
+              player.respawnFireLockUntil = performance.now() + 450;
+              updateHud();
+            } else {
+              const c = combatants.find(x => x.id === data.id);
+              if (c) {
+                c.alive = true;
+                c.dyingProgress = 0;
+                c.health = 100;
+                c.x = data.x;
+                c.y = data.y;
+                c.targetX = data.x;
+                c.targetY = data.y;
+              }
+            }
+          },
+          onGrenade: (data) => {
+            if (!isMpMatch || !gameRunning || !data) return;
+            activeGrenades.push({
+              kind: data.kind === 'smoke' ? 'smoke' : 'he',
+              x: data.x,
+              y: data.y,
+              vx: data.vx,
+              vy: data.vy,
+              timer: 1.15
+            });
+          },
+          onMatchEnd: (data) => {
+            if (!isMpMatch) return;
+            isMpMatch = false;
+            const winner = (data && data.winner) ? data.winner : (redScore > blueScore ? 'red' : (blueScore > redScore ? 'blue' : 'draw'));
+            finishMatch(winner);
+          }
+        });
+      }
+      window.addEventListener('DOMContentLoaded', () => setTimeout(bindMultiplayerGameHooks, 150));
+      setTimeout(bindMultiplayerGameHooks, 300);
+
       function startGameMatch() {
         initAudio();
+        isMpMatch = false;
         document.getElementById('modalOnline').classList.add('hidden');
         document.getElementById('lobbyView').classList.add('hidden');
         document.getElementById('gameView').classList.remove('hidden');
@@ -5814,6 +6215,10 @@
 
       function exitToLobby() {
         gameRunning = false;
+        if (isMpMatch) {
+          isMpMatch = false;
+          if (window.DIGI_MP) window.DIGI_MP.leaveRoom(true);
+        }
         exitBattleLandscape();
         player.spawnShieldUntil = 0;
         const sb = document.getElementById('spawnShieldBanner');
