@@ -380,6 +380,7 @@ function initMultiplayer(app) {
 
   // 8) SSE Jonli Oqim (Server -> Client real-time updates)
   app.get("/api/mp/stream", (req, res) => {
+    console.log("[MP] /api/mp/stream hit query:", req.query);
     const code = cleanCode(req.query.code);
     const pid = cleanId(req.query.playerId);
     const room = rooms.get(code);
