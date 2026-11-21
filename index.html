@@ -2379,7 +2379,7 @@
         const mySpawn = player.team === 'red' ? redSpawnPoints[0] : blueSpawnPoints[0];
         player.x = mySpawn.x;
         player.y = mySpawn.y;
-        player.angle = mySpawn.angle;
+        player.angle = findOpenCorridorAngle(mySpawn.x, mySpawn.y);
         player.angVel = 0;
         player.health = 100;
         player.armor = 50;
@@ -3135,6 +3135,27 @@
         }
       }
 
+      function findOpenCorridorAngle(x, y) {
+        const dirs = [0, Math.PI / 2, Math.PI, -Math.PI / 2];
+        let bestAngle = 0;
+        let bestClear = -1;
+        for (let i = 0; i < dirs.length; i++) {
+          const a = dirs[i];
+          const ca = Math.cos(a);
+          const sa = Math.sin(a);
+          let clearDist = 0;
+          for (let d = 0.35; d <= 8.0; d += 0.30) {
+            if (isWall(x + ca * d, y + sa * d)) break;
+            clearDist = d;
+          }
+          if (clearDist > bestClear) {
+            bestClear = clearDist;
+            bestAngle = a;
+          }
+        }
+        return bestAngle;
+      }
+
       function findSafeSpawnPoint(team, isForPlayer) {
         const candidates = team === 'red'
           ? [
@@ -3450,6 +3471,9 @@
                 const pSp = findSafeSpawnPoint(player.team, true);
                 player.x = pSp.x;
                 player.y = pSp.y;
+                player.angle = findOpenCorridorAngle(pSp.x, pSp.y);
+                player.angVel = 0;
+                player.pitch = 0;
                 const rw = WEAPONS[selectedWeaponIdx] || WEAPONS[0];
                 if (rw && !rw.isMelee) {
                   player.magAmmo = rw.magSize;
