@@ -388,6 +388,7 @@ function initMultiplayer(app) {
     }
 
     res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
+    res.setHeader("Content-Encoding", "identity");
     res.setHeader("Cache-Control", "no-cache, no-transform");
     res.setHeader("Connection", "keep-alive");
     res.setHeader("X-Accel-Buffering", "no");
