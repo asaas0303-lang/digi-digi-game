@@ -317,9 +317,14 @@ app.post("/api/tg/webhook", async (req, res) => {
       const firstName = (msg.from && msg.from.first_name) ? msg.from.first_name : "Jangchi";
       const parts = msg.text.trim().split(/\s+/);
       const rawRef = parts[1] || "";
-      // "friend_DOOM-XXXX" formatida kelsa "friend_" prefiksi olib tashlanadi
-      const cleanRef = rawRef.startsWith("friend_") ? rawRef.replace("friend_", "") : rawRef;
-      const webAppUrl = cleanRef ? `${APP_URL}/?friend_ref=${encodeURIComponent(cleanRef)}` : `${APP_URL}/`;
+      let webAppUrl = `${APP_URL}/`;
+      if (rawRef.startsWith("room_")) {
+        const roomCode = rawRef.replace("room_", "").replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 6);
+        if (roomCode) webAppUrl = `${APP_URL}/?room_code=${encodeURIComponent(roomCode)}`;
+      } else if (rawRef) {
+        const cleanRef = rawRef.startsWith("friend_") ? rawRef.replace("friend_", "") : rawRef;
+        webAppUrl = `${APP_URL}/?friend_ref=${encodeURIComponent(cleanRef)}`;
+      }
 
       const welcomeText =
         `🪖 <b>Salom, ${firstName}!</b>\n\n` +
@@ -355,6 +360,14 @@ try {
   initUzumSniper(app, DATA_DIR);
 } catch (uzumErr) {
   console.error("[UzumSniper] Init error:", uzumErr);
+}
+
+// Real-Time Multiplayer Room Engine (1v1 Duel & 4v4 TDM — SSE + Keep-Alive HTTP)
+try {
+  const { initMultiplayer } = require("./mp_engine");
+  initMultiplayer(app);
+} catch (mpErr) {
+  console.error("[Multiplayer] Init error:", mpErr);
 }
 
 const httpServer = app.listen(PORT, async () => {
