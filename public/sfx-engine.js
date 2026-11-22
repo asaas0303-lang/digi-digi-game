@@ -9,6 +9,30 @@
     if (saved && VALID_LANGS.indexOf(saved) !== -1) radioLang = saved;
   } catch (e) {}
 
+  const LS_WEAPON_VOL = 'digi_weapon_vol_v1';
+  const WEAPON_SHOOT_KEYS = {
+    shoot_m4a1: true,
+    shoot_plasma: true,
+    shoot_ak47: true,
+    shoot_shotgun: true,
+    shoot_pistol: true
+  };
+  let weaponVolume = 1.0;
+  try {
+    const savedVol = parseFloat(localStorage.getItem(LS_WEAPON_VOL));
+    if (Number.isFinite(savedVol) && savedVol >= 0 && savedVol <= 1.5) {
+      weaponVolume = savedVol;
+    }
+  } catch (e) {}
+
+  function setWeaponVolume(ratio) {
+    const v = Math.max(0, Math.min(1.5, Number(ratio)));
+    if (!Number.isFinite(v)) return weaponVolume;
+    weaponVolume = Math.round(v * 100) / 100;
+    try { localStorage.setItem(LS_WEAPON_VOL, String(weaponVolume)); } catch (e) {}
+    return weaponVolume;
+  }
+
   // Qurol va jang SFX xaritasi (public/sfx/weapons/ ichidagi .mp3 fayllar)
   const WEAPON_MAP = {
     shoot_m4a1:      { url: '/sfx/weapons/m4a1.mp3',     gain: 0.62, pMin: 0.96, pMax: 1.04, delay: 0 },
@@ -100,6 +124,12 @@
     const spec = WEAPON_MAP[type];
     if (!spec || !ctx || !dest) return false;
 
+    if (WEAPON_SHOOT_KEYS[type]) {
+      if (weaponVolume <= 0.005) {
+        return true;
+      }
+    }
+
     const buf = bufferCache[spec.url];
     if (!buf) {
       // Hali RAM ga tushmagan bo'lsa, fonda yuklashni boshlaydi va zaxira sintezga o'tadi
@@ -118,7 +148,8 @@
 
       const gain = ctx.createGain();
       const v = Math.max(0.08, Math.min(1.0, typeof vol === 'number' ? vol : 1.0));
-      gain.gain.value = spec.gain * v;
+      const mult = WEAPON_SHOOT_KEYS[type] ? weaponVolume : 1.0;
+      gain.gain.value = Math.min(1.4, spec.gain * v * mult);
 
       src.connect(gain);
       let panner = null;
@@ -150,6 +181,14 @@
       activeSfxVoices = Math.max(0, activeSfxVoices - 1);
       return false;
     }
+  }
+
+  function play(type, panVal, vol) {
+    const audio = (typeof window._digiEnsureAudio === 'function') ? window._digiEnsureAudio() : null;
+    if (audio && audio.ctx && audio.dest) {
+      return playWeapon(type, audio.ctx, audio.dest, panVal, vol);
+    }
+    return false;
   }
 
   function stopRadio() {
@@ -299,20 +338,58 @@
     updateRadioUI();
   }
 
+  function bindWeaponVolumeUI() {
+    const slider = document.getElementById('weaponVolSlider');
+    const valEl = document.getElementById('weaponVolVal');
+    if (!slider || slider._digiBound) return;
+    slider._digiBound = true;
+    const pct = Math.round(weaponVolume * 100);
+    slider.value = String(pct);
+    if (valEl) valEl.textContent = pct + '%';
+    slider.addEventListener('input', function() {
+      const p = Math.max(0, Math.min(150, parseInt(slider.value, 10) || 0));
+      setWeaponVolume(p / 100);
+      if (valEl) valEl.textContent = p + '%';
+    });
+    slider.addEventListener('change', function() {
+      const p = Math.max(0, Math.min(150, parseInt(slider.value, 10) || 0));
+      setWeaponVolume(p / 100);
+      if (valEl) valEl.textContent = p + '%';
+      if (p > 0) {
+        try {
+          if (typeof window._digiEnsureAudio === 'function') window._digiEnsureAudio();
+          if (window.DIGI_SFX && typeof window.DIGI_SFX.play === 'function') {
+            window.DIGI_SFX.play('shoot_ak47', 0, 1.0);
+          }
+        } catch (e) {}
+      }
+    });
+  }
+
   window.DIGI_SFX = {
     preload: preload,
     preloadRadio: preloadRadio,
     playWeapon: playWeapon,
+    play: play,
     playRadio: playRadio,
     stopRadio: stopRadio,
     calloutEnemyDir: calloutEnemyDir,
     getLang: function () { return radioLang; },
-    bindUI: bindRadioSettingsUI
+    getWeaponVolume: function() { return weaponVolume; },
+    setWeaponVolume: setWeaponVolume,
+    bindUI: function() {
+      bindRadioSettingsUI();
+      bindWeaponVolumeUI();
+    }
   };
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', bindRadioSettingsUI);
+    document.addEventListener('DOMContentLoaded', function() {
+      bindRadioSettingsUI();
+      bindWeaponVolumeUI();
+    });
   } else {
     bindRadioSettingsUI();
+    bindWeaponVolumeUI();
   }
 })();
