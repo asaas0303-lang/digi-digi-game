@@ -5836,6 +5836,13 @@
           if (!isNaN(s2) && s2 >= 20 && s2 <= 300) gyroAdsSensPct = s2;
           gyroInvertX = localStorage.getItem(LS_INV_X) === '1';
           gyroInvertY = localStorage.getItem(LS_INV_Y) === '1';
+          if (localStorage.getItem('digi_gyro_cal_v2') !== '1') {
+            gyroInvertX = false;
+            gyroInvertY = false;
+            localStorage.setItem(LS_INV_X, '0');
+            localStorage.setItem(LS_INV_Y, '0');
+            localStorage.setItem('digi_gyro_cal_v2', '1');
+          }
         } catch (e) {}
 
         let motionListening = false;
@@ -5903,7 +5910,11 @@
           return 0;
         }
 
-        // wx, wy - qurilma X va Y o'qlari bo'yicha burchak tezligi (rad/s)
+        let tgHasData = false;
+        let motionFallbackTimer = null;
+        const isAndroidUA = /Android/i.test(navigator.userAgent || '');
+
+        // wx, wy - qurilma haqiqiy hardware X va Y o'qlari bo'yicha burchak tezligi (rad/s)
         function applyGyroSample(wx, wy, dtSec) {
           if (!gameRunning || document.hidden) return;
           if (gyroMode === 'off') return;
@@ -5914,45 +5925,47 @@
           }
           if (!isFinite(wx) || !isFinite(wy) || !isFinite(dtSec)) return;
 
-          // Keskin datchik sakrashlarini (glitch) kesish
           if (wx > 12) wx = 12; else if (wx < -12) wx = -12;
           if (wy > 12) wy = 12; else if (wy < -12) wy = -12;
 
-          // 3 xil ekran holati bo'yicha o'qlarni aniq xaritalash:
-          // 1) Zaxira 90° CSS yonbosh (_digiRot90) yoki Native Landscape 90°: +X=Tepa, +Y=Chap => O'ng=-wx, Tepa=-wy
-          // 2) Native Landscape 270°: +X=Past, +Y=O'ng => O'ng=+wx, Tepa=+wy
-          // 3) Tik ekran (0°): +X=O'ng, +Y=Tepa => O'ng=-wy, Tepa=+wx
+          // PUBG uslubida 4 xil ekran holati bo'yicha haqiqiy o'ng-qo'l qoidasi xaritasi:
+          // 1) _digiRot90 yoki Native Landscape 90° (Selfie kamera chapda: +X=Tepa, +Y=Chap):
+          //    O'ngga burish => +wx; Tepaga qarash => -wy
+          // 2) Native Landscape 270° (Selfie kamera o'ngda: +X=Past, +Y=O'ng):
+          //    O'ngga burish => -wx; Tepaga qarash => +wy
+          // 3) Tik ekran 0° (+X=O'ng, +Y=Tepa):
+          //    O'ngga burish => +wy; Tepaga qarash => +wx
           const ang = getScreenAngle();
           let rawYaw, rawPitch;
           if (window._digiRot90 || ang === 90) {
-            rawYaw = -wx;
+            rawYaw = wx;
             rawPitch = -wy;
           } else if (ang === 270) {
-            rawYaw = wx;
+            rawYaw = -wx;
             rawPitch = wy;
           } else if (ang === 180) {
-            rawYaw = wy;
+            rawYaw = -wy;
             rawPitch = -wx;
           } else {
-            rawYaw = -wy;
+            rawYaw = wy;
             rawPitch = wx;
           }
 
           if (gyroInvertX) rawYaw = -rawYaw;
           if (gyroInvertY) rawPitch = -rawPitch;
 
-          // Qo'lning mayda titrashini so'ndirish (Deadzone: ~1.0 deg/s)
-          const deadzone = 0.018;
+          // Qo'lning mayda titrashini so'ndirish (Deadzone)
+          const deadzone = 0.012;
           if (Math.abs(rawYaw) < deadzone) rawYaw = 0;
           if (Math.abs(rawPitch) < deadzone) rawPitch = 0;
 
-          // PUBG uslubidagi silliq past chastotali filtr (Jitter-free snap)
-          smoothYaw += (rawYaw - smoothYaw) * 0.65;
-          smoothPitch += (rawPitch - smoothPitch) * 0.65;
+          // PUBG uslubidagi tezkor va silliq filtr
+          smoothYaw += (rawYaw - smoothYaw) * 0.78;
+          smoothPitch += (rawPitch - smoothPitch) * 0.78;
 
           const activePct = player.adsZoom ? gyroAdsSensPct : gyroSensPct;
-          const yawGain = (activePct / 100.0) * (player.adsZoom ? 0.85 : 1.25);
-          const pitchGain = yawGain * 0.65;
+          const yawGain = (activePct / 100.0) * (player.adsZoom ? 0.95 : 1.45);
+          const pitchGain = yawGain * 0.72;
 
           const dAngle = smoothYaw * dtSec * yawGain;
           const dPitch = smoothPitch * dtSec * pitchGain;
@@ -5962,21 +5975,21 @@
             player.weaponSwayX = Math.max(-14, Math.min(14, (player.weaponSwayX || 0) - dAngle * 18));
           }
           if (dPitch !== 0) {
-            player.pitch = Math.max(-0.30, Math.min(0.30, (player.pitch || 0) + dPitch));
+            player.pitch = Math.max(-0.38, Math.min(0.38, (player.pitch || 0) + dPitch));
           }
         }
 
         function onDeviceMotion(e) {
-          if (gyroMode === 'off') return;
+          if (gyroMode === 'off' || tgHasData) return;
           const rr = e && e.rotationRate;
           if (!rr) return;
-          const b = rr.beta;  // X o'qi (deg/s)
-          const g = rr.gamma; // Y o'qi (deg/s)
-          if (typeof b !== 'number' || typeof g !== 'number') return;
+          // Android Chrome/WebView da rotationRate (alpha=X, beta=Y, gamma=Z), iOS/W3C da (beta=X, gamma=Y, alpha=Z)
+          const rawX = isAndroidUA ? rr.alpha : rr.beta;
+          const rawY = isAndroidUA ? rr.beta : rr.gamma;
+          if (typeof rawX !== 'number' || typeof rawY !== 'number') return;
 
-          if (!motionHasData && (b !== 0 || g !== 0)) {
+          if (!motionHasData && (rawX !== 0 || rawY !== 0)) {
             motionHasData = true;
-            if (tgGyroActive) stopTelegramGyro();
             setStatus('Faol (60Hz)', 'text-emerald-400');
           }
 
@@ -5989,14 +6002,24 @@
           lastMotionTs = now;
 
           const DEG2RAD = Math.PI / 180;
-          applyGyroSample(b * DEG2RAD, g * DEG2RAD, dtSec);
+          applyGyroSample(rawX * DEG2RAD, rawY * DEG2RAD, dtSec);
         }
 
         function onTelegramGyroChanged() {
-          if (gyroMode === 'off' || motionHasData) return;
+          if (gyroMode === 'off') return;
           const tg = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
           const gyro = tg && tg.Gyroscope;
           if (!gyro) return;
+          const gx = Number(gyro.x) || 0;
+          const gy = Number(gyro.y) || 0;
+          if (!tgHasData && (gx !== 0 || gy !== 0)) {
+            tgHasData = true;
+            if (motionListening) {
+              window.removeEventListener('devicemotion', onDeviceMotion);
+              motionListening = false;
+            }
+            setStatus('Faol (TG Native)', 'text-emerald-400');
+          }
           const now = performance.now();
           if (lastTgTs === 0) {
             lastTgTs = now;
@@ -6004,15 +6027,14 @@
           }
           const dtSec = Math.min(0.06, Math.max(0.005, (now - lastTgTs) * 0.001));
           lastTgTs = now;
-          // Telegram WebApp Gyroscope qiymatlari rad/s birlikda keladi
-          applyGyroSample(Number(gyro.x) || 0, Number(gyro.y) || 0, dtSec);
+          applyGyroSample(gx, gy, dtSec);
         }
 
         function startTelegramGyro() {
           const tg = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
           const gyro = tg && tg.Gyroscope;
-          if (!gyro || typeof gyro.start !== 'function') return;
-          if (tgGyroActive) return;
+          if (!gyro || typeof gyro.start !== 'function') return false;
+          if (tgGyroActive) return true;
           try {
             lastTgTs = 0;
             if (typeof tg.onEvent === 'function') {
@@ -6022,16 +6044,26 @@
             gyro.start({ refresh_rate: 20 }, (started) => {
               if (started) {
                 tgGyroActive = true;
-                if (!motionHasData) setStatus('Faol (TG Sensor)', 'text-emerald-400');
+                setStatus('Faol (TG Native)', 'text-emerald-400');
+              } else if (gyroMode !== 'off' && !motionListening) {
+                window.addEventListener('devicemotion', onDeviceMotion, { passive: true });
+                motionListening = true;
               }
             });
-          } catch (e) {}
+            return true;
+          } catch (e) {
+            return false;
+          }
         }
 
         function stopTelegramGyro() {
           if (tgFallbackTimer) {
             clearTimeout(tgFallbackTimer);
             tgFallbackTimer = null;
+          }
+          if (motionFallbackTimer) {
+            clearTimeout(motionFallbackTimer);
+            motionFallbackTimer = null;
           }
           const tg = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
           const gyro = tg && tg.Gyroscope;
@@ -6040,6 +6072,7 @@
             if (gyro && typeof gyro.stop === 'function' && (tgGyroActive || gyro.isStarted)) gyro.stop();
           } catch (e) {}
           tgGyroActive = false;
+          tgHasData = false;
           lastTgTs = 0;
         }
 
@@ -6061,19 +6094,26 @@
             return;
           }
           lastMotionTs = 0;
+          lastTgTs = 0;
           smoothYaw = 0;
           smoothPitch = 0;
-          if (!motionListening && typeof window.addEventListener === 'function') {
-            window.addEventListener('devicemotion', onDeviceMotion, { passive: true });
-            motionListening = true;
-          }
-          // Agar Android/Telegram WebView devicemotion bermasa, 650ms dan keyin Telegram Native Gyroscope ulanadi
-          if (tgFallbackTimer) clearTimeout(tgFallbackTimer);
-          tgFallbackTimer = setTimeout(() => {
-            if (gyroMode !== 'off' && !motionHasData) {
-              startTelegramGyro();
+          // 1-o'rinda Telegram Native Gyroscope (sof hardware x, y, z)
+          const tgStarted = startTelegramGyro();
+          if (!tgStarted) {
+            if (!motionListening && typeof window.addEventListener === 'function') {
+              window.addEventListener('devicemotion', onDeviceMotion, { passive: true });
+              motionListening = true;
             }
-          }, 650);
+          } else {
+            // Agar 500ms ichida TG Gyroscope javob bermasa, zaxira sifatida tuzatilgan devicemotion ulanadi
+            if (motionFallbackTimer) clearTimeout(motionFallbackTimer);
+            motionFallbackTimer = setTimeout(() => {
+              if (gyroMode !== 'off' && !tgHasData && !motionListening) {
+                window.addEventListener('devicemotion', onDeviceMotion, { passive: true });
+                motionListening = true;
+              }
+            }, 500);
+          }
           refreshGyroUI();
         }
 
