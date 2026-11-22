@@ -648,6 +648,17 @@
                 <span id="audioText">Ovoz: Yoqilgan</span>
               </button>
             </div>
+            <div class="border-t border-slate-800/90 pt-2 space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-slate-200 font-bold">📻 Askarlar Radiosi (CS 1.6):</span>
+                <span id="radioStatusBadge" class="text-[10px] font-mono text-emerald-400">O'zbekcha</span>
+              </div>
+              <div id="radioLangBtns" class="grid grid-cols-3 gap-1.5">
+                <button type="button" data-radio-lang="uz" class="radio-lang-btn px-2 py-1.5 rounded-lg text-[10px] font-extrabold border border-sky-400 bg-sky-500/20 text-sky-300 transition">🇺🇿 O'zbekcha</button>
+                <button type="button" data-radio-lang="ru" class="radio-lang-btn px-2 py-1.5 rounded-lg text-[10px] font-extrabold border border-slate-700 bg-slate-900 text-slate-300 transition">🇷🇺 Русский</button>
+                <button type="button" data-radio-lang="off" class="radio-lang-btn px-2 py-1.5 rounded-lg text-[10px] font-extrabold border border-slate-700 bg-slate-900 text-slate-300 transition">🔇 O'chiq</button>
+              </div>
+            </div>
           </div>
 
           <div class="bg-slate-950/85 border border-slate-800 rounded-xl p-3 space-y-2.5">
@@ -1266,8 +1277,14 @@
           if (audioCtx && (audioCtx.state === 'suspended' || audioCtx.state === 'interrupted')) {
             audioCtx.resume().catch(function(){});
           }
+          if (audioCtx && window.DIGI_SFX) window.DIGI_SFX.preload(audioCtx);
         } catch (e) {}
       }
+
+      window._digiEnsureAudio = function() {
+        initAudio();
+        return audioCtx ? { ctx: audioCtx, dest: masterGain || audioCtx.destination } : null;
+      };
 
       // #16 3D Stereo Panner (faqat chap/o'ng sezilarli bo'lganda panner yaratadi va Master Limiter ga ulaydi)
       function connectWithPan(node, panVal) {
@@ -1365,7 +1382,7 @@
           const nowMs = performance.now();
 
           // Android Audio HAL tiqilib qolmasligi uchun tez-tez takrorlanuvchi bot va qadam tovushlariga aqlli chegara
-          if (type === 'shoot_pistol' && distScale < 0.95) {
+          if ((type === 'shoot_pistol' || type === 'shoot_m4a1' || type === 'shoot_ak47') && distScale < 0.95) {
             if (nowMs - (_soundCooldownMap.bot_shoot || 0) < 70 || _activeAudioVoices >= 12) return;
             _soundCooldownMap.bot_shoot = nowMs;
           } else if (type === 'step') {
@@ -1379,6 +1396,10 @@
             _soundCooldownMap.shell = nowMs;
           }
 
+          if (window.DIGI_SFX && window.DIGI_SFX.playWeapon(type, audioCtx, masterGain || audioCtx.destination, panVal, vol)) {
+            return;
+          }
+
           if (type === 'shoot_pistol') {
             if (distScale < 0.85) {
               // Uzoq bot otishmasi: 2 ta yengil qatlam (CPU 2x tejaladi, 3D stereo saqlanadi)
@@ -1389,12 +1410,12 @@
               triggerNoiseLayer(whiteNoiseBuf, 'bandpass', 2400, 620, 0.11, 0.62 * vol, 0, panVal);
               triggerNoiseLayer(brownNoiseBuf, 'lowpass', 540, 120, 0.15, 0.50 * vol, 0.01, panVal);
             }
-          } else if (type === 'shoot_shotgun') {
+          } else if (type === 'shoot_shotgun' || type === 'shoot_ak47') {
             triggerSubPunch(150, 26, 0.22, 0.88 * vol, 0, panVal);
             triggerNoiseLayer(brownNoiseBuf, 'lowpass', 720, 90, 0.30, 0.78 * vol, 0, panVal);
             triggerNoiseLayer(whiteNoiseBuf, 'bandpass', 1850, 360, 0.22, 0.68 * vol, 0, panVal);
             triggerNoiseLayer(whiteNoiseBuf, 'bandpass', 2800, 3500, 0.06, 0.30 * vol, 0.28, panVal);
-          } else if (type === 'shoot_plasma') {
+          } else if (type === 'shoot_plasma' || type === 'shoot_m4a1') {
             triggerSubPunch(660, 95, 0.15, 0.60 * vol, 0, panVal);
             triggerNoiseLayer(whiteNoiseBuf, 'bandpass', 3600, 820, 0.13, 0.45 * vol, 0, panVal);
           } else if (type === 'knife_slash') {
@@ -1538,6 +1559,7 @@
       // #32 Ovozli G'alaba E'loni (SpeechSynthesis + Fanfare)
       function announceVoice(text) {
         playSound('victory_fanfare');
+        if (window.DIGI_SFX && window.DIGI_SFX.getLang() !== 'off') return;
         try {
           if ('speechSynthesis' in window && soundEnabled) {
             window.speechSynthesis.cancel();
@@ -1687,8 +1709,8 @@
 
       // #5: Haqiqiy CS:GO Qurollari (1-o'rinda M4A1-S / AK-47 Avtomat 30/90, 115ms tez avtomatik otish bilan!)
       const WEAPONS = [
-        { name: 'M4A1-S AVTOMAT', damage: 36, cooldown: 115, magSize: 30, reloadTime: 1250, spread: 0.028, color: '#fbbf24', sound: 'shoot_plasma', isMelee: false },
-        { name: 'AK-47 KALASHNIKOV', damage: 44, cooldown: 130, magSize: 30, reloadTime: 1350, spread: 0.036, color: '#f97316', sound: 'shoot_shotgun', isMelee: false },
+        { name: 'M4A1-S AVTOMAT', damage: 36, cooldown: 115, magSize: 30, reloadTime: 1250, spread: 0.028, color: '#fbbf24', sound: 'shoot_m4a1', isMelee: false },
+        { name: 'AK-47 KALASHNIKOV', damage: 44, cooldown: 130, magSize: 30, reloadTime: 1350, spread: 0.036, color: '#f97316', sound: 'shoot_ak47', isMelee: false },
         { name: 'XM1014 SHOTGUN', damage: 68, cooldown: 380, magSize: 7, reloadTime: 1400, spread: 0.075, color: '#ef4444', sound: 'shoot_shotgun', isMelee: false },
         { name: 'USP-S TO\'PPONCHA', damage: 38, cooldown: 185, magSize: 12, reloadTime: 1050, spread: 0.022, color: '#38bdf8', sound: 'shoot_pistol', isMelee: false }
       ];
@@ -2609,6 +2631,7 @@
         player.reloadDuration = w.reloadTime;
         player.pumpStage = 14;
         playSound('reload');
+        if (window.DIGI_SFX && soundEnabled) window.DIGI_SFX.playRadio('reload', audioCtx, masterGain || (audioCtx && audioCtx.destination), false, 0.45);
       }
 
       // --- #13 PORTLOVCHI GRANATA (HE GRENADE) VA #30 TUTUN GRANATASI (SMOKE) ---
@@ -2629,6 +2652,7 @@
         }
         updateGrenadeLabels();
         playSound('knife_slash');
+        if (window.DIGI_SFX && soundEnabled) window.DIGI_SFX.playRadio('grenade', audioCtx, masterGain || (audioCtx && audioCtx.destination), true, 1.0);
 
         const gx0 = player.x + Math.cos(player.angle) * 0.4;
         const gy0 = player.y + Math.sin(player.angle) * 0.4;
@@ -2830,6 +2854,9 @@
               if (player.team === 'red') redScore++;
               else blueScore++;
               addKillFeed(myProfile.name, player.team, bestEnemy.name, bestEnemy.team, killBadge);
+              if (window.DIGI_SFX && soundEnabled) {
+                window.DIGI_SFX.playRadio(isHeadshotHit ? 'headshot' : 'kill', audioCtx, masterGain || (audioCtx && audioCtx.destination), isHeadshotHit, isHeadshotHit ? 0.85 : 0.45);
+              }
               checkMatchWinCondition();
             }
           }
@@ -2991,6 +3018,9 @@
           summary.textContent = didWin
             ? `G'ALABA! Siz ${player.kills} frag / ${player.deaths} o'lim natija ko'rsatdingiz!`
             : `MAG'LUBIYAT! Siz ${player.kills} frag / ${player.deaths} o'lim natija ko'rsatdingiz.`;
+          if (window.DIGI_SFX && soundEnabled) {
+            window.DIGI_SFX.playRadio(didWin ? 'win' : 'lose', audioCtx, masterGain || (audioCtx && audioCtx.destination), true, 1.0);
+          }
           announceVoice(winnerTeam === 'red' ? 'Red Force Wins! Counter Strike MVP ' + (mvpRow ? mvpRow.name : myProfile.name) : 'Blue Counter Spec Wins! MVP ' + (mvpRow ? mvpRow.name : myProfile.name));
         }
 
@@ -3478,7 +3508,15 @@
             const relAngle = Math.atan2(c.y - player.y, c.x - player.x) - player.angle;
             const stereoPan = Math.sin(relAngle);
             const distGain = Math.max(0.22, 1 - Math.hypot(c.x - player.x, c.y - player.y) / 12);
-            playSound('shoot_pistol', stereoPan, distGain);
+            playSound(c.team === 'red' ? 'shoot_ak47' : 'shoot_m4a1', stereoPan, distGain);
+            if (window.DIGI_SFX && soundEnabled) {
+              const rDest = masterGain || (audioCtx && audioCtx.destination);
+              if (targetIsPlayer) {
+                window.DIGI_SFX.calloutEnemyDir(c.x, c.y, player.x, player.y, player.angle, audioCtx, rDest);
+              } else if (c.team === player.team && targetX !== null && targetY !== null) {
+                window.DIGI_SFX.calloutEnemyDir(targetX, targetY, player.x, player.y, player.angle, audioCtx, rDest);
+              }
+            }
 
             if (targetIsPlayer) {
               if (now < player.spawnShieldUntil) return;
@@ -3503,6 +3541,9 @@
                 if (navigator.vibrate) navigator.vibrate(40);
               } catch (e) {}
               playSound('hurt', stereoPan, 1.0);
+              if (player.health > 0 && player.health <= 32 && window.DIGI_SFX && soundEnabled) {
+                window.DIGI_SFX.playRadio('need_help', audioCtx, masterGain || (audioCtx && audioCtx.destination), false, 0.75);
+              }
               triggerDamageFlash();
               updateHud();
 
@@ -6395,6 +6436,13 @@
         if (animFrameId) cancelAnimationFrame(animFrameId);
         gameRunning = true;
         enterBattleLandscape();
+        if (window.DIGI_SFX && soundEnabled) {
+          setTimeout(() => {
+            if (gameRunning && window.DIGI_SFX && soundEnabled) {
+              window.DIGI_SFX.playRadio('go', audioCtx, masterGain || (audioCtx && audioCtx.destination), true, 1.0);
+            }
+          }, 420);
+        }
         lastFrameTime = performance.now();
         animFrameId = requestAnimationFrame(gameLoop);
         showCsEventBanner('🌐 JONLI ' + gameMode.toUpperCase() + ' JANG BOSHLANDI!');
@@ -6622,12 +6670,20 @@
         if (animFrameId) cancelAnimationFrame(animFrameId);
         gameRunning = true;
         enterBattleLandscape();
+        if (window.DIGI_SFX && soundEnabled) {
+          setTimeout(() => {
+            if (gameRunning && window.DIGI_SFX && soundEnabled) {
+              window.DIGI_SFX.playRadio('go', audioCtx, masterGain || (audioCtx && audioCtx.destination), true, 1.0);
+            }
+          }, 420);
+        }
         lastFrameTime = performance.now();
         animFrameId = requestAnimationFrame(gameLoop);
       }
 
       function exitToLobby() {
         gameRunning = false;
+        if (window.DIGI_SFX) window.DIGI_SFX.stopRadio();
         if (isMpMatch) {
           isMpMatch = false;
           if (window.DIGI_MP) window.DIGI_MP.leaveRoom(true);
@@ -7807,5 +7863,6 @@
   </script>
   <script src="/telegram-bridge.js?v=20261108_3"></script>
   <script src="/mp-client.js"></script>
+  <script src="/sfx-engine.js"></script>
 </body>
 </html>
