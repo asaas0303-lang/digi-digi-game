@@ -13,7 +13,7 @@
   const WEAPON_MAP = {
     shoot_m4a1:      { url: '/sfx/weapons/m4a1.mp3',     gain: 0.96, pMin: 0.96, pMax: 1.04, delay: 0 },
     shoot_plasma:    { url: '/sfx/weapons/m4a1.mp3',     gain: 0.96, pMin: 0.96, pMax: 1.04, delay: 0 },
-    shoot_ak47:      { url: '/sfx/weapons/ak47.mp3',     gain: 1.00, pMin: 0.95, pMax: 1.05, delay: 0 },
+    shoot_ak47:      { url: '/sfx/weapons/ak47.mp3?v=2', gain: 1.00, pMin: 0.96, pMax: 1.04, delay: 0 },
     shoot_shotgun:   { url: '/sfx/weapons/shotgun.mp3',  gain: 1.00, pMin: 0.95, pMax: 1.04, delay: 0 },
     shoot_pistol:    { url: '/sfx/weapons/usps.mp3',     gain: 0.88, pMin: 0.96, pMax: 1.04, delay: 0 },
     reload:          { url: '/sfx/weapons/reload.mp3',   gain: 0.90, pMin: 0.99, pMax: 1.01, delay: 0 },
@@ -21,7 +21,7 @@
     grenade_explode: { url: '/sfx/weapons/grenade.mp3',  gain: 1.00, pMin: 0.94, pMax: 1.04, delay: 0 },
     smoke_hiss:      { url: '/sfx/weapons/smoke.mp3',    gain: 0.78, pMin: 0.97, pMax: 1.03, delay: 0 },
     hit:             { url: '/sfx/weapons/hit.mp3',      gain: 0.85, pMin: 0.93, pMax: 1.07, delay: 0 },
-    shell_drop:      { url: '/sfx/weapons/shell.mp3',    gain: 0.40, pMin: 0.92, pMax: 1.10, delay: 0.16 }
+    shell_drop:      { url: '/sfx/weapons/shell.mp3',    gain: 0.12, pMin: 0.92, pMax: 1.10, delay: 0.18 }
   };
 
   const RADIO_KEYS = [
