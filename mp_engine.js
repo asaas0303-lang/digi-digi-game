@@ -64,6 +64,20 @@ function initMultiplayer(app) {
 
   function broadcast(room, eventName, payloadObj, excludeId = null) {
     if (!room) return;
+    if (eventName !== "state") {
+      if (!Array.isArray(room.events)) room.events = [];
+      if (typeof room.nextEventSeq !== "number") room.nextEventSeq = 1;
+      room.events.push({
+        seq: room.nextEventSeq++,
+        type: eventName,
+        data: payloadObj,
+        excludeId: excludeId || null,
+        at: Date.now()
+      });
+      if (room.events.length > 80) {
+        room.events.splice(0, room.events.length - 80);
+      }
+    }
     const msg = `event: ${eventName}\ndata: ${JSON.stringify(payloadObj)}\n\n`;
     for (const p of room.players.values()) {
       if (excludeId && p.id === excludeId) continue;
@@ -75,6 +89,43 @@ function initMultiplayer(app) {
         }
       }
     }
+  }
+
+  function buildStatePayload(room, now) {
+    const rem = room.status === "playing" && room.startedAt
+      ? Math.max(0, Math.ceil((room.durationSec * 1000 - (now - room.startedAt)) / 1000))
+      : room.durationSec;
+    const arr = [];
+    for (const p of room.players.values()) {
+      arr.push([
+        p.id,
+        +p.x.toFixed(2),
+        +p.y.toFixed(2),
+        +p.a.toFixed(2),
+        p.hp,
+        p.alive ? 1 : 0,
+        p.mv ? 1 : 0,
+        now < p.mfUntil ? 1 : 0,
+        p.kills,
+        p.deaths,
+        p.wp
+      ]);
+    }
+    return { rem, rs: room.redScore, bs: room.blueScore, p: arr };
+  }
+
+  function collectEventsSince(room, sinceSeq, pid) {
+    const since = Math.max(0, parseInt(sinceSeq, 10) || 0);
+    const list = Array.isArray(room.events) ? room.events : [];
+    const out = [];
+    for (let i = 0; i < list.length; i++) {
+      const ev = list[i];
+      if (ev.seq > since && (!ev.excludeId || ev.excludeId !== pid)) {
+        out.push({ seq: ev.seq, type: ev.type, data: ev.data });
+      }
+    }
+    const latestSeq = (typeof room.nextEventSeq === "number" ? room.nextEventSeq - 1 : 0);
+    return { events: out, seq: latestSeq };
   }
 
   function serializeRoom(room) {
@@ -265,13 +316,15 @@ function initMultiplayer(app) {
       redScore: 0,
       blueScore: 0,
       players: new Map(),
+      events: [],
+      nextEventSeq: 1,
       createdAt: Date.now(),
       updatedAt: Date.now(),
       dirty: false
     };
     rooms.set(code, room);
     addPlayerToRoom(room, pid, cleanName(b.name, pid), b.team === "blue" ? "blue" : "red");
-    res.json({ ok: true, room: serializeRoom(room) });
+    res.json({ ok: true, room: serializeRoom(room), seq: (typeof room.nextEventSeq === "number" ? room.nextEventSeq - 1 : 0) });
   });
 
   // 3) Kod orqali xonaga qo'shilish
@@ -288,7 +341,7 @@ function initMultiplayer(app) {
     addPlayerToRoom(room, pid, cleanName(b.name, pid), b.team);
     const snap = serializeRoom(room);
     broadcast(room, "room", snap);
-    res.json({ ok: true, room: snap });
+    res.json({ ok: true, room: snap, seq: (typeof room.nextEventSeq === "number" ? room.nextEventSeq - 1 : 0) });
   });
 
   // 4) Tezkor avto-qidiruv (1v1 / 4v4 ochiq xona topadi yoki yangi yaratadi)
@@ -321,6 +374,8 @@ function initMultiplayer(app) {
         redScore: 0,
         blueScore: 0,
         players: new Map(),
+        events: [],
+        nextEventSeq: 1,
         createdAt: Date.now(),
         updatedAt: Date.now(),
         dirty: false
@@ -330,7 +385,7 @@ function initMultiplayer(app) {
     addPlayerToRoom(target, pid, name, b.team);
     const snap = serializeRoom(target);
     broadcast(target, "room", snap);
-    res.json({ ok: true, room: snap });
+    res.json({ ok: true, room: snap, seq: (typeof target.nextEventSeq === "number" ? target.nextEventSeq - 1 : 0) });
   });
 
   // 5) Kutish xonasida jamoa almashtirish
@@ -411,17 +466,43 @@ function initMultiplayer(app) {
     });
   });
 
-  // 9) Ultra-tezkor harakat paketi (204 No Content -> 0 bayt javob!)
+  // 8.5) Zero-Buffer HTTP Poll (Caddy SSE buferlanishisiz 0 ms sinxronizatsiya)
+  app.get("/api/mp/poll", (req, res) => {
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+    const code = cleanCode(req.query.code);
+    const pid = cleanId(req.query.playerId);
+    const room = rooms.get(code);
+    if (!room || !room.players.has(pid)) {
+      return res.status(404).json({ ok: false, error: "ROOM_OR_PLAYER_NOT_FOUND" });
+    }
+    const now = Date.now();
+    const p = room.players.get(pid);
+    p.lastSeenAt = now;
+
+    const { events, seq } = collectEventsSince(room, req.query.since, pid);
+    const state = room.status === "playing" ? buildStatePayload(room, now) : null;
+    res.json({
+      ok: true,
+      seq,
+      room: serializeRoom(room),
+      state,
+      events
+    });
+  });
+
+  // 9) Ultra-tezkor harakat + sinxronizatsiya paketi (1 ta HTTP so'rovda ham yuboradi, ham oladi)
   app.post("/api/mp/state", (req, res) => {
+    res.setHeader("Cache-Control", "no-store");
     const b = req.body || {};
     const code = cleanCode(b.code);
     const pid = cleanId(b.playerId);
     const room = rooms.get(code);
-    if (!room) return res.status(404).end();
+    if (!room) return res.status(404).json({ ok: false, error: "ROOM_NOT_FOUND" });
     const p = room.players.get(pid);
-    if (!p) return res.status(404).end();
+    if (!p) return res.status(404).json({ ok: false, error: "PLAYER_NOT_FOUND" });
 
-    p.lastSeenAt = Date.now();
+    const now = Date.now();
+    p.lastSeenAt = now;
     if (p.alive) {
       p.x = clamp(b.x, 1.0, MAP_SIZE - 1.0);
       p.y = clamp(b.y, 1.0, MAP_SIZE - 1.0);
@@ -430,7 +511,15 @@ function initMultiplayer(app) {
       p.wp = Math.max(0, Math.min(3, parseInt(b.wp, 10) || 0));
       room.dirty = true;
     }
-    res.status(204).end();
+
+    const { events, seq } = collectEventsSince(room, b.since, pid);
+    res.json({
+      ok: true,
+      seq,
+      status: room.status,
+      state: room.status === "playing" ? buildStatePayload(room, now) : null,
+      events
+    });
   });
 
   // 10) Otishma va Server-Authoritative Zarar / Headshot / Kill
@@ -572,7 +661,7 @@ function initMultiplayer(app) {
       let roomChanged = false;
 
       for (const [pid, p] of room.players.entries()) {
-        const timeoutMs = p.sseRes ? 25000 : 14000;
+        const timeoutMs = 28000;
         if (now - p.lastSeenAt > timeoutMs && !p.sseRes) {
           room.players.delete(pid);
           playerRoom.delete(pid);

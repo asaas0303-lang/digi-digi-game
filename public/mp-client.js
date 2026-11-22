@@ -7,8 +7,10 @@
 
   const BOT_USERNAME = "digi_dig_bot";
   let currentRoom = null;
-  let sseSource = null;
-  let reconnectTimer = null;
+  let pollTimer = null;
+  let pollInFlight = false;
+  let lastEventSeq = 0;
+  let activeMatchStartedAt = 0;
   let roomsPollTimer = null;
   let selectedMpMode = "1v1";
   let _lastStateSentAt = 0;
@@ -74,114 +76,190 @@
     return data;
   }
 
-  function closeSse() {
-    if (reconnectTimer) {
-      clearTimeout(reconnectTimer);
-      reconnectTimer = null;
-    }
-    if (sseSource) {
-      try { sseSource.close(); } catch (e) {}
-      sseSource = null;
+  function dispatchMpEvent(evType, data) {
+    if (!evType || !data) return;
+    switch (evType) {
+      case "room":
+        currentRoom = data;
+        renderMpRoomUI();
+        if (_hooks && typeof _hooks.onRoom === "function") {
+          try { _hooks.onRoom(data); } catch (e) {}
+        }
+        break;
+      case "start":
+        currentRoom = data;
+        renderMpRoomUI();
+        if (!activeMatchStartedAt) {
+          activeMatchStartedAt = Date.now();
+          if (_hooks && typeof _hooks.onMatchStart === "function") {
+            try { _hooks.onMatchStart(data); } catch (e) {}
+          } else {
+            showMpToast("🔥 Jonli " + (data.mode || "1v1").toUpperCase() + " jangi boshlandi!", "⚔️");
+          }
+        }
+        break;
+      case "state":
+        if (currentRoom) {
+          currentRoom.redScore = data.rs;
+          currentRoom.blueScore = data.bs;
+          currentRoom.remSec = data.rem;
+        }
+        if (_hooks && typeof _hooks.onState === "function") {
+          try { _hooks.onState(data); } catch (e) {}
+        }
+        break;
+      case "shoot":
+        if (_hooks && typeof _hooks.onShoot === "function") {
+          try { _hooks.onShoot(data); } catch (e) {}
+        }
+        break;
+      case "hit":
+        if (_hooks && typeof _hooks.onHit === "function") {
+          try { _hooks.onHit(data); } catch (e) {}
+        }
+        break;
+      case "kill":
+        if (currentRoom && data) {
+          if (typeof data.redScore === "number") currentRoom.redScore = data.redScore;
+          if (typeof data.blueScore === "number") currentRoom.blueScore = data.blueScore;
+        }
+        if (_hooks && typeof _hooks.onKill === "function") {
+          try { _hooks.onKill(data); } catch (e) {}
+        }
+        break;
+      case "respawn":
+        if (_hooks && typeof _hooks.onRespawn === "function") {
+          try { _hooks.onRespawn(data); } catch (e) {}
+        }
+        break;
+      case "grenade":
+        if (_hooks && typeof _hooks.onGrenade === "function") {
+          try { _hooks.onGrenade(data); } catch (e) {}
+        }
+        break;
+      case "match_end":
+        if (data.room) currentRoom = data.room;
+        activeMatchStartedAt = 0;
+        renderMpRoomUI();
+        if (_hooks && typeof _hooks.onMatchEnd === "function") {
+          try { _hooks.onMatchEnd(data); } catch (e) {}
+        }
+        break;
     }
   }
 
-  function connectSse(code, playerId) {
-    closeSse();
-    _manualLeave = false;
-    const url = `/api/mp/stream?code=${encodeURIComponent(code)}&playerId=${encodeURIComponent(playerId)}`;
-    const es = new EventSource(url);
-    sseSource = es;
+  function applySyncPayload(payload) {
+    if (!payload || !payload.ok) return;
 
-    const parseJson = (e) => {
-      try { return JSON.parse(e.data); } catch (_) { return null; }
-    };
+    if (typeof payload.seq === "number" && payload.seq > lastEventSeq) {
+      lastEventSeq = payload.seq;
+    }
 
-    es.addEventListener("room", (e) => {
-      const snap = parseJson(e);
-      if (!snap) return;
-      currentRoom = snap;
+    if (payload.room) {
+      currentRoom = payload.room;
       renderMpRoomUI();
-      if (_hooks && typeof _hooks.onRoom === "function") _hooks.onRoom(snap);
-    });
-
-    es.addEventListener("start", (e) => {
-      const snap = parseJson(e);
-      if (!snap) return;
-      currentRoom = snap;
-      renderMpRoomUI();
-      if (_hooks && typeof _hooks.onMatchStart === "function") {
-        _hooks.onMatchStart(snap);
-      } else {
-        showMpToast("🔥 Jonli " + snap.mode.toUpperCase() + " jangi signali keldi! (3-Bosqichda 3D arena ochiladi)", "⚔️");
+      if (_hooks && typeof _hooks.onRoom === "function") {
+        try { _hooks.onRoom(payload.room); } catch (e) {}
       }
-    });
+    }
 
-    es.addEventListener("state", (e) => {
-      const data = parseJson(e);
-      if (!data) return;
+    if (Array.isArray(payload.events) && payload.events.length > 0) {
+      for (let i = 0; i < payload.events.length; i++) {
+        const ev = payload.events[i];
+        if (ev && ev.type) {
+          dispatchMpEvent(ev.type, ev.data);
+        }
+      }
+    }
+
+    if (currentRoom && currentRoom.status === "playing") {
+      if (!activeMatchStartedAt) {
+        activeMatchStartedAt = Date.now();
+        if (_hooks && typeof _hooks.onMatchStart === "function") {
+          try { _hooks.onMatchStart(currentRoom); } catch (e) {}
+        }
+      }
+    } else if (currentRoom && currentRoom.status !== "playing") {
+      activeMatchStartedAt = 0;
+    }
+
+    if (payload.state) {
       if (currentRoom) {
-        currentRoom.redScore = data.rs;
-        currentRoom.blueScore = data.bs;
-        currentRoom.remSec = data.rem;
+        currentRoom.redScore = payload.state.rs;
+        currentRoom.blueScore = payload.state.bs;
+        currentRoom.remSec = payload.state.rem;
       }
-      if (_hooks && typeof _hooks.onState === "function") _hooks.onState(data);
-    });
-
-    es.addEventListener("shoot", (e) => {
-      const data = parseJson(e);
-      if (data && _hooks && typeof _hooks.onShoot === "function") _hooks.onShoot(data);
-    });
-
-    es.addEventListener("hit", (e) => {
-      const data = parseJson(e);
-      if (data && _hooks && typeof _hooks.onHit === "function") _hooks.onHit(data);
-    });
-
-    es.addEventListener("kill", (e) => {
-      const data = parseJson(e);
-      if (!data) return;
-      if (currentRoom) {
-        currentRoom.redScore = data.redScore;
-        currentRoom.blueScore = data.blueScore;
+      if (_hooks && typeof _hooks.onState === "function") {
+        try { _hooks.onState(payload.state); } catch (e) {}
       }
-      if (_hooks && typeof _hooks.onKill === "function") _hooks.onKill(data);
-    });
+    }
+  }
 
-    es.addEventListener("respawn", (e) => {
-      const data = parseJson(e);
-      if (data && _hooks && typeof _hooks.onRespawn === "function") _hooks.onRespawn(data);
-    });
-
-    es.addEventListener("grenade", (e) => {
-      const data = parseJson(e);
-      if (data && _hooks && typeof _hooks.onGrenade === "function") _hooks.onGrenade(data);
-    });
-
-    es.addEventListener("match_end", (e) => {
-      const data = parseJson(e);
-      if (!data) return;
-      if (data.room) currentRoom = data.room;
-      renderMpRoomUI();
-      if (_hooks && typeof _hooks.onMatchEnd === "function") _hooks.onMatchEnd(data);
-    });
-
-    es.onerror = () => {
-      if (_manualLeave || !currentRoom) {
-        closeSse();
+  async function pollRoomOnce() {
+    if (!currentRoom || pollInFlight || _manualLeave) return;
+    const me = getPlayerIdentity();
+    const code = currentRoom.code;
+    pollInFlight = true;
+    try {
+      const url = `/api/mp/poll?code=${encodeURIComponent(code)}&playerId=${encodeURIComponent(me.id)}&since=${lastEventSeq}&t=${Date.now()}`;
+      const res = await fetch(url, { cache: "no-store" });
+      if (res.status === 404) {
+        stopSyncLoop();
+        currentRoom = null;
+        renderMpRoomUI();
+        showMpToast("Xona yopildi yoki vaqt tugadi", "ℹ️");
         return;
       }
-      if (es.readyState === EventSource.CLOSED) {
-        closeSse();
-        const me = getPlayerIdentity();
-        const codeKeep = currentRoom.code;
-        reconnectTimer = setTimeout(() => {
-          if (!_manualLeave && currentRoom && currentRoom.code === codeKeep) {
-            connectSse(codeKeep, me.id);
-          }
-        }, 1600);
+      if (!res.ok) return;
+      const data = await res.json().catch(() => null);
+      if (data && data.ok) {
+        applySyncPayload(data);
       }
-    };
+    } catch (e) {
+    } finally {
+      pollInFlight = false;
+    }
   }
+
+  function stopSyncLoop() {
+    if (pollTimer) {
+      clearInterval(pollTimer);
+      pollTimer = null;
+    }
+    pollInFlight = false;
+  }
+
+  function startSyncLoop(code, playerId) {
+    stopSyncLoop();
+    _manualLeave = false;
+    activeMatchStartedAt = 0;
+    pollRoomOnce();
+
+    pollTimer = setInterval(() => {
+      if (!currentRoom || _manualLeave) {
+        stopSyncLoop();
+        return;
+      }
+      if (currentRoom.status === "playing") {
+        if (performance.now() - _lastStateSentAt > 450) {
+          pollRoomOnce();
+        }
+      } else {
+        pollRoomOnce();
+      }
+    }, 650);
+  }
+
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && currentRoom && !_manualLeave) {
+      pollRoomOnce();
+    }
+  });
+  window.addEventListener("focus", () => {
+    if (currentRoom && !_manualLeave) {
+      pollRoomOnce();
+    }
+  });
 
   async function createRoom() {
     const me = getPlayerIdentity();
@@ -199,7 +277,8 @@
         return;
       }
       currentRoom = data.room;
-      connectSse(currentRoom.code, me.id);
+      lastEventSeq = typeof data.seq === "number" ? data.seq : 0;
+      startSyncLoop(currentRoom.code, me.id);
       renderMpRoomUI();
       showMpToast("Xona ochildi! Kod: " + currentRoom.code, "🏠");
     } catch (err) {
@@ -223,7 +302,8 @@
         return;
       }
       currentRoom = data.room;
-      connectSse(currentRoom.code, me.id);
+      lastEventSeq = typeof data.seq === "number" ? data.seq : 0;
+      startSyncLoop(currentRoom.code, me.id);
       renderMpRoomUI();
       showMpToast("Xonaga ulandingiz: " + currentRoom.code, "⚡");
     } catch (err) {
@@ -255,7 +335,8 @@
         return;
       }
       currentRoom = data.room;
-      connectSse(currentRoom.code, me.id);
+      lastEventSeq = typeof data.seq === "number" ? data.seq : 0;
+      startSyncLoop(currentRoom.code, me.id);
       renderMpRoomUI();
       showMpToast("Xonaga qo'shildingiz: " + currentRoom.code, "✅");
     } catch (err) {
@@ -295,6 +376,10 @@
           ? "Boshlash uchun kamida 1 ta raqib qo'shilishi kerak!"
           : (data.error === "NOT_HOST" ? "Faqat xona egasi (Host) boshlay oladi!" : "Boshlab bo'lmadi!");
         showMpToast(msg, "⚠️");
+      } else if (data.room) {
+        currentRoom = data.room;
+        renderMpRoomUI();
+        pollRoomOnce();
       }
     } catch (e) {
       showMpToast("Boshlashda tarmoq xatosi!", "⚠️");
@@ -307,8 +392,9 @@
     _manualLeave = true;
     const prevCode = currentRoom ? currentRoom.code : null;
     const me = getPlayerIdentity();
-    closeSse();
+    stopSyncLoop();
     currentRoom = null;
+    activeMatchStartedAt = 0;
     renderMpRoomUI();
     if (prevCode) {
       try {
@@ -452,7 +538,9 @@
 
     if (statusEl) {
       if (currentRoom.status === "playing") {
-        statusEl.textContent = "🟢 Jonli jang faol! (SSE oqimi ulangan)";
+        statusEl.textContent = "🟢 Jonli jang faol! (Real-time sinxronizatsiya)";
+      } else if (currentRoom.status === "ended") {
+        statusEl.textContent = "🏁 Jang yakunlandi! Host yangi raundni boshlashi mumkin.";
       } else if (players.length < 2) {
         statusEl.textContent = "⏳ Raqib kutilmoqda... Kodni yoki Telegram taklifni do'stingizga yuboring!";
       } else if (isHost) {
@@ -470,7 +558,11 @@
         startBtn.className = canStart
           ? "flex-1 menu-btn-gold text-white font-black italic text-xs py-2.5 px-3 rounded-xl uppercase transition"
           : "flex-1 bg-slate-800 border border-slate-700 text-slate-400 font-bold text-xs py-2.5 px-3 rounded-xl uppercase cursor-not-allowed";
-        startBtn.textContent = canStart ? "🔥 JONLI JANGNI BOSHLASH" : "⏳ RAQIB KUTILMOQDA (1/" + currentRoom.maxPlayers + ")";
+        if (currentRoom.status === "ended") {
+          startBtn.textContent = canStart ? "🔥 QAYTA O'YNASH" : "⏳ RAQIB KUTILMOQDA (1/" + currentRoom.maxPlayers + ")";
+        } else {
+          startBtn.textContent = canStart ? "🔥 JONLI JANGNI BOSHLASH" : "⏳ RAQIB KUTILMOQDA (1/" + currentRoom.maxPlayers + ")";
+        }
       } else {
         startBtn.classList.add("hidden");
       }
@@ -490,7 +582,7 @@
           <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0"></span>
           <span class="text-xs font-black italic uppercase text-emerald-300 tracking-wide truncate">🌐 JONLI ONLINE MULTIPLAYER</span>
         </div>
-        <span class="text-[9px] font-mono font-bold bg-emerald-950 text-emerald-300 border border-emerald-500/40 px-1.5 py-0.5 rounded uppercase shrink-0">REAL-TIME SSE</span>
+        <span class="text-[9px] font-mono font-bold bg-emerald-950 text-emerald-300 border border-emerald-500/40 px-1.5 py-0.5 rounded uppercase shrink-0">REAL-TIME SYNC</span>
       </div>
 
       <div id="mpLobbyControls" class="space-y-2">
@@ -647,6 +739,7 @@
       fetch("/api/mp/state", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        cache: "no-store",
         body: JSON.stringify({
           code: currentRoom.code,
           playerId: me.id,
@@ -654,10 +747,16 @@
           y: +Number(y).toFixed(2),
           a: +Number(a).toFixed(2),
           mv: mv ? 1 : 0,
-          wp: wp || 0
-        }),
-        keepalive: true
-      }).catch(() => {}).finally(() => { _stateInFlight = false; });
+          wp: wp || 0,
+          since: lastEventSeq
+        })
+      })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data && data.ok) applySyncPayload(data);
+      })
+      .catch(() => {})
+      .finally(() => { _stateInFlight = false; });
     },
     sendShoot: (hitTargetId, dmg, isHeadshot, isWallbang) => {
       if (!currentRoom || currentRoom.status !== "playing") return Promise.resolve({ ok: false });
