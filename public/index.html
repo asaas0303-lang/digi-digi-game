@@ -611,7 +611,7 @@
           <button id="btnCloseSettingsModal" class="menu-btn-dark text-white text-xs font-bold px-3 py-1.5 rounded-xl">✕ Yopish</button>
         </div>
 
-        <div class="p-4 space-y-3 text-xs">
+        <div class="p-4 space-y-3 text-xs max-h-[78vh] overflow-y-auto">
           <div class="bg-slate-950/85 border border-slate-800 rounded-xl p-3 space-y-2.5">
             <h3 class="font-black text-amber-400 uppercase text-[11px]">🎨 Grafika va Muhit</h3>
             <div class="flex items-center justify-between">
@@ -655,6 +655,40 @@
             <div class="flex items-center justify-between">
               <span class="text-slate-200 font-medium">Burilish sezgirligi (Sensitivity):</span>
               <input id="sensSlider" type="range" min="5" max="25" value="14" class="w-28 accent-emerald-500 cursor-pointer" />
+            </div>
+
+            <div class="border-t border-slate-800/90 pt-2.5 space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-slate-200 font-bold">🎯 Giroskop (PUBG uslubi):</span>
+                <span id="gyroStatusBadge" class="text-[10px] font-mono text-slate-400">O'chiq</span>
+              </div>
+
+              <div id="gyroModeBtns" class="grid grid-cols-3 gap-1.5">
+                <button type="button" data-gyro-mode="off" class="gyro-mode-btn px-2 py-1.5 rounded-lg text-[10px] font-extrabold border border-amber-400 bg-amber-500/20 text-amber-300 transition">O'chiq</button>
+                <button type="button" data-gyro-mode="ads" class="gyro-mode-btn px-2 py-1.5 rounded-lg text-[10px] font-extrabold border border-slate-700 bg-slate-900 text-slate-300 transition">Faqat Pritsel</button>
+                <button type="button" data-gyro-mode="always" class="gyro-mode-btn px-2 py-1.5 rounded-lg text-[10px] font-extrabold border border-slate-700 bg-slate-900 text-slate-300 transition">Doim Yoniq</button>
+              </div>
+
+              <div id="gyroSlidersWrap" class="hidden space-y-2 pt-1">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-slate-300 text-[11px]">Giroskop sezgirligi (<span id="gyroSensVal" class="text-emerald-400 font-bold">120%</span>):</span>
+                  <input id="gyroSensSlider" type="range" min="20" max="300" step="5" value="120" class="w-28 accent-emerald-500 cursor-pointer" />
+                </div>
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-slate-300 text-[11px]">Pritsel (ADS) giroskop (<span id="gyroAdsSensVal" class="text-sky-400 font-bold">100%</span>):</span>
+                  <input id="gyroAdsSensSlider" type="range" min="20" max="300" step="5" value="100" class="w-28 accent-sky-500 cursor-pointer" />
+                </div>
+                <div class="flex items-center justify-between pt-0.5 text-[10px] text-slate-400">
+                  <label class="flex items-center gap-1.5 cursor-pointer">
+                    <input id="gyroInvertX" type="checkbox" class="w-3.5 h-3.5 accent-amber-500 rounded cursor-pointer" />
+                    <span>Teskari X (Chap/O'ng)</span>
+                  </label>
+                  <label class="flex items-center gap-1.5 cursor-pointer">
+                    <input id="gyroInvertY" type="checkbox" class="w-3.5 h-3.5 accent-amber-500 rounded cursor-pointer" />
+                    <span>Teskari Y (Tepa/Past)</span>
+                  </label>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -5713,6 +5747,7 @@
         }
         setTimeout(() => { if (gameRunning) applyLandscapeLayout(); }, 180);
         setTimeout(() => { if (gameRunning) applyLandscapeLayout(); }, 480);
+        if (typeof window._digiGyroSync === 'function') window._digiGyroSync(false);
       }
 
       function exitBattleLandscape() {
@@ -5744,6 +5779,7 @@
             if (typeof tg.exitFullscreen === 'function' && tg.isFullscreen) tg.exitFullscreen();
           } catch (e) {}
         }
+        if (typeof window._digiGyroStop === 'function') window._digiGyroStop();
       }
 
       (function bindLandscapeControls() {
@@ -5775,6 +5811,343 @@
             tg.onEvent('contentSafeAreaChanged', onViewportShift);
           } catch (e) {}
         }
+      })();
+
+      // ==================== PUBG USLUBIDAGI GIROSKOP TIZIMI (60 FPS, 0-LAG) ====================
+      (function initDigiGyroscope() {
+        const LS_MODE = 'digi_gyro_mode';
+        const LS_SENS = 'digi_gyro_sens';
+        const LS_ADS_SENS = 'digi_gyro_ads_sens';
+        const LS_INV_X = 'digi_gyro_inv_x';
+        const LS_INV_Y = 'digi_gyro_inv_y';
+
+        let gyroMode = 'off'; // 'off' | 'ads' | 'always'
+        let gyroSensPct = 120;
+        let gyroAdsSensPct = 100;
+        let gyroInvertX = false;
+        let gyroInvertY = false;
+
+        try {
+          const savedMode = localStorage.getItem(LS_MODE);
+          if (savedMode === 'off' || savedMode === 'ads' || savedMode === 'always') gyroMode = savedMode;
+          const s1 = parseInt(localStorage.getItem(LS_SENS), 10);
+          if (!isNaN(s1) && s1 >= 20 && s1 <= 300) gyroSensPct = s1;
+          const s2 = parseInt(localStorage.getItem(LS_ADS_SENS), 10);
+          if (!isNaN(s2) && s2 >= 20 && s2 <= 300) gyroAdsSensPct = s2;
+          gyroInvertX = localStorage.getItem(LS_INV_X) === '1';
+          gyroInvertY = localStorage.getItem(LS_INV_Y) === '1';
+        } catch (e) {}
+
+        let motionListening = false;
+        let motionHasData = false;
+        let tgGyroActive = false;
+        let tgFallbackTimer = null;
+        let lastMotionTs = 0;
+        let lastTgTs = 0;
+        let smoothYaw = 0;
+        let smoothPitch = 0;
+
+        const statusBadge = document.getElementById('gyroStatusBadge');
+        const slidersWrap = document.getElementById('gyroSlidersWrap');
+        const sensSlider = document.getElementById('gyroSensSlider');
+        const adsSensSlider = document.getElementById('gyroAdsSensSlider');
+        const sensValEl = document.getElementById('gyroSensVal');
+        const adsSensValEl = document.getElementById('gyroAdsSensVal');
+        const invXEl = document.getElementById('gyroInvertX');
+        const invYEl = document.getElementById('gyroInvertY');
+        const modeBtns = document.querySelectorAll('.gyro-mode-btn');
+
+        function setStatus(text, colorClass) {
+          if (!statusBadge) return;
+          statusBadge.textContent = text;
+          statusBadge.className = 'text-[10px] font-mono ' + (colorClass || 'text-slate-400');
+        }
+
+        function refreshGyroUI() {
+          modeBtns.forEach((btn) => {
+            const m = btn.getAttribute('data-gyro-mode');
+            const active = m === gyroMode;
+            btn.className = active
+              ? 'gyro-mode-btn px-2 py-1.5 rounded-lg text-[10px] font-extrabold border border-amber-400 bg-amber-500/20 text-amber-300 transition'
+              : 'gyro-mode-btn px-2 py-1.5 rounded-lg text-[10px] font-extrabold border border-slate-700 bg-slate-900 text-slate-300 transition';
+          });
+          if (slidersWrap) {
+            if (gyroMode === 'off') slidersWrap.classList.add('hidden');
+            else slidersWrap.classList.remove('hidden');
+          }
+          if (sensSlider) sensSlider.value = String(gyroSensPct);
+          if (adsSensSlider) adsSensSlider.value = String(gyroAdsSensPct);
+          if (sensValEl) sensValEl.textContent = gyroSensPct + '%';
+          if (adsSensValEl) adsSensValEl.textContent = gyroAdsSensPct + '%';
+          if (invXEl) invXEl.checked = gyroInvertX;
+          if (invYEl) invYEl.checked = gyroInvertY;
+
+          if (gyroMode === 'off') {
+            setStatus("O'chiq", 'text-slate-400');
+          } else if (motionHasData) {
+            setStatus('Faol (60Hz)', 'text-emerald-400');
+          } else if (tgGyroActive) {
+            setStatus('Faol (TG Sensor)', 'text-emerald-400');
+          } else {
+            setStatus('Tayyor', 'text-amber-300');
+          }
+        }
+
+        function getScreenAngle() {
+          if (screen.orientation && typeof screen.orientation.angle === 'number') {
+            return ((screen.orientation.angle % 360) + 360) % 360;
+          }
+          if (typeof window.orientation === 'number') {
+            return ((window.orientation % 360) + 360) % 360;
+          }
+          return 0;
+        }
+
+        // wx, wy - qurilma X va Y o'qlari bo'yicha burchak tezligi (rad/s)
+        function applyGyroSample(wx, wy, dtSec) {
+          if (!gameRunning || document.hidden) return;
+          if (gyroMode === 'off') return;
+          if (gyroMode === 'ads' && !player.adsZoom) {
+            smoothYaw = 0;
+            smoothPitch = 0;
+            return;
+          }
+          if (!isFinite(wx) || !isFinite(wy) || !isFinite(dtSec)) return;
+
+          // Keskin datchik sakrashlarini (glitch) kesish
+          if (wx > 12) wx = 12; else if (wx < -12) wx = -12;
+          if (wy > 12) wy = 12; else if (wy < -12) wy = -12;
+
+          // 3 xil ekran holati bo'yicha o'qlarni aniq xaritalash:
+          // 1) Zaxira 90° CSS yonbosh (_digiRot90) yoki Native Landscape 90°: +X=Tepa, +Y=Chap => O'ng=-wx, Tepa=-wy
+          // 2) Native Landscape 270°: +X=Past, +Y=O'ng => O'ng=+wx, Tepa=+wy
+          // 3) Tik ekran (0°): +X=O'ng, +Y=Tepa => O'ng=-wy, Tepa=+wx
+          const ang = getScreenAngle();
+          let rawYaw, rawPitch;
+          if (window._digiRot90 || ang === 90) {
+            rawYaw = -wx;
+            rawPitch = -wy;
+          } else if (ang === 270) {
+            rawYaw = wx;
+            rawPitch = wy;
+          } else if (ang === 180) {
+            rawYaw = wy;
+            rawPitch = -wx;
+          } else {
+            rawYaw = -wy;
+            rawPitch = wx;
+          }
+
+          if (gyroInvertX) rawYaw = -rawYaw;
+          if (gyroInvertY) rawPitch = -rawPitch;
+
+          // Qo'lning mayda titrashini so'ndirish (Deadzone: ~1.0 deg/s)
+          const deadzone = 0.018;
+          if (Math.abs(rawYaw) < deadzone) rawYaw = 0;
+          if (Math.abs(rawPitch) < deadzone) rawPitch = 0;
+
+          // PUBG uslubidagi silliq past chastotali filtr (Jitter-free snap)
+          smoothYaw += (rawYaw - smoothYaw) * 0.65;
+          smoothPitch += (rawPitch - smoothPitch) * 0.65;
+
+          const activePct = player.adsZoom ? gyroAdsSensPct : gyroSensPct;
+          const yawGain = (activePct / 100.0) * (player.adsZoom ? 0.85 : 1.25);
+          const pitchGain = yawGain * 0.65;
+
+          const dAngle = smoothYaw * dtSec * yawGain;
+          const dPitch = smoothPitch * dtSec * pitchGain;
+
+          if (dAngle !== 0) {
+            player.angle += dAngle;
+            player.weaponSwayX = Math.max(-14, Math.min(14, (player.weaponSwayX || 0) - dAngle * 18));
+          }
+          if (dPitch !== 0) {
+            player.pitch = Math.max(-0.30, Math.min(0.30, (player.pitch || 0) + dPitch));
+          }
+        }
+
+        function onDeviceMotion(e) {
+          if (gyroMode === 'off') return;
+          const rr = e && e.rotationRate;
+          if (!rr) return;
+          const b = rr.beta;  // X o'qi (deg/s)
+          const g = rr.gamma; // Y o'qi (deg/s)
+          if (typeof b !== 'number' || typeof g !== 'number') return;
+
+          if (!motionHasData && (b !== 0 || g !== 0)) {
+            motionHasData = true;
+            if (tgGyroActive) stopTelegramGyro();
+            setStatus('Faol (60Hz)', 'text-emerald-400');
+          }
+
+          const now = performance.now();
+          if (lastMotionTs === 0) {
+            lastMotionTs = now;
+            return;
+          }
+          const dtSec = Math.min(0.05, Math.max(0.004, (now - lastMotionTs) * 0.001));
+          lastMotionTs = now;
+
+          const DEG2RAD = Math.PI / 180;
+          applyGyroSample(b * DEG2RAD, g * DEG2RAD, dtSec);
+        }
+
+        function onTelegramGyroChanged() {
+          if (gyroMode === 'off' || motionHasData) return;
+          const tg = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
+          const gyro = tg && tg.Gyroscope;
+          if (!gyro) return;
+          const now = performance.now();
+          if (lastTgTs === 0) {
+            lastTgTs = now;
+            return;
+          }
+          const dtSec = Math.min(0.06, Math.max(0.005, (now - lastTgTs) * 0.001));
+          lastTgTs = now;
+          // Telegram WebApp Gyroscope qiymatlari rad/s birlikda keladi
+          applyGyroSample(Number(gyro.x) || 0, Number(gyro.y) || 0, dtSec);
+        }
+
+        function startTelegramGyro() {
+          const tg = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
+          const gyro = tg && tg.Gyroscope;
+          if (!gyro || typeof gyro.start !== 'function') return;
+          if (tgGyroActive) return;
+          try {
+            lastTgTs = 0;
+            if (typeof tg.onEvent === 'function') {
+              tg.offEvent && tg.offEvent('gyroscopeChanged', onTelegramGyroChanged);
+              tg.onEvent('gyroscopeChanged', onTelegramGyroChanged);
+            }
+            gyro.start({ refresh_rate: 20 }, (started) => {
+              if (started) {
+                tgGyroActive = true;
+                if (!motionHasData) setStatus('Faol (TG Sensor)', 'text-emerald-400');
+              }
+            });
+          } catch (e) {}
+        }
+
+        function stopTelegramGyro() {
+          if (tgFallbackTimer) {
+            clearTimeout(tgFallbackTimer);
+            tgFallbackTimer = null;
+          }
+          const tg = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
+          const gyro = tg && tg.Gyroscope;
+          try {
+            if (tg && typeof tg.offEvent === 'function') tg.offEvent('gyroscopeChanged', onTelegramGyroChanged);
+            if (gyro && typeof gyro.stop === 'function' && (tgGyroActive || gyro.isStarted)) gyro.stop();
+          } catch (e) {}
+          tgGyroActive = false;
+          lastTgTs = 0;
+        }
+
+        function stopGyroSensors() {
+          if (motionListening) {
+            window.removeEventListener('devicemotion', onDeviceMotion);
+            motionListening = false;
+          }
+          stopTelegramGyro();
+          lastMotionTs = 0;
+          smoothYaw = 0;
+          smoothPitch = 0;
+        }
+
+        function attachMotionSensors() {
+          if (gyroMode === 'off') {
+            stopGyroSensors();
+            refreshGyroUI();
+            return;
+          }
+          lastMotionTs = 0;
+          smoothYaw = 0;
+          smoothPitch = 0;
+          if (!motionListening && typeof window.addEventListener === 'function') {
+            window.addEventListener('devicemotion', onDeviceMotion, { passive: true });
+            motionListening = true;
+          }
+          // Agar Android/Telegram WebView devicemotion bermasa, 650ms dan keyin Telegram Native Gyroscope ulanadi
+          if (tgFallbackTimer) clearTimeout(tgFallbackTimer);
+          tgFallbackTimer = setTimeout(() => {
+            if (gyroMode !== 'off' && !motionHasData) {
+              startTelegramGyro();
+            }
+          }, 650);
+          refreshGyroUI();
+        }
+
+        function syncGyroSensors(fromUserGesture) {
+          if (gyroMode === 'off') {
+            stopGyroSensors();
+            refreshGyroUI();
+            return;
+          }
+          if (fromUserGesture && typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+            DeviceMotionEvent.requestPermission().then((state) => {
+              if (state === 'granted') {
+                attachMotionSensors();
+              } else {
+                startTelegramGyro();
+                setStatus('Ruxsat berilmadi', 'text-red-400');
+              }
+            }).catch(() => {
+              attachMotionSensors();
+            });
+          } else {
+            attachMotionSensors();
+          }
+        }
+
+        window._digiGyroSync = syncGyroSensors;
+        window._digiGyroStop = stopGyroSensors;
+
+        modeBtns.forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const nextMode = btn.getAttribute('data-gyro-mode') || 'off';
+            gyroMode = nextMode;
+            try { localStorage.setItem(LS_MODE, gyroMode); } catch (e) {}
+            if (gyroMode === 'off') {
+              stopGyroSensors();
+              refreshGyroUI();
+              if (typeof showToast === 'function') showToast("Giroskop o'chirildi", '🎯');
+            } else {
+              syncGyroSensors(true);
+              if (typeof showToast === 'function') {
+                showToast(gyroMode === 'ads' ? 'Giroskop: Faqat Pritsel (ADS)' : 'Giroskop: Doim Yoniq (PUBG)', '🎯');
+              }
+            }
+          });
+        });
+
+        if (sensSlider) {
+          sensSlider.addEventListener('input', () => {
+            gyroSensPct = parseInt(sensSlider.value, 10) || 120;
+            if (sensValEl) sensValEl.textContent = gyroSensPct + '%';
+            try { localStorage.setItem(LS_SENS, String(gyroSensPct)); } catch (e) {}
+          });
+        }
+        if (adsSensSlider) {
+          adsSensSlider.addEventListener('input', () => {
+            gyroAdsSensPct = parseInt(adsSensSlider.value, 10) || 100;
+            if (adsSensValEl) adsSensValEl.textContent = gyroAdsSensPct + '%';
+            try { localStorage.setItem(LS_ADS_SENS, String(gyroAdsSensPct)); } catch (e) {}
+          });
+        }
+        if (invXEl) {
+          invXEl.addEventListener('change', () => {
+            gyroInvertX = !!invXEl.checked;
+            try { localStorage.setItem(LS_INV_X, gyroInvertX ? '1' : '0'); } catch (e) {}
+          });
+        }
+        if (invYEl) {
+          invYEl.addEventListener('change', () => {
+            gyroInvertY = !!invYEl.checked;
+            try { localStorage.setItem(LS_INV_Y, gyroInvertY ? '1' : '0'); } catch (e) {}
+          });
+        }
+
+        refreshGyroUI();
       })();
 
       // ==================== REAL-TIME MULTIPLAYER 3D ARENA KO'PRIGI (3-BOSQICH) ====================
