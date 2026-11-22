@@ -33,6 +33,8 @@ app.use((req, res, next) => {
     res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
     res.setHeader("Pragma", "no-cache");
     res.setHeader("Expires", "0");
+  } else if (req.path.startsWith("/sfx/") && (req.path.endsWith(".mp3") || req.path.endsWith(".ogg"))) {
+    res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
   }
   next();
 });
