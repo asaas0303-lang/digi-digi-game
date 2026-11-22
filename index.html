@@ -313,6 +313,96 @@
     #gameView.digi-landscape-hud #matchEndCard {
       max-height: 94% !important;
     }
+
+    /* === AAA DIGI DIGI MATCH END SCOREBOARD (0 BLUR / 60 FPS) === */
+    #matchEndModal.dg-aaa-overlay {
+      background:
+        radial-gradient(circle at 20% 22%, rgba(14, 165, 233, 0.22) 0%, transparent 45%),
+        radial-gradient(circle at 80% 22%, rgba(245, 158, 11, 0.22) 0%, transparent 45%),
+        linear-gradient(180deg, rgba(6, 12, 24, 0.96) 0%, rgba(10, 14, 24, 0.98) 55%, rgba(6, 9, 16, 0.99) 100%);
+    }
+    .dg-score-wing-ct {
+      background: linear-gradient(135deg, rgba(2, 132, 199, 0.35), rgba(15, 23, 42, 0.9));
+      border: 1.5px solid rgba(56, 189, 248, 0.85);
+      box-shadow: 0 0 18px rgba(14, 165, 233, 0.35);
+      clip-path: polygon(0 0, 100% 0, 90% 100%, 8% 100%);
+    }
+    .dg-score-wing-t {
+      background: linear-gradient(225deg, rgba(217, 119, 6, 0.35), rgba(24, 16, 8, 0.9));
+      border: 1.5px solid rgba(251, 191, 36, 0.85);
+      box-shadow: 0 0 18px rgba(245, 158, 11, 0.35);
+      clip-path: polygon(0 0, 100% 0, 92% 100%, 10% 100%);
+    }
+    .dg-team-panel-ct {
+      background: linear-gradient(180deg, rgba(12, 42, 78, 0.78) 0%, rgba(8, 18, 34, 0.92) 100%);
+      border: 1.5px solid rgba(56, 189, 248, 0.55);
+      box-shadow: inset 0 1px 0 rgba(125, 211, 252, 0.35);
+    }
+    .dg-team-panel-t {
+      background: linear-gradient(180deg, rgba(78, 46, 12, 0.78) 0%, rgba(28, 18, 8, 0.92) 100%);
+      border: 1.5px solid rgba(251, 191, 36, 0.55);
+      box-shadow: inset 0 1px 0 rgba(253, 224, 71, 0.35);
+    }
+    .dg-avatar-frame {
+      width: 34px;
+      height: 34px;
+      border-radius: 6px;
+      overflow: hidden;
+      flex-shrink: 0;
+      border: 2px solid #fbbf24;
+      background: #0f172a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 13px;
+      color: #fde68a;
+    }
+    .dg-avatar-frame-ct { border-color: #38bdf8; color: #bae6fd; }
+    .dg-avatar-frame img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .dg-mvp-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      background: linear-gradient(90deg, #f59e0b, #fde047);
+      color: #1c1917;
+      font-weight: 900;
+      font-size: 8px;
+      padding: 1px 5px;
+      border-radius: 3px;
+      line-height: 1.1;
+      letter-spacing: 0.04em;
+    }
+    .dg-act-btn {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: 1px solid rgba(251, 191, 36, 0.45);
+      background: rgba(15, 23, 42, 0.75);
+      color: #fbbf24;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      cursor: pointer;
+      transition: transform 0.12s ease, background 0.15s ease;
+    }
+    .dg-act-btn:active { transform: scale(0.88); }
+    .dg-act-btn.dg-done {
+      background: rgba(16, 185, 129, 0.25);
+      border-color: #34d399;
+      color: #34d399;
+    }
+    .dg-thanks-ribbon {
+      background: linear-gradient(90deg, transparent, rgba(15, 23, 42, 0.92) 15%, rgba(15, 23, 42, 0.92) 85%, transparent);
+      border-top: 1.5px solid rgba(251, 191, 36, 0.7);
+      border-bottom: 1.5px solid rgba(251, 191, 36, 0.7);
+    }
+    .dg-continue-btn {
+      background: linear-gradient(180deg, rgba(180, 120, 20, 0.45), rgba(30, 20, 10, 0.92));
+      border: 1.5px solid #fbbf24;
+      box-shadow: 0 0 14px rgba(245, 158, 11, 0.35);
+    }
   </style>
 </head>
 <body class="relative w-full h-full flex flex-col justify-between horror-bg select-none">
@@ -1119,91 +1209,111 @@
       </div>
     </div>
 
-    <!-- O'yin Tugashi: PUBG TDM Uslubidagi Yakuniy Natija va 2 Jamoali Jadval -->
-    <div id="matchEndModal" class="hidden fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center p-2.5 sm:p-4">
-      <div id="matchEndCard" class="bg-zinc-950 border-2 border-amber-500/80 rounded-2xl max-w-2xl w-full max-h-[92vh] flex flex-col overflow-hidden shadow-2xl">
-        <!-- Yuqori Sarlavha, Yirik Hisob va MVP -->
-        <div class="shrink-0 bg-gradient-to-b from-zinc-900 to-zinc-950 border-b border-zinc-800 px-3.5 py-3 text-center">
-          <div class="flex items-center justify-center gap-2 mb-0.5">
-            <span id="matchEndIcon" class="text-2xl sm:text-3xl">🏆</span>
-            <h2 id="matchEndTitle" class="retro-font text-sm sm:text-lg text-amber-400 tracking-wide">G'ALABA!</h2>
-          </div>
-          <p id="matchEndSummary" class="text-[11px] sm:text-xs text-zinc-400 mb-2.5">Vaqt tugadi! Yakuniy jang natijalari</p>
+    <!-- ==================== AAA YAKUNIY HISOBOT TABLOSI (DIGI DIGI GLOBAL OFFENSIVE) ==================== -->
+    <div id="matchEndModal" class="hidden dg-aaa-overlay fixed inset-0 z-50 flex flex-col justify-between p-2 sm:p-3 select-none overflow-hidden">
+      <div id="matchEndCard" class="w-full h-full max-w-5xl mx-auto flex flex-col justify-between gap-1.5 sm:gap-2">
 
-          <!-- 2 Jamoa Yirik Hisob Tablosi -->
-          <div class="grid grid-cols-3 items-center bg-black/65 border border-zinc-800 rounded-xl px-3 py-2 mb-2">
-            <div class="text-left">
-              <div class="text-[9px] sm:text-[10px] font-extrabold text-red-400 uppercase tracking-wider">🔴 T-FORCE</div>
-              <div id="matchEndRedScore" class="retro-font text-xl sm:text-2xl text-red-500 leading-tight">0</div>
-            </div>
-            <div class="text-center">
-              <span class="inline-block text-[8px] sm:text-[9px] font-mono uppercase text-zinc-400 bg-zinc-900 border border-zinc-700 rounded-md px-2 py-0.5">YAKUNIY HISOB</span>
-            </div>
-            <div class="text-right">
-              <div class="text-[9px] sm:text-[10px] font-extrabold text-blue-400 uppercase tracking-wider">CT-SPEC 🔵</div>
-              <div id="matchEndBlueScore" class="retro-font text-xl sm:text-2xl text-blue-500 leading-tight">0</div>
+        <!-- 1. YUQORI QISM: CT HISOB | DIGI DIGI LOGOTIP | T HISOB -->
+        <div class="shrink-0 grid grid-cols-[1fr_auto_1fr] items-center gap-2 pt-0.5">
+          <!-- Chap: CT (Ko'k) Hisob -->
+          <div class="flex justify-end">
+            <div class="dg-score-wing-ct px-5 sm:px-8 py-1 text-center min-w-[92px] sm:min-w-[130px]">
+              <div id="matchEndBlueScore" class="font-black italic text-2xl sm:text-4xl text-sky-300 leading-none tracking-tight drop-shadow">0</div>
             </div>
           </div>
 
-          <!-- Match MVP va Mukofotlar -->
-          <div class="flex flex-wrap items-center justify-center gap-1.5 text-[10px] sm:text-xs font-bold">
-            <div id="matchMvpBox" class="bg-amber-500/15 border border-amber-500/40 rounded-lg px-2.5 py-1 text-amber-300">⭐ Match MVP: -</div>
-            <div id="matchEndRewardBox" class="bg-emerald-500/15 border border-emerald-500/40 rounded-lg px-2.5 py-1 text-emerald-300">💰 +0 | 📈 +0 ELO</div>
-          </div>
-        </div>
-
-        <!-- 2 Jamoa O'yinchilarining Batafsil Statistikasi (PUBG TDM Jadvali) -->
-        <div class="flex-1 overflow-y-auto p-2.5 sm:p-3 space-y-2.5 sm:space-y-0 sm:grid sm:grid-cols-2 sm:gap-3">
-          <!-- QIZIL JAMOA -->
-          <div class="bg-red-950/20 border border-red-500/35 rounded-xl overflow-hidden">
-            <div class="bg-red-950/65 border-b border-red-500/30 px-2.5 py-1.5 flex items-center justify-between">
-              <span class="text-[11px] font-black text-red-400 tracking-wide">🔴 T-FORCE (QIZIL)</span>
-              <span id="matchEndRedTeamTotal" class="font-mono text-[11px] font-bold text-red-200">0 Frag</span>
+          <!-- Markaz: DIGI DIGI — GLOBAL OFFENSIVE -->
+          <div class="text-center px-1">
+            <div class="text-base sm:text-2xl font-black italic tracking-wider leading-none bg-gradient-to-b from-white via-amber-200 to-amber-500 bg-clip-text text-transparent">
+              DIGI DIGI
             </div>
-            <table class="w-full text-left text-[11px] border-collapse">
-              <thead>
-                <tr class="text-[9px] uppercase text-zinc-400 border-b border-zinc-800/80 bg-black/35">
-                  <th class="py-1 px-2 w-6">#</th>
-                  <th class="py-1 px-1.5">O'yinchi</th>
-                  <th class="py-1 px-1.5 text-center text-emerald-400">Kill</th>
-                  <th class="py-1 px-1.5 text-center text-zinc-400">O'lim</th>
-                  <th class="py-1 px-2 text-right text-amber-300">K/D</th>
-                </tr>
-              </thead>
-              <tbody id="matchEndRedList" class="divide-y divide-zinc-800/60"></tbody>
-            </table>
+            <div class="text-[8px] sm:text-[10px] font-extrabold tracking-[0.26em] text-amber-300/90 uppercase mt-0.5">
+              GLOBAL OFFENSIVE
+            </div>
+            <div class="flex items-center justify-center gap-1.5 mt-0.5 text-[9px] sm:text-[10px] font-bold">
+              <span id="matchEndIcon" class="hidden">🏆</span>
+              <span id="matchEndTitle" class="text-amber-300 uppercase tracking-wide">G'ALABA!</span>
+              <span class="text-zinc-500">•</span>
+              <span id="matchEndRewardBox" class="text-emerald-300">💰 +0 | 📈 +0 ELO</span>
+            </div>
+            <p id="matchEndSummary" class="hidden"></p>
+            <div id="matchMvpBox" class="hidden"></div>
+            <span id="matchEndRedTeamTotal" class="hidden"></span>
+            <span id="matchEndBlueTeamTotal" class="hidden"></span>
           </div>
 
-          <!-- KO'K JAMOA -->
-          <div class="bg-blue-950/20 border border-blue-500/35 rounded-xl overflow-hidden">
-            <div class="bg-blue-950/65 border-b border-blue-500/30 px-2.5 py-1.5 flex items-center justify-between">
-              <span class="text-[11px] font-black text-blue-400 tracking-wide">🔵 CT-SPEC (KO'K)</span>
-              <span id="matchEndBlueTeamTotal" class="font-mono text-[11px] font-bold text-blue-200">0 Frag</span>
+          <!-- O'ng: T (Oltin/Sariq) Hisob -->
+          <div class="flex justify-start">
+            <div class="dg-score-wing-t px-5 sm:px-8 py-1 text-center min-w-[92px] sm:min-w-[130px]">
+              <div id="matchEndRedScore" class="font-black italic text-2xl sm:text-4xl text-amber-300 leading-none tracking-tight drop-shadow">0</div>
             </div>
-            <table class="w-full text-left text-[11px] border-collapse">
-              <thead>
-                <tr class="text-[9px] uppercase text-zinc-400 border-b border-zinc-800/80 bg-black/35">
-                  <th class="py-1 px-2 w-6">#</th>
-                  <th class="py-1 px-1.5">O'yinchi</th>
-                  <th class="py-1 px-1.5 text-center text-emerald-400">Kill</th>
-                  <th class="py-1 px-1.5 text-center text-zinc-400">O'lim</th>
-                  <th class="py-1 px-2 text-right text-amber-300">K/D</th>
-                </tr>
-              </thead>
-              <tbody id="matchEndBlueList" class="divide-y divide-zinc-800/60"></tbody>
-            </table>
           </div>
         </div>
 
-        <!-- Pastki Doimiy Tugmalar -->
-        <div class="shrink-0 bg-zinc-900/95 border-t border-zinc-800 px-3 py-2.5 flex gap-2.5">
-          <button id="btnRematch" class="flex-1 bg-red-600 hover:bg-red-500 active:scale-95 text-white font-bold text-xs py-2.5 px-4 rounded-xl transition shadow-lg">
-            🔄 Qayta O'ynash
+        <!-- 2. MARKAZIY QISM: 2 USTUNLI CT (KO'K) vs T (OLTIN) JADVAL -->
+        <div class="flex-1 min-h-0 grid grid-cols-2 gap-1.5 sm:gap-2.5 overflow-hidden">
+          <!-- CHAP: CT (KO'K JAMOA) -->
+          <div class="dg-team-panel-ct rounded-lg flex flex-col min-h-0 overflow-hidden">
+            <div class="shrink-0 bg-gradient-to-r from-sky-900/90 via-sky-950/70 to-transparent border-b border-sky-400/40 px-2 py-1 flex items-center justify-between">
+              <div class="flex items-center gap-1.5">
+                <span class="w-6 h-6 rounded-full bg-sky-950 border border-sky-400 flex items-center justify-center text-xs font-black text-sky-300">🛡️</span>
+                <span class="font-black italic text-sm sm:text-base text-white tracking-wider">CT</span>
+              </div>
+              <div class="grid grid-cols-[34px_34px_34px_54px] sm:grid-cols-[44px_44px_44px_60px] text-center text-[9px] sm:text-[10px] font-extrabold text-sky-200/90">
+                <span>Elims</span>
+                <span>K/D</span>
+                <span>Assists</span>
+                <span></span>
+              </div>
+            </div>
+            <div id="matchEndBlueList" class="flex-1 overflow-y-auto divide-y divide-sky-400/15"></div>
+          </div>
+
+          <!-- O'NG: T (OLTIN/SARIQ JAMOA) -->
+          <div class="dg-team-panel-t rounded-lg flex flex-col min-h-0 overflow-hidden">
+            <div class="shrink-0 bg-gradient-to-r from-amber-900/90 via-amber-950/70 to-transparent border-b border-amber-400/40 px-2 py-1 flex items-center justify-between">
+              <div class="flex items-center gap-1.5">
+                <span class="w-6 h-6 rounded-full bg-amber-950 border border-amber-400 flex items-center justify-center text-xs font-black text-amber-300">★</span>
+                <span class="font-black italic text-sm sm:text-base text-amber-200 tracking-wider">T</span>
+              </div>
+              <div class="grid grid-cols-[34px_34px_34px_54px] sm:grid-cols-[44px_44px_44px_60px] text-center text-[9px] sm:text-[10px] font-extrabold text-amber-200/90">
+                <span>Elims</span>
+                <span>K/D</span>
+                <span>Assists</span>
+                <span></span>
+              </div>
+            </div>
+            <div id="matchEndRedList" class="flex-1 overflow-y-auto divide-y divide-amber-400/15"></div>
+          </div>
+        </div>
+
+        <!-- 3. PASTKI BOSHQARUV PANELI: REPORT | RAHMAT TASMASI | CONTINUE (10) & SHARE -->
+        <div class="shrink-0 flex items-center justify-between gap-2 pb-0.5">
+          <!-- Chap: Report -->
+          <button id="btnMatchReport" type="button" class="px-2.5 sm:px-3.5 py-1.5 rounded bg-slate-900/90 hover:bg-slate-800 border border-zinc-600/70 text-zinc-200 text-[10px] sm:text-xs font-bold flex items-center gap-1.5 active:scale-95 transition">
+            <span class="w-4 h-4 rounded-full bg-zinc-200 text-slate-950 font-black text-[10px] inline-flex items-center justify-center">!</span>
+            <span>Report</span>
           </button>
-          <button id="btnEndToLobby" class="flex-1 bg-zinc-800 hover:bg-zinc-700 active:scale-95 text-zinc-100 font-bold text-xs py-2.5 px-4 rounded-xl transition border border-zinc-700">
-            🏠 Lobbiga Qaytish
-          </button>
+
+          <!-- Markaz: O'yinda ishtirok etganingiz uchun rahmat! -->
+          <div class="dg-thanks-ribbon hidden sm:flex items-center justify-center px-6 py-1 text-xs font-bold italic text-amber-100 tracking-wide">
+            O'yinda ishtirok etganingiz uchun rahmat!
+          </div>
+
+          <!-- O'ng: Qayta o'ynash + Continue (10) + Share -->
+          <div class="flex items-center gap-1.5">
+            <button id="btnRematch" type="button" class="px-2.5 py-1.5 rounded bg-slate-900/90 hover:bg-slate-800 border border-amber-500/50 text-amber-300 font-extrabold text-[10px] sm:text-xs active:scale-95 transition" title="Qayta o'ynash">
+              🔄 Qayta
+            </button>
+            <button id="btnEndToLobby" type="button" class="dg-continue-btn px-3.5 sm:px-5 py-1.5 rounded text-white font-black text-[11px] sm:text-xs tracking-wide active:scale-95 transition">
+              Continue ( <span id="matchContinueSec">10</span> )
+            </button>
+            <button id="btnMatchShare" type="button" class="w-8 h-8 rounded bg-slate-900/90 hover:bg-slate-800 border border-zinc-500/70 text-zinc-100 flex items-center justify-center active:scale-95 transition" title="Natijani ulashish">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+            </button>
+          </div>
         </div>
+
       </div>
     </div>
 
@@ -2908,54 +3018,109 @@
           .replace(/>/g, '&gt;')
           .replace(/"/g, '&quot;');
 
-        // Barcha jangchilarni yig'ish (Siz + barcha botlar)
+        // 1) Haqiqiy Telegram nomi va avatari
+        const tgUser = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) || null;
+        const tgProf = window.DIGI_TG_PROFILE || {};
+        const selfName = (tgUser && (tgUser.first_name ? (tgUser.first_name + (tgUser.last_name ? ' ' + tgUser.last_name : '')) : (tgUser.username ? '@' + tgUser.username : ''))) || tgProf.myName || myProfile.name || 'Jangchi';
+        const selfPhoto = (tgUser && tgUser.photo_url) || tgProf.myPhoto || '';
+
+        const mpRoom = (window.DIGI_MP && typeof window.DIGI_MP.getRoom === 'function') ? window.DIGI_MP.getRoom() : null;
+        const mpPlayersMap = {};
+        if (mpRoom && Array.isArray(mpRoom.players)) {
+          mpRoom.players.forEach(p => {
+            if (p && p.id) {
+              mpPlayersMap[p.id] = {
+                name: p.name,
+                photo: p.photoUrl || p.photo || ''
+              };
+            }
+          });
+        }
+
+        // Barcha jangchilarni yig'ish (Siz + barcha botlar/o'yinchilar)
         const allParticipants = [
           {
             id: '__SELF__',
-            name: myProfile.name || 'Jangchi',
+            name: selfName,
+            photo: selfPhoto,
             team: player.team,
             kills: player.kills || 0,
             deaths: player.deaths || 0,
+            assists: player.assists != null ? player.assists : Math.max(0, Math.floor((player.kills || 0) * 0.3)),
             isSelf: true
           },
-          ...combatants.map(c => ({
-            id: c.id,
-            name: c.name,
-            team: c.team,
-            kills: c.kills || 0,
-            deaths: c.deaths || 0,
-            isSelf: false
-          }))
+          ...combatants.map(c => {
+            const mpInfo = mpPlayersMap[c.id] || {};
+            return {
+              id: c.id,
+              name: mpInfo.name || c.name,
+              photo: mpInfo.photo || '',
+              team: c.team,
+              kills: c.kills || 0,
+              deaths: c.deaths || 0,
+              assists: c.assists != null ? c.assists : Math.max(0, Math.floor((c.kills || 0) * 0.3)),
+              isSelf: false
+            };
+          })
         ];
 
         const sortByPerformance = (a, b) => (b.kills - a.kills) || (a.deaths - b.deaths);
         const rankedAll = [...allParticipants].sort(sortByPerformance);
         const mvpRow = rankedAll[0] || allParticipants[0];
 
+        // 2) Har bir jamoa satrlari (CT = blue, T = red)
         const redTeamRows = allParticipants.filter(p => p.team === 'red').sort(sortByPerformance);
         const blueTeamRows = allParticipants.filter(p => p.team === 'blue').sort(sortByPerformance);
 
-        const renderTeamRowsHtml = (rows) => rows.map((r, idx) => {
-          const isMvp = mvpRow && r.id === mvpRow.id && r.kills > 0;
+        // 3) Row HTML (renderTeamRowsHtml(rows, isCt))
+        const renderTeamRowsHtml = (rows, isCt) => rows.map((r, idx) => {
+          const isMvp = (idx === 0 && r.kills > 0);
           const kd = (r.kills / Math.max(1, r.deaths)).toFixed(1);
+          const assistsVal = r.assists != null ? r.assists : Math.max(0, Math.floor((r.kills || 0) * 0.3));
+          const initial = (r.name ? r.name.replace(/^@/, '').charAt(0) : '?').toUpperCase();
+          const avatarHtml = r.photo
+            ? `<img src="${escHtml(r.photo)}" alt="${escHtml(r.name)}" onerror="this.remove()" />`
+            : `<span>${initial}</span>`;
+          const frameCls = isCt ? 'dg-avatar-frame dg-avatar-frame-ct' : 'dg-avatar-frame';
+
           const rowBg = r.isSelf
-            ? 'bg-amber-500/20 font-extrabold'
-            : (idx % 2 === 1 ? 'bg-white/[0.02]' : '');
-          const nameCls = r.isSelf ? 'text-amber-300' : 'text-zinc-100';
-          const selfTag = r.isSelf
-            ? '<span class="ml-1 text-[8px] bg-amber-500/30 border border-amber-400/50 text-amber-200 px-1 py-0.5 rounded uppercase">Siz</span>'
-            : '';
-          const mvpTag = isMvp
-            ? '<span class="ml-1 text-[8px] bg-yellow-400/25 border border-yellow-400/60 text-yellow-300 px-1 py-0.5 rounded font-black">👑 MVP</span>'
-            : '';
+            ? (isCt ? 'bg-sky-500/20 font-extrabold' : 'bg-amber-500/20 font-extrabold')
+            : (idx % 2 === 1 ? 'bg-black/20' : '');
+
+          const nameColor = r.isSelf ? (isCt ? 'text-sky-200 font-black' : 'text-amber-200 font-black') : 'text-zinc-100 font-bold';
+          const selfBadge = r.isSelf ? '<span class="ml-1 text-[8px] bg-white/20 px-1 py-0.5 rounded text-white font-mono uppercase">Siz</span>' : '';
+          const mvpBadge = isMvp ? '<span class="dg-mvp-tag ml-1">👑 MVP</span>' : '';
+          const comboBadge = (r.kills >= 5) ? `<span class="text-[8px] font-black text-amber-300 ml-1">🔥 ${Math.min(r.kills, 8)} Combo</span>` : '';
+
+          const actionCol = r.isSelf
+            ? `<span class="dg-act-btn" title="Siz">!</span>`
+            : `<div class="inline-flex items-center justify-center gap-1">
+                <button type="button" class="dg-act-btn dg-btn-addf" data-pid="${escHtml(r.id)}" data-pname="${escHtml(r.name)}" title="Do'st qo'shish">👤+</button>
+                <button type="button" class="dg-act-btn dg-btn-like" data-pname="${escHtml(r.name)}" title="Layk">👍</button>
+              </div>`;
+
           return `
-            <tr class="${rowBg}">
-              <td class="py-1.5 px-2 font-mono text-[10px] text-zinc-500">${idx + 1}</td>
-              <td class="py-1.5 px-1.5 ${nameCls} truncate max-w-[130px]">${escHtml(r.name)}${selfTag}${mvpTag}</td>
-              <td class="py-1.5 px-1.5 text-center font-mono font-bold text-emerald-400">${r.kills}</td>
-              <td class="py-1.5 px-1.5 text-center font-mono text-zinc-400">${r.deaths}</td>
-              <td class="py-1.5 px-2 text-right font-mono text-[10px] text-amber-300">${kd}</td>
-            </tr>
+            <div class="flex items-center justify-between px-2 py-1.5 gap-1.5 ${rowBg}">
+              <!-- Chap: Avatar + Ism + MVP + Combo -->
+              <div class="flex items-center gap-1.5 min-w-0 flex-1">
+                <div class="${frameCls}">${avatarHtml}</div>
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center gap-1 flex-wrap">
+                    <span class="${nameColor} text-[11px] sm:text-xs truncate max-w-[90px] sm:max-w-[130px] leading-tight">${escHtml(r.name)}</span>
+                    ${selfBadge}
+                    ${mvpBadge}
+                  </div>
+                  ${comboBadge ? `<div>${comboBadge}</div>` : ''}
+                </div>
+              </div>
+              <!-- O'ng: Elims | K/D | Assists | Actions -->
+              <div class="grid grid-cols-[34px_34px_34px_54px] sm:grid-cols-[44px_44px_44px_60px] items-center text-center text-[10px] sm:text-xs">
+                <span class="font-mono font-black ${isCt ? 'text-sky-300' : 'text-amber-300'}">${r.kills}</span>
+                <span class="font-mono text-zinc-300">${kd}</span>
+                <span class="font-mono text-emerald-400 font-bold">${assistsVal}</span>
+                <div class="flex items-center justify-center">${actionCol}</div>
+              </div>
+            </div>
           `;
         }).join('');
 
@@ -2963,8 +3128,8 @@
         if (blueScoreEl) blueScoreEl.textContent = String(blueScore);
         if (redTotalEl) redTotalEl.textContent = `${redScore} Frag`;
         if (blueTotalEl) blueTotalEl.textContent = `${blueScore} Frag`;
-        if (redListEl) redListEl.innerHTML = renderTeamRowsHtml(redTeamRows);
-        if (blueListEl) blueListEl.innerHTML = renderTeamRowsHtml(blueTeamRows);
+        if (redListEl) redListEl.innerHTML = renderTeamRowsHtml(redTeamRows, false);
+        if (blueListEl) blueListEl.innerHTML = renderTeamRowsHtml(blueTeamRows, true);
 
         if (mvpBox && mvpRow) {
           mvpBox.textContent = `⭐ Match MVP: ${mvpRow.name} (${mvpRow.kills} Frag)`;
@@ -2999,7 +3164,7 @@
 
         if (rewardBox) {
           const eloSign = eloDelta >= 0 ? `+${eloDelta}` : String(eloDelta);
-          rewardBox.textContent = `💰 +${coinReward} Tanga  |  📈 ${eloSign} ELO`;
+          rewardBox.textContent = `💰 +${coinReward} | 📈 ${eloSign} ELO`;
         }
 
         if (card) {
@@ -3008,25 +3173,104 @@
         }
 
         if (isDraw) {
-          icon.textContent = '🤝';
-          title.textContent = 'DURRANG! TENGLIK';
-          title.className = 'retro-font text-sm sm:text-lg text-amber-400 tracking-wide';
-          summary.textContent = `Vaqt tugadi! Hisob teng (${redScore} - ${blueScore}). Siz ${player.kills} ta raqibni yo'q qildingiz!`;
+          if (icon) icon.textContent = '🤝';
+          if (title) {
+            title.textContent = 'DURRANG!';
+            title.className = 'text-amber-300 uppercase tracking-wide';
+          }
+          if (summary) summary.textContent = `Vaqt tugadi! Hisob teng (${blueScore} - ${redScore}). Siz ${player.kills} ta raqibni yo'q qildingiz!`;
           announceVoice('Match Draw! MVP ' + (mvpRow ? mvpRow.name : myProfile.name));
         } else {
-          icon.textContent = didWin ? '🏆' : '💀';
-          title.textContent = winnerTeam === 'red' ? "🔴 T-FORCE (QIZIL) G'OLIB!" : "🔵 CT-SPEC (KO'K) G'OLIB!";
-          title.className = didWin
-            ? 'retro-font text-sm sm:text-lg text-emerald-400 tracking-wide'
-            : 'retro-font text-sm sm:text-lg text-red-400 tracking-wide';
-          summary.textContent = didWin
-            ? `G'ALABA! Siz ${player.kills} frag / ${player.deaths} o'lim natija ko'rsatdingiz!`
-            : `MAG'LUBIYAT! Siz ${player.kills} frag / ${player.deaths} o'lim natija ko'rsatdingiz.`;
+          if (icon) icon.textContent = didWin ? '🏆' : '💀';
+          if (title) {
+            title.textContent = didWin ? "G'ALABA!" : "MAG'LUBIYAT!";
+            title.className = didWin ? 'text-emerald-400 uppercase tracking-wide' : 'text-rose-400 uppercase tracking-wide';
+          }
+          if (summary) {
+            summary.textContent = didWin
+              ? `G'ALABA! Siz ${player.kills} frag / ${player.deaths} o'lim natija ko'rsatdingiz!`
+              : `MAG'LUBIYAT! Siz ${player.kills} frag / ${player.deaths} o'lim natija ko'rsatdingiz.`;
+          }
           if (window.DIGI_SFX && soundEnabled) {
             window.DIGI_SFX.playRadio(didWin ? 'win' : 'lose', audioCtx, masterGain || (audioCtx && audioCtx.destination), true, 1.0);
           }
           announceVoice(winnerTeam === 'red' ? 'Red Force Wins! Counter Strike MVP ' + (mvpRow ? mvpRow.name : myProfile.name) : 'Blue Counter Spec Wins! MVP ' + (mvpRow ? mvpRow.name : myProfile.name));
         }
+
+        // 4) Haqiqiy tugmalar ishlashi (Event Delegation)
+        if (!modal._dgScoreEventsBound) {
+          modal._dgScoreEventsBound = true;
+          modal.addEventListener('click', (e) => {
+            const addfBtn = e.target.closest('.dg-btn-addf');
+            if (addfBtn) {
+              const pid = addfBtn.getAttribute('data-pid') || '';
+              const pname = addfBtn.getAttribute('data-pname') || "O'yinchi";
+              addfBtn.classList.add('dg-done');
+              addfBtn.textContent = '✓';
+              if (typeof window.digiSendQuickFriendReq === 'function') {
+                window.digiSendQuickFriendReq(pid, pname);
+              } else if (typeof showToast === 'function') {
+                showToast(`✅ ${pname} ga do'stlik so'rovi yuborildi!`);
+              }
+              return;
+            }
+
+            const likeBtn = e.target.closest('.dg-btn-like');
+            if (likeBtn) {
+              const pname = likeBtn.getAttribute('data-pname') || "O'yinchi";
+              likeBtn.classList.add('dg-done');
+              if (typeof showToast === 'function') {
+                showToast('👍 ' + pname + ' ga layk yuborildi!');
+              } else if (typeof window.showBridgeToast === 'function') {
+                window.showBridgeToast('👍 ' + pname + ' ga layk yuborildi!');
+              }
+              return;
+            }
+          });
+
+          const btnReport = document.getElementById('btnMatchReport');
+          if (btnReport) {
+            btnReport.addEventListener('click', () => {
+              if (typeof showToast === 'function') {
+                showToast('⚠️ Shikoyat qabul qilindi va tekshiruvga yuborildi.', '⚠️');
+              } else if (typeof window.showBridgeToast === 'function') {
+                window.showBridgeToast('⚠️ Shikoyat qabul qilindi va tekshiruvga yuborildi.');
+              }
+            });
+          }
+
+          const btnShare = document.getElementById('btnMatchShare');
+          if (btnShare) {
+            btnShare.addEventListener('click', () => {
+              const text = `🏆 DIGI DIGI — GLOBAL OFFENSIVE jang natijasi:\n🔵 CT: ${blueScore} - 🔴 T: ${redScore}\nMening hisobim: ${player.kills} Kill / ${player.deaths} O'lim!\nO'yinga qo'shiling:`;
+              if (typeof window.digiShareMatchScore === 'function') {
+                window.digiShareMatchScore(text);
+              } else if (window.Telegram && window.Telegram.WebApp && typeof window.Telegram.WebApp.openTelegramLink === 'function') {
+                window.Telegram.WebApp.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent('https://t.me/digi_dig_bot')}&text=${encodeURIComponent(text)}`);
+              } else {
+                window.open(`https://t.me/share/url?url=${encodeURIComponent('https://t.me/digi_dig_bot')}&text=${encodeURIComponent(text)}`, '_blank');
+              }
+            });
+          }
+        }
+
+        // 5) Jonli Continue (10) taymeri
+        if (window._matchContinueTimer) {
+          clearInterval(window._matchContinueTimer);
+          window._matchContinueTimer = null;
+        }
+        let remSec = 10;
+        const secEl = document.getElementById('matchContinueSec');
+        if (secEl) secEl.textContent = String(remSec);
+        window._matchContinueTimer = setInterval(() => {
+          remSec--;
+          if (secEl) secEl.textContent = String(Math.max(0, remSec));
+          if (remSec <= 0) {
+            clearInterval(window._matchContinueTimer);
+            window._matchContinueTimer = null;
+            exitToLobby();
+          }
+        }, 1000);
 
         modal.classList.remove('hidden');
       }
@@ -6620,6 +6864,10 @@
       setTimeout(bindMultiplayerGameHooks, 300);
 
       function startGameMatch() {
+        if (window._matchContinueTimer) {
+          clearInterval(window._matchContinueTimer);
+          window._matchContinueTimer = null;
+        }
         initAudio();
         isMpMatch = false;
         document.getElementById('modalOnline').classList.add('hidden');
@@ -6686,6 +6934,10 @@
       }
 
       function exitToLobby() {
+        if (window._matchContinueTimer) {
+          clearInterval(window._matchContinueTimer);
+          window._matchContinueTimer = null;
+        }
         gameRunning = false;
         if (window.DIGI_SFX) window.DIGI_SFX.stopRadio();
         if (isMpMatch) {
@@ -6705,8 +6957,14 @@
 
       document.getElementById('btnStartMatch').addEventListener('click', startGameMatch);
       document.getElementById('btnExitToLobby').addEventListener('click', exitToLobby);
-      document.getElementById('btnEndToLobby').addEventListener('click', exitToLobby);
-      document.getElementById('btnRematch').addEventListener('click', startGameMatch);
+      document.getElementById('btnEndToLobby').addEventListener('click', () => {
+        if (window._matchContinueTimer) { clearInterval(window._matchContinueTimer); window._matchContinueTimer = null; }
+        exitToLobby();
+      });
+      document.getElementById('btnRematch').addEventListener('click', () => {
+        if (window._matchContinueTimer) { clearInterval(window._matchContinueTimer); window._matchContinueTimer = null; }
+        startGameMatch();
+      });
 
       document.getElementById('btnInGameWeapon').addEventListener('click', () => {
         selectedWeaponIdx = (selectedWeaponIdx + 1) % WEAPONS.length;

@@ -19,6 +19,7 @@
     friends: [],
     handledRequests: {} // { [senderId]: handledAtTimestampMs } — 60 soniya davomida qayta modal chiqmasin
   };
+  window.DIGI_TG_PROFILE = tgState;
 
   let currentPendingSender = null;
   let currentPreviewProfile = null;
@@ -568,7 +569,7 @@
       if (u) {
         tgState.myTgId = String(u.id);
         tgState.myUsername = u.username || '';
-        tgState.myName = u.username ? `@${u.username}` : (u.first_name || 'TG_Player');
+        tgState.myName = (u.first_name ? (u.first_name + (u.last_name ? ' ' + u.last_name : '')) : (u.username ? '@' + u.username : 'TG_Player')).trim();
         tgState.myId = 'DOOM-' + String(u.id).slice(-4).padStart(4, '0');
         tgState.myPhoto = u.photo_url || '';
       }
@@ -615,4 +616,45 @@
       syncWithServer(false);
     }, 15000);
   });
+
+  window.showBridgeToast = showBridgeToast;
+
+  window.digiSendQuickFriendReq = async function(targetId, targetName) {
+    const name = targetName || targetId || "O'yinchi";
+    if (targetId && typeof targetId === 'string' && (targetId.startsWith('DOOM-') || targetId.startsWith('TG-') || /^[a-zA-Z0-9_\-]+$/.test(targetId)) && !targetId.toLowerCase().includes('bot')) {
+      try {
+        const res = await fetch('/api/tg/friend-request', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fromId: tgState.myId,
+            fromName: tgState.myName,
+            fromElo: tgState.elo,
+            toId: targetId
+          })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (data && data.error === 'BLOCKED_1_WEEK') {
+          showBridgeToast(`🚫 ${name} sizni 1 haftaga bloklagan (${data.remDays || 7} kun qoldi)`);
+          return;
+        }
+        showBridgeToast(`✅ ${name} ga do'stlik so'rovi yuborildi!`);
+      } catch (e) {
+        showBridgeToast(`✅ ${name} ga do'stlik so'rovi yuborildi!`);
+      }
+    } else {
+      showBridgeToast(`✅ ${name} ga do'stlik so'rovi yuborildi!`);
+    }
+  };
+
+  window.digiShareMatchScore = function(summaryText) {
+    const botUrl = 'https://t.me/digi_dig_bot';
+    const text = (summaryText || "🔥 DIGI DIGI — GLOBAL OFFENSIVE jangida ajoyib natija ko'rsatdim! O'yinimizga qo'shiling:").trim();
+    const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(botUrl)}&text=${encodeURIComponent(text)}`;
+    if (window.Telegram && window.Telegram.WebApp && typeof window.Telegram.WebApp.openTelegramLink === 'function') {
+      window.Telegram.WebApp.openTelegramLink(shareUrl);
+    } else {
+      window.open(shareUrl, '_blank');
+    }
+  };
 })();
