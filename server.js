@@ -80,17 +80,112 @@ function saveDb() {
 
 loadDb();
 
+function getTashkentWeekKey(ts = Date.now()) {
+  const d = new Date(ts + 5 * 3600 * 1000);
+  const target = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+  const dayNum = target.getUTCDay() || 7;
+  target.setUTCDate(target.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(target.getUTCFullYear(), 0, 1));
+  const weekNo = Math.ceil((((target - yearStart) / 86400000) + 1) / 7);
+  return `${target.getUTCFullYear()}-W${String(weekNo).padStart(2, '0')}`;
+}
+
+function getTashkentMonthKey(ts = Date.now()) {
+  const d = new Date(ts + 5 * 3600 * 1000);
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+}
+
+function normalizeUserStats(s) {
+  const st = (s && typeof s === 'object') ? s : {};
+  const matches5v5 = Math.max(Number(st.matches5v5) || 0, Number(st.botMatches) || 0);
+  const matchesOnline = Math.max(Number(st.matchesOnline) || 0, Number(st.lobbyMatches) || 0);
+  const kills = Math.max(Number(st.kills) || 0, Number(st.totalKills) || 0);
+  const headshots = Math.max(Number(st.headshots) || 0, Number(st.totalHS) || 0);
+  const elo = Number(st.elo) || 1000;
+  const botLevel = Number(st.botLevel) || 1;
+  return {
+    elo,
+    botLevel,
+    matches5v5,
+    matchesOnline,
+    totalMatches: matches5v5 + matchesOnline,
+    kills,
+    headshots
+  };
+}
+
+function getLeagueInfo(elo) {
+  const e = Number(elo) || 1000;
+  if (e >= 2300) return { id: 'legend', name: 'Afsona', icon: '👑', min: 2300, next: null };
+  if (e >= 1950) return { id: 'master', name: 'Master', icon: '🔥', min: 1950, next: 2300 };
+  if (e >= 1650) return { id: 'diamond', name: 'Olmos', icon: '💎', min: 1650, next: 1950 };
+  if (e >= 1400) return { id: 'platinum', name: 'Platina', icon: '💠', min: 1400, next: 1650 };
+  if (e >= 1200) return { id: 'gold', name: 'Oltin', icon: '🥇', min: 1200, next: 1400 };
+  if (e >= 1050) return { id: 'silver', name: 'Kumush', icon: '🥈', min: 1050, next: 1200 };
+  return { id: 'bronze', name: 'Bronza', icon: '🥉', min: 800, next: 1050 };
+}
+
 function computePlayerPowerScore(player) {
-  const s = (player && player.userStats) || {};
-  const elo = Number(s.elo) || 1000;
-  const totalMatches = (Number(s.matches5v5) || 0) + (Number(s.matchesOnline) || 0);
-  const kills = Number(s.kills) || 0;
-  const headshots = Number(s.headshots) || 0;
-  const botLevel = Number(s.botLevel) || 1;
-  const powerScore = Math.round(elo + (totalMatches * 30) + (kills * 4) + (headshots * 10) + Math.max(0, botLevel - 1) * 15);
-  const level = Math.max(1, Math.floor((elo - 800) / 25) + 1);
+  const n = normalizeUserStats(player && player.userStats);
+  const hsRate = n.kills > 0 ? Math.min(100, Math.round((n.headshots / n.kills) * 100)) : 0;
+  const kpm = n.totalMatches > 0 ? Number((n.kills / n.totalMatches).toFixed(1)) : 0;
+  const powerScore = Math.round(n.elo + (n.totalMatches * 30) + (n.kills * 4) + (n.headshots * 10) + Math.max(0, n.botLevel - 1) * 15);
+  const level = Math.max(1, Math.floor((n.elo - 800) / 25) + 1);
   const isOnline = (Date.now() - Number((player && (player.lastSeenAt || player.updatedAt)) || 0)) < 90000;
-  return { elo, level, totalMatches, kills, headshots, powerScore, isOnline };
+  const league = getLeagueInfo(n.elo);
+  return {
+    elo: n.elo,
+    level,
+    matches5v5: n.matches5v5,
+    matchesOnline: n.matchesOnline,
+    totalMatches: n.totalMatches,
+    kills: n.kills,
+    headshots: n.headshots,
+    hsRate,
+    kpm,
+    powerScore,
+    isOnline,
+    league
+  };
+}
+
+function updatePlayerPeriodStats(player, prevNorm, nextNorm) {
+  if (!player) return;
+  const now = Date.now();
+  const wk = getTashkentWeekKey(now);
+  const mk = getTashkentMonthKey(now);
+  if (!player.periodStats || typeof player.periodStats !== 'object') {
+    player.periodStats = {};
+  }
+  const ps = player.periodStats;
+  if (ps.weekKey !== wk || !ps.week) {
+    ps.weekKey = wk;
+    ps.week = { matches: 0, kills: 0, headshots: 0, eloGain: 0, power: 0 };
+  }
+  if (ps.monthKey !== mk || !ps.month) {
+    ps.monthKey = mk;
+    ps.month = { matches: 0, kills: 0, headshots: 0, eloGain: 0, power: 0 };
+  }
+
+  const dMatches = Math.max(0, nextNorm.totalMatches - prevNorm.totalMatches);
+  const dKills = Math.max(0, nextNorm.kills - prevNorm.kills);
+  const dHs = Math.max(0, nextNorm.headshots - prevNorm.headshots);
+  const dElo = Math.max(0, nextNorm.elo - prevNorm.elo);
+
+  if (dMatches > 0 || dKills > 0 || dHs > 0 || dElo > 0) {
+    const dPower = Math.round((dElo * 2) + (dMatches * 30) + (dKills * 5) + (dHs * 12));
+    ps.week.matches += dMatches;
+    ps.week.kills += dKills;
+    ps.week.headshots += dHs;
+    ps.week.eloGain += dElo;
+    ps.week.power += dPower;
+
+    ps.month.matches += dMatches;
+    ps.month.kills += dKills;
+    ps.month.headshots += dHs;
+    ps.month.eloGain += dElo;
+    ps.month.power += dPower;
+  }
 }
 
 // Telegram Native HTTPS Helper
@@ -209,8 +304,19 @@ app.post("/api/tg/sync", (req, res) => {
 
   // Agar initLoad === true bo'lsa, bazadagi saqlangan statistikani 0 bilan ezib yubormaymiz!
   if (!initLoad && userStats && typeof userStats === "object") {
+    const prevNorm = normalizeUserStats(existing.userStats);
     existing.userStats = Object.assign({}, existing.userStats, userStats);
+    const nextNorm = normalizeUserStats(existing.userStats);
+    existing.userStats.kills = nextNorm.kills;
+    existing.userStats.totalKills = nextNorm.kills;
+    existing.userStats.headshots = nextNorm.headshots;
+    existing.userStats.totalHS = nextNorm.headshots;
+    existing.userStats.matches5v5 = nextNorm.matches5v5;
+    existing.userStats.botMatches = nextNorm.matches5v5;
+    existing.userStats.matchesOnline = nextNorm.matchesOnline;
+    existing.userStats.lobbyMatches = nextNorm.matchesOnline;
     existing.updatedAt = Date.now();
+    updatePlayerPeriodStats(existing, prevNorm, nextNorm);
   }
 
   if (blockedUsersMap && typeof blockedUsersMap === "object") {
@@ -564,6 +670,267 @@ app.get("/api/tg/directory", (req, res) => {
     myFriends,
     incomingRequests,
     outgoingRequests
+  });
+});
+
+// 5D) 3D iOS Glass Jonli Reyting va Chempionlar (/api/tg/leaderboard)
+app.get('/api/tg/leaderboard', (req, res) => {
+  const myId = String(req.query.myId || '').trim().toUpperCase();
+  const period = String(req.query.period || 'all').trim().toLowerCase();
+  const category = String(req.query.category || 'overall').trim().toLowerCase();
+
+  const now = Date.now();
+  const wk = getTashkentWeekKey(now);
+  const mk = getTashkentMonthKey(now);
+  const myObj = db.players[myId] || null;
+  const myFriendIds = new Set(((myObj && myObj.savedFriends) || []).map(f => String(f.id || '').toUpperCase()));
+
+  const allPlayers = Object.values(db.players).map(p => {
+    const all = computePlayerPowerScore(p);
+    const ps = (p.periodStats && typeof p.periodStats === 'object') ? p.periodStats : {};
+    const hasLiveWeek = (ps.weekKey === wk && ps.week && Number(ps.week.power) > 0);
+    const hasLiveMonth = (ps.monthKey === mk && ps.month && Number(ps.month.power) > 0);
+    const lastAct = Number(p.lastSeenAt || p.updatedAt || p.createdAt || 0);
+    const active7d = (now - lastAct) <= 7 * 24 * 3600 * 1000;
+    const active30d = (now - lastAct) <= 30 * 24 * 3600 * 1000;
+    const w = hasLiveWeek ? ps.week : null;
+    const m = hasLiveMonth ? ps.month : null;
+    const isSelf = (p.id === myId);
+    const isFriend = myFriendIds.has(p.id);
+
+    return {
+      id: p.id,
+      name: p.name || p.id,
+      username: p.username || '',
+      photoUrl: p.photoUrl || '',
+      all,
+      ps,
+      w,
+      m,
+      hasLiveWeek,
+      hasLiveMonth,
+      active7d,
+      active30d,
+      isSelf,
+      isFriend,
+      lastAct
+    };
+  });
+
+  const anyLiveWeek = allPlayers.some(p => p.hasLiveWeek);
+  const anyLiveMonth = allPlayers.some(p => p.hasLiveMonth);
+  const weeklyMode = anyLiveWeek ? 'live' : 'active7d';
+  const monthlyMode = anyLiveMonth ? 'live' : 'active30d';
+
+  // Haftalik MVP
+  let weeklyMvp = null;
+  if (anyLiveWeek) {
+    const sortedWeek = allPlayers.filter(p => p.hasLiveWeek).sort((a, b) => {
+      if (b.w.power !== a.w.power) return b.w.power - a.w.power;
+      return b.all.powerScore - a.all.powerScore;
+    });
+    if (sortedWeek.length > 0) {
+      const topW = sortedWeek[0];
+      weeklyMvp = {
+        id: topW.id,
+        name: topW.name,
+        username: topW.username,
+        photoUrl: topW.photoUrl,
+        isOnline: topW.all.isOnline,
+        level: topW.all.level,
+        league: topW.all.league,
+        metricPower: topW.w.power,
+        metricKills: topW.w.kills,
+        metricMatches: topW.w.matches,
+        mode: 'live'
+      };
+    }
+  }
+  if (!weeklyMvp) {
+    const act7 = allPlayers.filter(p => p.active7d).sort((a, b) => b.all.powerScore - a.all.powerScore);
+    const topW = act7.length > 0 ? act7[0] : (allPlayers.slice().sort((a, b) => b.all.powerScore - a.all.powerScore)[0] || null);
+    if (topW) {
+      weeklyMvp = {
+        id: topW.id,
+        name: topW.name,
+        username: topW.username,
+        photoUrl: topW.photoUrl,
+        isOnline: topW.all.isOnline,
+        level: topW.all.level,
+        league: topW.all.league,
+        metricPower: topW.all.powerScore,
+        metricKills: topW.all.kills,
+        metricMatches: topW.all.totalMatches,
+        mode: 'active7d'
+      };
+    }
+  }
+
+  // Oylik MVP
+  let monthlyMvp = null;
+  if (anyLiveMonth) {
+    const sortedMonth = allPlayers.filter(p => p.hasLiveMonth).sort((a, b) => {
+      if (b.m.power !== a.m.power) return b.m.power - a.m.power;
+      return b.all.powerScore - a.all.powerScore;
+    });
+    if (sortedMonth.length > 0) {
+      const topM = sortedMonth[0];
+      monthlyMvp = {
+        id: topM.id,
+        name: topM.name,
+        username: topM.username,
+        photoUrl: topM.photoUrl,
+        isOnline: topM.all.isOnline,
+        level: topM.all.level,
+        league: topM.all.league,
+        metricPower: topM.m.power,
+        metricKills: topM.m.kills,
+        metricMatches: topM.m.matches,
+        mode: 'live'
+      };
+    }
+  }
+  if (!monthlyMvp) {
+    const act30 = allPlayers.filter(p => p.active30d).sort((a, b) => b.all.powerScore - a.all.powerScore);
+    const topM = act30.length > 0 ? act30[0] : (allPlayers.slice().sort((a, b) => b.all.powerScore - a.all.powerScore)[0] || null);
+    if (topM) {
+      monthlyMvp = {
+        id: topM.id,
+        name: topM.name,
+        username: topM.username,
+        photoUrl: topM.photoUrl,
+        isOnline: topM.all.isOnline,
+        level: topM.all.level,
+        league: topM.all.league,
+        metricPower: topM.all.powerScore,
+        metricKills: topM.all.kills,
+        metricMatches: topM.all.totalMatches,
+        mode: 'active30d'
+      };
+    }
+  }
+
+  // Tanlangan period va category bo'yicha filtrlash va metrikalarni hisoblash
+  let pool = allPlayers;
+  if (category === 'friends') {
+    pool = allPlayers.filter(p => p.isSelf || p.isFriend);
+  }
+
+  const entries = pool.map(p => {
+    let metricPower, metricKills, metricHeadshots, metricMatches, elo, hsRate, kpm;
+
+    if (period === 'week' && anyLiveWeek) {
+      const pw = p.w || { power: 0, kills: 0, headshots: 0, matches: 0 };
+      metricPower = pw.power;
+      metricKills = pw.kills;
+      metricHeadshots = pw.headshots;
+      metricMatches = pw.matches;
+      elo = p.all.elo;
+      hsRate = pw.kills > 0 ? Math.min(100, Math.round((pw.headshots / pw.kills) * 100)) : 0;
+      kpm = pw.matches > 0 ? Number((pw.kills / pw.matches).toFixed(1)) : 0;
+    } else if (period === 'month' && anyLiveMonth) {
+      const pm = p.m || { power: 0, kills: 0, headshots: 0, matches: 0 };
+      metricPower = pm.power;
+      metricKills = pm.kills;
+      metricHeadshots = pm.headshots;
+      metricMatches = pm.matches;
+      elo = p.all.elo;
+      hsRate = pm.kills > 0 ? Math.min(100, Math.round((pm.headshots / pm.kills) * 100)) : 0;
+      kpm = pm.matches > 0 ? Number((pm.kills / pm.matches).toFixed(1)) : 0;
+    } else {
+      metricPower = p.all.powerScore;
+      metricKills = p.all.kills;
+      metricHeadshots = p.all.headshots;
+      metricMatches = p.all.totalMatches;
+      elo = p.all.elo;
+      hsRate = p.all.hsRate;
+      kpm = p.all.kpm;
+    }
+
+    return {
+      id: p.id,
+      name: p.name,
+      username: p.username,
+      photoUrl: p.photoUrl,
+      isOnline: p.all.isOnline,
+      level: p.all.level,
+      league: p.all.league,
+      elo,
+      isSelf: p.isSelf,
+      isFriend: p.isFriend,
+      metricPower,
+      metricKills,
+      metricHeadshots,
+      metricMatches,
+      hsRate,
+      kpm
+    };
+  });
+
+  // Saralash
+  entries.sort((a, b) => {
+    if (category === 'kills') {
+      if (b.metricKills !== a.metricKills) return b.metricKills - a.metricKills;
+      if (b.metricPower !== a.metricPower) return b.metricPower - a.metricPower;
+      return b.elo - a.elo;
+    }
+    if (category === 'headshots') {
+      if (b.metricHeadshots !== a.metricHeadshots) return b.metricHeadshots - a.metricHeadshots;
+      if (b.hsRate !== a.hsRate) return b.hsRate - a.hsRate;
+      return b.metricKills - a.metricKills;
+    }
+    if (category === 'matches') {
+      if (b.metricMatches !== a.metricMatches) return b.metricMatches - a.metricMatches;
+      if (b.metricPower !== a.metricPower) return b.metricPower - a.metricPower;
+      return b.elo - a.elo;
+    }
+    // overall yoki friends
+    if (b.metricPower !== a.metricPower) return b.metricPower - a.metricPower;
+    if (b.elo !== a.elo) return b.elo - a.elo;
+    return b.metricKills - a.metricKills;
+  });
+
+  entries.forEach((e, idx) => {
+    e.rank = idx + 1;
+  });
+
+  let myEntry = entries.find(e => e.isSelf) || null;
+  if (!myEntry && myObj) {
+    const myAll = computePlayerPowerScore(myObj);
+    myEntry = {
+      id: myObj.id,
+      name: myObj.name || myObj.id,
+      username: myObj.username || '',
+      photoUrl: myObj.photoUrl || '',
+      isOnline: true,
+      level: myAll.level,
+      league: myAll.league,
+      elo: myAll.elo,
+      rank: entries.length + 1,
+      isSelf: true,
+      isFriend: false,
+      metricPower: myAll.powerScore,
+      metricKills: myAll.kills,
+      metricHeadshots: myAll.headshots,
+      metricMatches: myAll.totalMatches,
+      hsRate: myAll.hsRate,
+      kpm: myAll.kpm
+    };
+  }
+
+  return res.json({
+    ok: true,
+    weekKey: wk,
+    monthKey: mk,
+    period,
+    category,
+    weeklyMode,
+    monthlyMode,
+    totalPlayers: entries.length,
+    weeklyMvp,
+    monthlyMvp,
+    myEntry,
+    list: entries.slice(0, 100)
   });
 });
 

@@ -837,6 +837,51 @@
       padding: 3px;
       box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.72);
     }
+    /* === 3D iOS GLASS REYTING VA STATISTIKA (#modalRating) === */
+    #modalRating {
+      background:
+        radial-gradient(circle at 18% 18%, rgba(251, 191, 36, 0.20), transparent 44%),
+        radial-gradient(circle at 82% 84%, rgba(14, 165, 233, 0.24), transparent 46%),
+        rgba(3, 7, 18, 0.74) !important;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", sans-serif;
+    }
+    #lobbyView.digi-lobby-rot90 #modalRating {
+      padding: 8px 14px 8px max(66px, calc(var(--digi-safe-left, 58px) + 8px)) !important;
+    }
+    #lobbyView.digi-lobby-rot90 #modalRating > div {
+      height: 96% !important;
+      max-height: 96% !important;
+    }
+    .ios-rt-mvp-week {
+      background: linear-gradient(155deg, rgba(14, 165, 233, 0.22) 0%, rgba(12, 22, 46, 0.88) 60%, rgba(7, 13, 28, 0.94) 100%);
+      border: 1px solid rgba(56, 189, 248, 0.48);
+      border-radius: 16px;
+      box-shadow: 0 8px 22px rgba(0, 0, 0, 0.52), 0 0 14px rgba(14, 165, 233, 0.16), inset 0 1px 1px rgba(255, 255, 255, 0.22);
+    }
+    .ios-rt-mvp-month {
+      background: linear-gradient(155deg, rgba(251, 191, 36, 0.24) 0%, rgba(36, 24, 10, 0.86) 55%, rgba(10, 14, 28, 0.94) 100%);
+      border: 1px solid rgba(251, 191, 36, 0.56);
+      border-radius: 16px;
+      box-shadow: 0 8px 22px rgba(0, 0, 0, 0.54), 0 0 16px rgba(245, 158, 11, 0.20), inset 0 1px 1px rgba(254, 240, 138, 0.30);
+    }
+    .ios-rt-stat-box {
+      background: linear-gradient(180deg, rgba(16, 27, 52, 0.78) 0%, rgba(7, 13, 28, 0.90) 100%);
+      border: 1px solid rgba(96, 165, 250, 0.22);
+      border-radius: 13px;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 4px 12px rgba(0, 0, 0, 0.38);
+    }
+    .ios-rt-cat-btn {
+      white-space: nowrap;
+      flex-shrink: 0;
+      padding: 4px 10px;
+      font-size: 10px;
+      border-radius: 9999px;
+      transition: transform 110ms ease, background 140ms ease;
+    }
+    .ios-rt-self-row {
+      background: linear-gradient(90deg, rgba(251, 191, 36, 0.14) 0%, rgba(14, 165, 233, 0.12) 100%);
+      box-shadow: inset 2.5px 0 0 #fbbf24;
+    }
   </style>
 </head>
 <body class="relative w-full h-full flex flex-col justify-between horror-bg select-none">
@@ -1371,49 +1416,130 @@
     </div>
 
     <!-- ==================== MODAL 4: REYTING VA STATISTIKA (BOSH PANEL USLUBIDA) ==================== -->
-    <div id="modalRating" class="hidden fixed inset-0 z-50 cs-modal-backdrop backdrop-blur-md flex items-center justify-center p-4">
-      <div class="cs-panel-card rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl max-h-[90vh] flex flex-col">
-        <div class="cs-gold-header px-4 py-3 flex items-center justify-between shrink-0">
-          <h2 class="text-sm font-black italic uppercase text-amber-300 flex items-center gap-2">🏆 REYTING VA STATISTIKA</h2>
-          <button id="btnCloseRatingModal" class="menu-btn-dark text-white text-xs font-bold px-3 py-1.5 rounded-xl">✕ Yopish</button>
+    <!-- ==================== MODAL 4: 3D iOS GLASS REYTING VA STATISTIKA ==================== -->
+    <div id="modalRating" class="hidden fixed inset-0 z-50 flex items-center justify-center p-2.5">
+      <div class="ios-fh-sheet w-full max-w-4xl h-[94%] flex flex-col overflow-hidden">
+
+        <!-- Yuqori 3D iOS Glass Sarlavha + Davr Selektori (Haftalik / Oylik / Barchasi) -->
+        <div class="ios-fh-nav shrink-0 h-[44px] px-3.5 flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="w-7 h-7 rounded-full ios-fh-avatar ios-fh-avatar-gold bg-slate-900/90 flex items-center justify-center text-amber-300 text-xs shrink-0">🏆</span>
+            <h2 class="text-[15px] font-bold tracking-tight bg-gradient-to-b from-white via-sky-100 to-amber-200 bg-clip-text text-transparent drop-shadow truncate">Reyting</h2>
+            <span id="rtMyGlobalRankPill" class="ios-fh-stat-pill text-amber-200 text-[10px] font-semibold px-2.5 py-0.5 rounded-full truncate">Global #--</span>
+          </div>
+
+          <div class="flex items-center gap-1.5 shrink-0">
+            <!-- Vaqt davri filtri -->
+            <div class="ios-mp-seg flex items-center gap-0.5">
+              <button type="button" data-rt-period="week" class="rt-period-btn px-2.5 py-1 text-[10px] font-semibold text-slate-300 rounded-full transition">Haftalik</button>
+              <button type="button" data-rt-period="month" class="rt-period-btn px-2.5 py-1 text-[10px] font-semibold text-slate-300 rounded-full transition">Oylik</button>
+              <button type="button" data-rt-period="all" class="rt-period-btn ios-btn-blue px-2.5 py-1 text-[10px] rounded-full transition">Barchasi</button>
+            </div>
+            <button id="btnRefreshRating" type="button" class="ios-btn-circle" title="Yangilash" aria-label="Yangilash">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+            </button>
+            <button id="btnCloseRatingModal" type="button" class="ios-btn-circle" title="Yopish" aria-label="Yopish">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
+          </div>
         </div>
 
-        <div class="p-4 space-y-3 overflow-y-auto">
-          <div class="menu-btn-gold rounded-2xl p-3.5 flex items-center justify-between">
-            <div>
-              <span class="text-[10px] uppercase font-extrabold text-amber-200">Sizning Unvoningiz:</span>
-              <h3 id="statRankTitle" class="text-base font-black italic text-white mt-0.5">🎖️ OLTIN BURGUT (1000 ELO)</h3>
-              <p id="statBotInfo" class="text-[11px] text-amber-100 mt-0.5">Botlar darajasi: <strong>Daraja 1/5</strong></p>
+        <!-- 2 USTUNLI ASOSIY MAYDON (CHAP: SHAXSIY LIGA + HAFTALIK/OYLIK CHEMPIONLAR | O'NG: TOP REYTING) -->
+        <div class="grid grid-cols-2 gap-3 p-3 flex-1 min-h-0 overflow-hidden">
+
+          <!-- CHAP USTUN: SHAXSIY UNVON, 6 TA STATISTIKA, HAFTA VA OY CHEMPIONLARI -->
+          <div class="flex flex-col gap-2 min-h-0 overflow-y-auto pr-0.5">
+
+            <!-- 1) Shaxsiy Unvon va Liga Progressi -->
+            <div class="ios-rt-mvp-month p-2.5 shrink-0">
+              <div class="flex items-center justify-between gap-2">
+                <div class="min-w-0">
+                  <span class="text-[9px] font-semibold uppercase tracking-[0.08em] text-amber-200/85">Sizning unvoningiz</span>
+                  <h3 id="statRankTitle" class="text-[12.5px] font-extrabold text-white truncate mt-0.5">🎖️ OLTIN BURGUT (1000 ELO)</h3>
+                  <p id="statBotInfo" class="text-[9.5px] text-amber-100/80 truncate mt-0.5">Botlar darajasi: <strong>Daraja 1/5</strong></p>
+                </div>
+                <div class="ios-fh-stat-pill px-2.5 py-1.5 rounded-xl text-center shrink-0">
+                  <span class="block text-[8px] uppercase text-slate-400">Baho</span>
+                  <span id="statRatingScore" class="text-[12px] font-black text-amber-300">4.9★</span>
+                </div>
+              </div>
+              <!-- Liga progress chizig'i -->
+              <div class="mt-2">
+                <div class="flex items-center justify-between text-[9px] text-slate-300 mb-1">
+                  <span id="rtLeagueCurrentText" class="font-semibold text-amber-200">Liga: --</span>
+                  <span id="rtLeagueNextText" class="text-slate-400">--</span>
+                </div>
+                <div class="h-1.5 w-full rounded-full bg-slate-950/85 border border-white/10 overflow-hidden">
+                  <div id="rtLeagueProgressBar" class="h-full rounded-full bg-gradient-to-r from-sky-400 via-amber-400 to-yellow-300 transition-all duration-300" style="width: 65%"></div>
+                </div>
+              </div>
             </div>
-            <div class="text-center bg-slate-950/90 border border-amber-400 px-3 py-2 rounded-xl">
-              <span class="block text-[9px] text-slate-400 uppercase">Baho</span>
-              <span id="statRatingScore" class="retro-font text-sm text-amber-400">4.9★</span>
+
+            <!-- 2) 6 ta Shaxsiy Ko'rsatkich (3x2 ixcham panjara) -->
+            <div class="grid grid-cols-3 gap-1.5 text-center shrink-0">
+              <div class="ios-rt-stat-box py-1.5 px-1">
+                <span class="block text-[8.5px] text-slate-400 font-medium">5v5 O'yin</span>
+                <span id="statBotMatches" class="text-[13px] font-extrabold text-white">0</span>
+              </div>
+              <div class="ios-rt-stat-box py-1.5 px-1">
+                <span class="block text-[8.5px] text-slate-400 font-medium">Online</span>
+                <span id="statLobbyMatches" class="text-[13px] font-extrabold text-sky-300">0</span>
+              </div>
+              <div class="ios-rt-stat-box py-1.5 px-1">
+                <span class="block text-[8.5px] text-slate-400 font-medium">Jami Frag</span>
+                <span id="statTotalKills" class="text-[13px] font-extrabold text-emerald-400">0</span>
+              </div>
+              <div class="ios-rt-stat-box py-1.5 px-1">
+                <span class="block text-[8.5px] text-slate-400 font-medium">Headshot</span>
+                <span id="statTotalHS" class="text-[13px] font-extrabold text-amber-300">0</span>
+              </div>
+              <div class="ios-rt-stat-box py-1.5 px-1">
+                <span class="block text-[8.5px] text-slate-400 font-medium">HS Aniqlik</span>
+                <span id="rtStatHsRate" class="text-[13px] font-extrabold text-sky-200">0%</span>
+              </div>
+              <div class="ios-rt-stat-box py-1.5 px-1">
+                <span class="block text-[8.5px] text-slate-400 font-medium">Frag/O'yin</span>
+                <span id="rtStatKpm" class="text-[13px] font-extrabold text-amber-200">0.0</span>
+              </div>
+            </div>
+
+            <!-- 3) HAFTALIK VA OYLIK ENG ZO'R O'YINCHILAR (MVP SPOTLIGHT) -->
+            <div class="grid grid-cols-2 gap-2 shrink-0">
+              <div id="rtWeeklyMvpCard" class="ios-rt-mvp-week p-2 flex flex-col justify-between gap-1.5">
+                <div class="text-[9px] font-bold uppercase tracking-wider text-sky-300">⚡ Hafta Chempioni</div>
+                <div class="text-[10px] text-slate-400">Yuklanmoqda...</div>
+              </div>
+              <div id="rtMonthlyMvpCard" class="ios-rt-mvp-month p-2 flex flex-col justify-between gap-1.5">
+                <div class="text-[9px] font-bold uppercase tracking-wider text-amber-300">👑 Oy Chempioni</div>
+                <div class="text-[10px] text-slate-400">Yuklanmoqda...</div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- O'NG USTUN: 5 TA REYTING KATEGORIYASI + JONLI TOP RO'YXAT -->
+          <div class="flex flex-col min-h-0 overflow-hidden">
+            <!-- Kategoriya tugmalari -->
+            <div id="rtCategoryBar" class="shrink-0 pb-1.5 flex items-center gap-1 overflow-x-auto no-scrollbar">
+              <button type="button" data-rt-cat="overall" class="rt-cat-btn ios-rt-cat-btn ios-btn-gold">🏆 Umumiy</button>
+              <button type="button" data-rt-cat="kills" class="rt-cat-btn ios-rt-cat-btn ios-btn-gray">💀 Frag</button>
+              <button type="button" data-rt-cat="headshots" class="rt-cat-btn ios-rt-cat-btn ios-btn-gray">🎯 Snayper</button>
+              <button type="button" data-rt-cat="matches" class="rt-cat-btn ios-rt-cat-btn ios-btn-gray">⚔️ Faol</button>
+              <button type="button" data-rt-cat="friends" class="rt-cat-btn ios-rt-cat-btn ios-btn-gray">🤝 Do'stlar</button>
+            </div>
+
+            <!-- TOP O'yinchilar Shisha Ro'yxati -->
+            <div id="ratingLeaderboardBox" class="ios-fh-group flex-1 min-h-0 overflow-y-auto">
+              <div class="py-8 text-center text-[11px] text-slate-400">Reyting yuklanmoqda...</div>
+            </div>
+
+            <!-- Pastda: Sizning aniq o'rningiz -->
+            <div id="rtMyRankFooter" class="shrink-0 mt-1.5 ios-fh-stat-pill px-3 py-1 rounded-full flex items-center justify-between text-[10px] text-sky-100">
+              <span>Sizning o'rningiz: --</span>
+              <span class="text-amber-300 font-bold">--</span>
             </div>
           </div>
 
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
-            <div class="bg-slate-950/90 border border-slate-700/80 rounded-xl p-2.5">
-              <span class="block text-[10px] text-slate-400 font-semibold">5v5 Otishmalar</span>
-              <span id="statBotMatches" class="text-lg font-black text-white">3</span>
-            </div>
-            <div class="bg-slate-950/90 border border-slate-700/80 rounded-xl p-2.5">
-              <span class="block text-[10px] text-slate-400 font-semibold">Online Lobbilar</span>
-              <span id="statLobbyMatches" class="text-lg font-black text-sky-400">2</span>
-            </div>
-            <div class="bg-slate-950/90 border border-slate-700/80 rounded-xl p-2.5">
-              <span class="block text-[10px] text-slate-400 font-semibold">Jami Kill (Frag)</span>
-              <span id="statTotalKills" class="text-lg font-black text-emerald-400">18</span>
-            </div>
-            <div class="bg-slate-950/90 border border-slate-700/80 rounded-xl p-2.5">
-              <span class="block text-[10px] text-slate-400 font-semibold">Headshotlar</span>
-              <span id="statTotalHS" class="text-lg font-black text-amber-400">7</span>
-            </div>
-          </div>
-
-          <div class="bg-slate-950/90 border border-slate-800 rounded-xl p-3">
-            <h4 class="text-xs font-black italic uppercase text-amber-400 mb-2">🥇 Top O'yinchilar Reytingi (DIGI DIGI)</h4>
-            <div id="ratingLeaderboardBox" class="space-y-1.5 text-xs"></div>
-          </div>
         </div>
       </div>
     </div>
@@ -8101,26 +8227,258 @@
       }
       window.updateAllCoinDisplays = updateMainMenuWidgets;
 
-      function renderRatingLeaderboard() {
-        const box = document.getElementById('ratingLeaderboardBox');
-        if (!box) return;
-        const list = [
-          { name: myProfile.name + ' (Siz)', elo: userStats.elo, kills: userStats.totalKills + player.kills, isSelf: true },
-          ...onlinePlayers.slice(0, 6).map(p => ({ name: p.name, elo: p.elo || 1100, kills: Math.floor((p.elo || 1000) / 45), isSelf: false }))
-        ];
-        list.sort((a, b) => b.elo - a.elo);
-        box.innerHTML = list.map((item, idx) => `
-          <div class="flex items-center justify-between px-3 py-1.5 rounded-lg border ${item.isSelf ? 'bg-amber-500/20 border-amber-400 text-amber-200 font-bold' : 'bg-slate-950 border-slate-800 text-slate-200'}">
-            <div class="flex items-center gap-2">
-              <span class="w-5 text-center font-mono text-amber-400">#${idx + 1}</span>
-              <span>${item.name}</span>
+      let rtActivePeriod = 'all'; // 'week' | 'month' | 'all'
+      let rtActiveCategory = 'overall'; // 'overall' | 'kills' | 'headshots' | 'matches' | 'friends'
+      let _rtLeaderboardBound = false;
+
+      function getClientLeagueInfo(elo) {
+        const e = Number(elo) || 1000;
+        if (e >= 2300) return { id: 'legend', name: 'Afsona', icon: '👑', min: 2300, next: null };
+        if (e >= 1950) return { id: 'master', name: 'Master', icon: '🔥', min: 1950, next: 2300 };
+        if (e >= 1650) return { id: 'diamond', name: 'Olmos', icon: '💎', min: 1650, next: 1950 };
+        if (e >= 1400) return { id: 'platinum', name: 'Platina', icon: '💠', min: 1400, next: 1650 };
+        if (e >= 1200) return { id: 'gold', name: 'Oltin', icon: '🥇', min: 1200, next: 1400 };
+        if (e >= 1050) return { id: 'silver', name: 'Kumush', icon: '🥈', min: 1050, next: 1200 };
+        return { id: 'bronze', name: 'Bronza', icon: '🥉', min: 800, next: 1050 };
+      }
+
+      function updatePersonalRatingStatsUI() {
+        if (typeof userStats === 'undefined') return;
+        const totalKills = Number(userStats.totalKills) || 0;
+        const totalHS = Number(userStats.totalHS) || 0;
+        const botM = Number(userStats.botMatches) || 0;
+        const lobM = Number(userStats.lobbyMatches) || 0;
+        const totalMatches = botM + lobM;
+        const hsRate = totalKills > 0 ? Math.min(100, Math.round((totalHS / totalKills) * 100)) : 0;
+        const kpm = totalMatches > 0 ? (totalKills / totalMatches).toFixed(1) : '0.0';
+
+        const elBotM = document.getElementById('statBotMatches');
+        if (elBotM) elBotM.textContent = String(botM);
+        const elLobM = document.getElementById('statLobbyMatches');
+        if (elLobM) elLobM.textContent = String(lobM);
+        const elKills = document.getElementById('statTotalKills');
+        if (elKills) elKills.textContent = String(totalKills);
+        const elHS = document.getElementById('statTotalHS');
+        if (elHS) elHS.textContent = String(totalHS);
+        const elHsRate = document.getElementById('rtStatHsRate');
+        if (elHsRate) elHsRate.textContent = hsRate + '%';
+        const elKpm = document.getElementById('rtStatKpm');
+        if (elKpm) elKpm.textContent = kpm;
+
+        const elTitle = document.getElementById('statRankTitle');
+        if (elTitle && typeof getRankInfo === 'function') {
+          const ri = getRankInfo(userStats.elo);
+          elTitle.textContent = `${ri.title} (${userStats.elo} ELO)`;
+        }
+        const elBotInfo = document.getElementById('statBotInfo');
+        if (elBotInfo) {
+          elBotInfo.innerHTML = `Botlar darajasi: <strong>Daraja ${userStats.botLevel || 1}/5</strong>`;
+        }
+
+        const league = getClientLeagueInfo(userStats.elo);
+        const curText = document.getElementById('rtLeagueCurrentText');
+        const nextText = document.getElementById('rtLeagueNextText');
+        const pBar = document.getElementById('rtLeagueProgressBar');
+        if (curText) curText.textContent = `${league.icon} ${league.name} (${userStats.elo} ELO)`;
+        if (league.next) {
+          const span = league.next - league.min;
+          const progress = Math.max(0, Math.min(span, userStats.elo - league.min));
+          const pct = Math.max(8, Math.min(100, Math.round((progress / span) * 100)));
+          if (nextText) nextText.textContent = `Keyingi: ${league.next} ELO`;
+          if (pBar) pBar.style.width = pct + '%';
+        } else {
+          if (nextText) nextText.textContent = 'Maksimal Liga!';
+          if (pBar) pBar.style.width = '100%';
+        }
+      }
+
+      function renderMvpCard(containerId, titleText, mvp, isMonthly) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        const accentColor = isMonthly ? 'text-amber-300' : 'text-sky-300';
+        const modeTag = mvp && mvp.mode === 'live' ? '⚡ Jonli' : '🔥 Faol';
+
+        if (!mvp) {
+          container.innerHTML = `
+            <div class="flex items-center justify-between">
+              <span class="text-[9px] font-bold uppercase tracking-wider ${accentColor}">${escapeFhHtml(titleText)}</span>
+              <span class="text-[8px] text-slate-400">${modeTag}</span>
             </div>
-            <div class="flex items-center gap-3 text-[11px] font-mono">
-              <span class="text-emerald-400">${item.kills} Kill</span>
-              <span class="text-amber-300 font-bold">${item.elo} ELO</span>
+            <div class="py-2 text-center text-[10px] text-slate-400">Hali aniqlanmagan</div>
+          `;
+          return;
+        }
+
+        const avatar = buildIosAvatarHtml(mvp.name, mvp.id, mvp.photoUrl, mvp.isOnline, true);
+        const pName = escapeFhHtml(mvp.name || mvp.id);
+        const lIcon = (mvp.league && mvp.league.icon) || '🎖️';
+        const lName = (mvp.league && mvp.league.name) || 'Oltin';
+
+        container.innerHTML = `
+          <div class="flex items-center justify-between">
+            <span class="text-[9px] font-bold uppercase tracking-wider ${accentColor}">${escapeFhHtml(titleText)}</span>
+            <span class="text-[8px] font-semibold px-1.5 py-0.5 rounded-full bg-white/10 text-slate-300">${modeTag}</span>
+          </div>
+          <div class="flex items-center gap-2 min-w-0 mt-0.5">
+            ${avatar}
+            <div class="min-w-0 flex-1 leading-tight">
+              <div class="text-[11px] font-bold text-white truncate">${pName}</div>
+              <div class="text-[9px] text-slate-300 truncate mt-0.5">${lIcon} ${lName} · Lv.${mvp.level || 1}</div>
+              <div class="text-[9px] font-semibold ${accentColor} truncate mt-0.5">⚡ ${mvp.metricPower || 0} ball · ${mvp.metricKills || 0} frag</div>
             </div>
           </div>
-        `).join('');
+        `;
+      }
+
+      async function renderRatingLeaderboard(forceFetch = false) {
+        updatePersonalRatingStatsUI();
+        initRatingModalInteractions();
+
+        if (typeof gameRunning !== 'undefined' && gameRunning) return;
+        const modal = document.getElementById('modalRating');
+        if (!forceFetch && modal && modal.classList.contains('hidden')) return;
+
+        const box = document.getElementById('ratingLeaderboardBox');
+        if (!box) return;
+
+        try {
+          const myId = getActiveMyId();
+          const url = `/api/tg/leaderboard?myId=${encodeURIComponent(myId)}&period=${encodeURIComponent(rtActivePeriod)}&category=${encodeURIComponent(rtActiveCategory)}`;
+          const res = await fetch(url);
+          const data = await res.json();
+          if (!data || !data.ok) throw new Error((data && data.error) || 'Xatolik');
+
+          renderMvpCard('rtWeeklyMvpCard', '⚡ Hafta Chempioni', data.weeklyMvp, false);
+          renderMvpCard('rtMonthlyMvpCard', '👑 Oy Chempioni', data.monthlyMvp, true);
+
+          const rankPill = document.getElementById('rtMyGlobalRankPill');
+          if (rankPill) {
+            if (data.myEntry) {
+              const lIcon = (data.myEntry.league && data.myEntry.league.icon) || '🎖️';
+              const lName = (data.myEntry.league && data.myEntry.league.name) || '';
+              rankPill.textContent = `Global #${data.myEntry.rank} · ${lIcon} ${lName}`;
+            } else {
+              rankPill.textContent = `Global #${data.totalPlayers || '--'}`;
+            }
+          }
+
+          const list = Array.isArray(data.list) ? data.list : [];
+          if (list.length === 0) {
+            box.innerHTML = `<div class="py-8 text-center text-[11px] text-slate-400">Bu toifada o'yinchilar topilmadi</div>`;
+          } else {
+            let rowsHtml = list.map(p => {
+              const rank = p.rank || 1;
+              let rankCls = 'text-slate-400';
+              if (rank === 1) rankCls = 'ios-fh-rank-1 font-extrabold';
+              else if (rank === 2) rankCls = 'ios-fh-rank-2 font-bold';
+              else if (rank === 3) rankCls = 'ios-fh-rank-3 font-bold';
+
+              const rankHtml = `<span class="w-5 text-center text-[11px] ${rankCls} shrink-0">${rank}</span>`;
+              const avatarHtml = buildIosAvatarHtml(p.name, p.id, p.photoUrl, p.isOnline, rank <= 3 || p.isSelf);
+              const pName = escapeFhHtml(p.name || p.id);
+              const lIcon = (p.league && p.league.icon) || '🎖️';
+              const lName = (p.league && p.league.name) || '';
+              const selfBadge = p.isSelf ? '<span class="ios-btn-gold px-1.5 py-0.2 text-[8px] rounded-full ml-1">Siz</span>' : '';
+              const selfRowCls = p.isSelf ? 'ios-rt-self-row' : '';
+
+              let metricHtml = '';
+              if (rtActiveCategory === 'kills') {
+                metricHtml = `<span class="text-emerald-400 font-extrabold text-[12px]">${p.metricKills} frag</span><span class="text-[9px] text-slate-400">${p.kpm}/o'yin</span>`;
+              } else if (rtActiveCategory === 'headshots') {
+                metricHtml = `<span class="text-sky-300 font-extrabold text-[12px]">${p.metricHeadshots} HS</span><span class="text-[9px] text-slate-400">${p.hsRate}% aniqlik</span>`;
+              } else if (rtActiveCategory === 'matches') {
+                metricHtml = `<span class="text-white font-extrabold text-[12px]">${p.metricMatches} o'yin</span><span class="text-[9px] text-slate-400">${p.metricKills} frag</span>`;
+              } else {
+                metricHtml = `<span class="text-amber-300 font-extrabold text-[12px]">${p.metricPower} ball</span><span class="text-[9px] text-slate-400">${p.elo} ELO</span>`;
+              }
+
+              return `<div class="ios-fh-row ${selfRowCls} flex items-center justify-between gap-2">`
+                + `<div class="flex items-center gap-2 min-w-0 flex-1">`
+                  + rankHtml
+                  + avatarHtml
+                  + `<div class="min-w-0 flex-1 leading-tight">`
+                    + `<div class="flex items-center gap-1"><span class="text-[11.5px] font-semibold text-white truncate">${pName}</span>${selfBadge}</div>`
+                    + `<div class="text-[9.5px] text-slate-400 truncate mt-0.5">${lIcon} ${lName} · Lv.${p.level || 1} · ${p.metricMatches || 0} o'yin</div>`
+                  + `</div>`
+                + `</div>`
+                + `<div class="shrink-0 text-right leading-tight flex flex-col items-end">${metricHtml}</div>`
+              + `</div>`;
+            }).join('');
+
+            if (rtActiveCategory === 'friends' && list.length <= 1) {
+              rowsHtml += `<div class="p-3 text-center text-[10px] text-amber-200/80 bg-amber-500/10 rounded-xl mt-1 border border-amber-400/20">Do'stlar qo'shib, ular bilan reytingda musobaqalashing!</div>`;
+            }
+            box.innerHTML = rowsHtml;
+          }
+
+          const footer = document.getElementById('rtMyRankFooter');
+          if (footer) {
+            if (data.myEntry) {
+              let valText = `${data.myEntry.metricPower} ball`;
+              if (rtActiveCategory === 'kills') valText = `${data.myEntry.metricKills} frag`;
+              else if (rtActiveCategory === 'headshots') valText = `${data.myEntry.metricHeadshots} HS (${data.myEntry.hsRate}%)`;
+              else if (rtActiveCategory === 'matches') valText = `${data.myEntry.metricMatches} o'yin`;
+              footer.innerHTML = `<span>Sizning o'rningiz: <strong class="text-white font-bold">#${data.myEntry.rank}</strong> / ${data.totalPlayers}</span><span class="text-amber-300 font-black">${valText}</span>`;
+            } else {
+              footer.innerHTML = `<span>Sizning o'rningiz: <strong class="text-white font-bold">--</strong> / ${data.totalPlayers}</span><span class="text-amber-300 font-bold">--</span>`;
+            }
+          }
+        } catch (err) {
+          box.innerHTML = `<div class="py-8 text-center text-[11px] text-rose-400">Reytingni yuklab bo'lmadi: ${escapeFhHtml(err.message)}</div>`;
+        }
+      }
+      window.renderRatingLeaderboard = renderRatingLeaderboard;
+
+      function initRatingModalInteractions() {
+        if (_rtLeaderboardBound) return;
+        _rtLeaderboardBound = true;
+
+        const periodBtns = document.querySelectorAll('.rt-period-btn');
+        periodBtns.forEach(btn => {
+          btn.addEventListener('click', () => {
+            const p = btn.getAttribute('data-rt-period');
+            if (!p || p === rtActivePeriod) return;
+            rtActivePeriod = p;
+            periodBtns.forEach(b => {
+              b.classList.remove('ios-btn-blue');
+              b.classList.add('text-slate-300');
+            });
+            btn.classList.add('ios-btn-blue');
+            btn.classList.remove('text-slate-300');
+            renderRatingLeaderboard(true);
+          });
+        });
+
+        const catBtns = document.querySelectorAll('.rt-cat-btn');
+        catBtns.forEach(btn => {
+          btn.addEventListener('click', () => {
+            const c = btn.getAttribute('data-rt-cat');
+            if (!c || c === rtActiveCategory) return;
+            rtActiveCategory = c;
+            catBtns.forEach(b => {
+              b.classList.remove('ios-btn-gold');
+              b.classList.add('ios-btn-gray');
+            });
+            btn.classList.add('ios-btn-gold');
+            btn.classList.remove('ios-btn-gray');
+            renderRatingLeaderboard(true);
+          });
+        });
+
+        const refreshBtn = document.getElementById('btnRefreshRating');
+        if (refreshBtn) {
+          refreshBtn.addEventListener('click', () => {
+            renderRatingLeaderboard(true);
+            if (typeof showToast === 'function') showToast('Reyting yangilanmoqda...', '🔄');
+          });
+        }
+
+        const modal = document.getElementById('modalRating');
+        if (modal) {
+          modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.classList.add('hidden');
+          });
+        }
       }
 
       function renderShopSkins() {
@@ -9049,8 +9407,9 @@
       // 4) REYTING tugmasi
       document.getElementById('menuBtnRating').addEventListener('click', () => {
         updateMainMenuWidgets();
-        renderRatingLeaderboard();
         document.getElementById('modalRating').classList.remove('hidden');
+        renderRatingLeaderboard(true);
+        if (typeof window.tgBridgeForceSync === 'function') window.tgBridgeForceSync();
       });
       document.getElementById('btnCloseRatingModal').addEventListener('click', () => {
         document.getElementById('modalRating').classList.add('hidden');
