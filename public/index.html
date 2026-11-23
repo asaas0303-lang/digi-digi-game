@@ -488,14 +488,30 @@
           border: 1.2px solid rgba(115, 145, 190, 0.45);
           box-shadow: 0 8px 22px rgba(0, 0, 0, 0.78), inset 0 1px 0 rgba(255, 255, 255, 0.14);
         }
-        /* 90° burilgan rejimda barcha 6 ta modal balandligi kesilib qolmasligi uchun (vh o'rniga %): */
-        #lobbyView.digi-lobby-rot90 [id^="modal"] > div {
-          max-height: 94% !important;
-        }
-        #lobbyView.digi-lobby-rot90 #modalSettings .overflow-y-auto {
-          max-height: calc(100% - 48px) !important;
-        }
-        #lobbyView.digi-lobby-landscape #modalBonus #csCase3DCanvas {
+            /* 90° burilgan rejimda barcha 6 ta modal kesilib qolmasligi va barmoq bilan silliq skroll bo'lishi uchun: */
+    #lobbyView.digi-lobby-rot90 [id^="modal"] {
+      padding: 8px 12px !important;
+    }
+    #lobbyView.digi-lobby-rot90 [id^="modal"] > div {
+      max-height: 94% !important;
+      height: auto !important;
+      display: flex !important;
+      flex-direction: column !important;
+      overflow: hidden !important;
+    }
+    #lobbyView.digi-lobby-rot90 [id^="modal"] > div > .cs-gold-header {
+      flex-shrink: 0 !important;
+    }
+    #lobbyView.digi-lobby-rot90 [id^="modal"] .overflow-y-auto {
+      flex: 1 1 auto !important;
+      min-height: 0 !important;
+      max-height: none !important;
+      overflow-y: auto !important;
+      -webkit-overflow-scrolling: touch !important;
+      touch-action: pan-y !important;
+      overscroll-behavior: contain !important;
+    }
+#lobbyView.digi-lobby-landscape #modalBonus #csCase3DCanvas {
           max-height: 120px;
         }
         #lobbyView.digi-lobby-landscape #modalBonus .h-52 {
@@ -915,13 +931,13 @@
 
     <!-- ==================== MODAL 3: SOZLAMALAR (BOSH PANEL USLUBIDA) ==================== -->
     <div id="modalSettings" class="hidden fixed inset-0 z-50 cs-modal-backdrop backdrop-blur-md flex items-center justify-center p-4">
-      <div class="cs-panel-card rounded-2xl max-w-md w-full overflow-hidden shadow-2xl">
-        <div class="cs-gold-header px-4 py-3 flex items-center justify-between">
+      <div class="cs-panel-card rounded-2xl max-w-md w-full max-h-[92%] flex flex-col overflow-hidden shadow-2xl">
+        <div class="cs-gold-header shrink-0 px-4 py-3 flex items-center justify-between">
           <h2 class="text-sm font-black italic uppercase text-white flex items-center gap-2">⚙️ O'YIN SOZLAMALARI</h2>
           <button id="btnCloseSettingsModal" class="menu-btn-dark text-white text-xs font-bold px-3 py-1.5 rounded-xl">✕ Yopish</button>
         </div>
 
-        <div class="p-4 space-y-3 text-xs max-h-[78vh] overflow-y-auto">
+        <div class="p-4 space-y-3 text-xs max-h-[78vh] flex-1 min-h-0 overflow-y-auto">
           <div class="bg-slate-950/85 border border-slate-800 rounded-xl p-3 space-y-2.5">
             <h3 class="font-black text-amber-400 uppercase text-[11px]">🎨 Grafika va Muhit</h3>
             <div class="flex items-center justify-between">
