@@ -436,8 +436,8 @@
         }
         #lobbyView.digi-lobby-landscape {
           background:
-            linear-gradient(180deg, rgba(4, 8, 18, 0.36) 0%, rgba(4, 8, 18, 0.04) 45%, rgba(4, 8, 18, 0.56) 100%),
-            url('/lobby_bg_landscape.jpg') center/cover no-repeat;
+            linear-gradient(180deg, rgba(6, 10, 20, 0.42) 0%, rgba(6, 10, 20, 0.10) 45%, rgba(6, 10, 20, 0.65) 100%),
+            url('/lobby_bg_landscape.jpg') center center / cover no-repeat border-box;
         }
         #lobbyStage {
           position: relative;
@@ -6271,6 +6271,18 @@
         if (typeof cacheJoystickMetrics === 'function') cacheJoystickMetrics();
       }
 
+      function requestLobbyFullscreen() {
+        const tg = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
+        if (!tg) return;
+        try {
+          if (typeof tg.expand === 'function') tg.expand();
+          if (typeof tg.disableVerticalSwipes === 'function') tg.disableVerticalSwipes();
+          if (typeof tg.unlockOrientation === 'function') tg.unlockOrientation();
+          if (typeof tg.requestFullscreen === 'function' && !tg.isFullscreen) {
+            tg.requestFullscreen();
+          }
+        } catch (e) {}
+      }
       function applyLobbyLandscapeLayout() {
         if (gameRunning) return;
         const lv = document.getElementById('lobbyView');
@@ -6284,7 +6296,7 @@
           lv.style.width = vh + 'px';
           lv.style.height = vw + 'px';
           lv.style.transform = 'translate3d(' + vw + 'px, 0px, 0px) rotate(90deg)';
-          const rotLeftSafe = ins.top > 0 ? Math.max(52, ins.top + 4) : 0;
+          const rotLeftSafe = ins.top > 0 ? Math.max(58, ins.top + 4) : 0;
           lv.style.setProperty('--digi-safe-top', '0px');
           lv.style.setProperty('--digi-safe-left', rotLeftSafe + 'px');
           lv.style.setProperty('--digi-safe-right', Math.max(8, ins.bottom || 0) + 'px');
@@ -6363,12 +6375,7 @@
             document.exitFullscreen().catch(() => {});
           }
         } catch (e) {}
-        const tg = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
-        if (tg) {
-          try {
-            if (typeof tg.exitFullscreen === 'function' && tg.isFullscreen) tg.exitFullscreen();
-          } catch (e) {}
-        }
+        // Telegram Fullscreen saqlab qolinadi (bosh menyuga qaytganda ham to'liq ekran qolishi uchun)
         if (typeof window._digiGyroStop === 'function') window._digiGyroStop();
       }
 
@@ -8327,15 +8334,12 @@
       });
 
       window.addEventListener('load', () => {
-        const tg = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
-        if (tg) {
-          try {
-            if (typeof tg.expand === 'function') tg.expand();
-            if (typeof tg.disableVerticalSwipes === 'function') tg.disableVerticalSwipes();
-            if (typeof tg.unlockOrientation === 'function') tg.unlockOrientation();
-          } catch (e) {}
-        }
+        requestLobbyFullscreen();
         applyLobbyLandscapeLayout();
+        setTimeout(applyLobbyLandscapeLayout, 180);
+        document.addEventListener('pointerdown', () => {
+          if (!gameRunning) requestLobbyFullscreen();
+        }, { once: true, passive: true });
         updateMainMenuWidgets();
         loadMaze(0);
         renderOnlinePlayers();
