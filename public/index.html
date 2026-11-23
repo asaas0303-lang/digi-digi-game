@@ -425,65 +425,85 @@
       box-shadow: 0 0 14px rgba(245, 158, 11, 0.35);
     }
 
-    /* === AAA YONBOSH (LANDSCAPE) BOSH MENYU (#lobbyView) === */
-    #lobbyView.digi-lobby-rot90 {
-      position: fixed !important;
-      top: 0 !important;
-      left: 0 !important;
-      right: auto !important;
-      bottom: auto !important;
-      transform-origin: 0 0 !important;
-    }
-    #lobbyView.digi-lobby-landscape {
-      background:
-        linear-gradient(180deg, rgba(6, 10, 20, 0.42) 0%, rgba(6, 10, 20, 0.10) 45%, rgba(6, 10, 20, 0.65) 100%),
-        url('/lobby_bg_landscape.jpg') center/cover no-repeat;
-    }
-    #lobbyStage {
-      position: relative;
-      width: 100%;
-      height: 100%;
-      max-width: 100%;
-      max-height: 100%;
-      overflow: hidden;
-    }
-    .dg-lob-topbar {
-      background: linear-gradient(180deg, rgba(5, 10, 20, 0.92) 0%, rgba(8, 15, 30, 0.72) 72%, rgba(8, 15, 30, 0) 100%);
-    }
-    .dg-lob-btn-gold {
-      background: linear-gradient(90deg, rgba(42, 29, 6, 0.94) 0%, rgba(128, 84, 12, 0.90) 48%, rgba(160, 104, 14, 0.88) 76%, rgba(58, 38, 7, 0.94) 100%);
-      border: 1.5px solid #fbbf24;
-      box-shadow: 0 0 18px rgba(251, 191, 36, 0.45), inset 0 1px 1px rgba(255, 255, 255, 0.35);
-    }
-    .dg-lob-btn-dark {
-      background: linear-gradient(90deg, rgba(11, 18, 32, 0.88) 0%, rgba(22, 34, 56, 0.84) 55%, rgba(12, 20, 36, 0.92) 100%);
-      border: 1.2px solid rgba(125, 150, 188, 0.45);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.14);
-    }
-    .dg-lob-btn-gold:active, .dg-lob-btn-dark:active {
-      transform: scale(0.975);
-    }
-    .dg-lob-card {
-      background: linear-gradient(180deg, rgba(10, 17, 32, 0.88) 0%, rgba(6, 11, 22, 0.94) 100%);
-      border: 1.2px solid rgba(110, 138, 180, 0.42);
-      box-shadow: 0 8px 22px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.12);
-    }
-    /* 90° burilgan rejimda barcha 6 ta modal kesilib qolmasligi uchun (vh o'rniga %): */
-    #lobbyView.digi-lobby-rot90 [id^="modal"] > div {
-      max-height: 94% !important;
-    }
-    #lobbyView.digi-lobby-rot90 #modalSettings .overflow-y-auto {
-      max-height: calc(100% - 48px) !important;
-    }
-    #lobbyView.digi-lobby-landscape #modalBonus #csCase3DCanvas {
-      max-height: 120px;
-    }
-    #lobbyView.digi-lobby-landscape #modalBonus .h-52 {
-      height: 7.5rem !important;
-    }
-    #lobbyView.digi-lobby-landscape #modalBonus .h-20 {
-      height: 3.5rem !important;
-    }
+        /* === AAA YONBOSH (LANDSCAPE) BOSH MENYU (#lobbyView) === */
+        #lobbyView.digi-lobby-rot90 {
+          position: fixed !important;
+          top: 0 !important;
+          left: 0 !important;
+          right: auto !important;
+          bottom: auto !important;
+          transform-origin: 0 0 !important;
+        }
+        #lobbyView.digi-lobby-landscape {
+          background:
+            linear-gradient(180deg, rgba(4, 8, 18, 0.36) 0%, rgba(4, 8, 18, 0.04) 45%, rgba(4, 8, 18, 0.56) 100%),
+            url('/lobby_bg_landscape.jpg') center/cover no-repeat;
+        }
+        #lobbyStage {
+          position: relative;
+          width: 100%;
+          height: 100%;
+          overflow: hidden;
+        }
+        .dg-lob-topbar {
+          background: linear-gradient(180deg, rgba(5, 10, 22, 0.92) 0%, rgba(7, 14, 28, 0.68) 72%, rgba(7, 14, 28, 0) 100%);
+        }
+        .dg-lob-pill {
+          background: linear-gradient(180deg, rgba(12, 20, 38, 0.94) 0%, rgba(7, 12, 24, 0.96) 100%);
+          border: 1px solid rgba(110, 140, 185, 0.42);
+          box-shadow: 0 3px 10px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+        }
+        .dg-lob-pill-gold {
+          background: linear-gradient(180deg, rgba(32, 24, 10, 0.94) 0%, rgba(15, 12, 8, 0.96) 100%);
+          border: 1px solid rgba(251, 191, 36, 0.72);
+          box-shadow: 0 0 12px rgba(245, 158, 11, 0.28), inset 0 1px 0 rgba(255, 235, 160, 0.25);
+        }
+        .dg-lob-btn-gold {
+          position: relative;
+          background: linear-gradient(90deg, rgba(38, 26, 6, 0.95) 0%, rgba(138, 92, 14, 0.90) 48%, rgba(178, 118, 18, 0.88) 78%, rgba(62, 40, 8, 0.95) 100%);
+          border: 1.5px solid #fbbf24;
+          box-shadow: 0 0 18px rgba(251, 191, 36, 0.48), inset 0 1px 1px rgba(255, 244, 196, 0.42);
+        }
+        .dg-lob-btn-dark {
+          position: relative;
+          background: linear-gradient(90deg, rgba(10, 17, 32, 0.90) 0%, rgba(24, 39, 66, 0.84) 55%, rgba(12, 21, 38, 0.92) 100%);
+          border: 1.2px solid rgba(128, 158, 200, 0.48);
+          box-shadow: 0 5px 14px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+        }
+        .dg-lob-btn-gold:active, .dg-lob-btn-dark:active {
+          transform: scale(0.975);
+        }
+        .dg-btn-art {
+          position: absolute;
+          right: 18px;
+          top: 50%;
+          transform: translateY(-50%);
+          height: 86%;
+          width: auto;
+          pointer-events: none;
+          opacity: 0.24;
+        }
+        .dg-lob-card {
+          background: linear-gradient(180deg, rgba(11, 18, 34, 0.90) 0%, rgba(6, 11, 22, 0.96) 100%);
+          border: 1.2px solid rgba(115, 145, 190, 0.45);
+          box-shadow: 0 8px 22px rgba(0, 0, 0, 0.78), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+        }
+        /* 90° burilgan rejimda barcha 6 ta modal balandligi kesilib qolmasligi uchun (vh o'rniga %): */
+        #lobbyView.digi-lobby-rot90 [id^="modal"] > div {
+          max-height: 94% !important;
+        }
+        #lobbyView.digi-lobby-rot90 #modalSettings .overflow-y-auto {
+          max-height: calc(100% - 48px) !important;
+        }
+        #lobbyView.digi-lobby-landscape #modalBonus #csCase3DCanvas {
+          max-height: 120px;
+        }
+        #lobbyView.digi-lobby-landscape #modalBonus .h-52 {
+          height: 7.5rem !important;
+        }
+        #lobbyView.digi-lobby-landscape #modalBonus .h-20 {
+          height: 3.5rem !important;
+        }
   </style>
 </head>
 <body class="relative w-full h-full flex flex-col justify-between horror-bg select-none">
@@ -545,211 +565,207 @@
   <!-- ==================== 1. DIGI DIGI AAA YONBOSH (LANDSCAPE) BOSH MENYU ==================== -->
   <div id="lobbyView" class="digi-lobby-landscape relative z-20 w-full h-full overflow-hidden bg-slate-950 flex items-center justify-center" style="padding-left: var(--digi-safe-left, 0px); padding-right: var(--digi-safe-right, 0px); padding-top: var(--digi-safe-top, 0px);">
 
-    <div id="lobbyStage" class="select-none">
-
-      <!-- 1. YUQORI TAKTIK PANEL (Profil | Tangalar | ELO | Qo'ng'iroqcha | Sozlamalar | Holat) -->
-      <div class="dg-lob-topbar absolute top-0 inset-x-0 h-[13%] min-h-[46px] z-20 px-2.5 sm:px-4 flex items-center justify-between gap-2">
-        <!-- Chap: Haqiqiy Telegram Avatar + Ism + Daraja + ID Nusxa -->
-        <div class="flex items-center gap-2 min-w-0">
-          <div class="w-9 h-9 sm:w-11 sm:h-11 rounded-lg overflow-hidden border-2 border-amber-400/90 bg-slate-900 shadow-lg shrink-0 flex items-center justify-center">
-            <img id="lobbyAvatarImg" src="" alt="" class="hidden w-full h-full object-cover" />
-            <span id="lobbyAvatarFallback" class="text-base sm:text-lg">🪖</span>
-          </div>
-          <div class="min-w-0 leading-tight">
-            <div class="flex items-center gap-1">
-              <input id="myNameInput" type="text" value="Sardor_UZ" maxlength="16" class="bg-transparent text-[11px] sm:text-xs font-black text-white w-[96px] sm:w-[125px] truncate focus:outline-none focus:border-b focus:border-amber-400" title="Ismingiz" />
-              <button id="btnCopyMyId" type="button" class="text-[8px] sm:text-[9px] bg-slate-800/90 hover:bg-slate-700 border border-slate-600/70 text-amber-300 px-1.5 py-0.5 rounded active:scale-95 shrink-0" title="ID nusxalash">📋</button>
+        <div id="lobbyStage" class="select-none">
+    
+          <!-- 1. YUQORI TAKTIK PANEL (33512_2.png tartibida: Profil | Tangalar & ELO | Qo'ng'iroq & Sozlama | Wi-Fi & Batareya) -->
+          <div class="dg-lob-topbar absolute top-0 inset-x-0 h-[44px] z-20 px-2.5 flex items-center justify-between gap-2">
+            <!-- Chap va O'rta-Chap: Profil + Valyutalar + Tugmalar -->
+            <div class="flex items-center gap-2 min-w-0">
+              <!-- Profil qutisi -->
+              <div class="flex items-center gap-2 pr-2 border-r border-slate-500/40 min-w-0">
+                <div class="w-9 h-9 rounded-lg overflow-hidden border-2 border-amber-400/95 bg-slate-900 shadow-md shrink-0 flex items-center justify-center">
+                  <img id="lobbyAvatarImg" src="" alt="" class="hidden w-full h-full object-cover" />
+                  <span id="lobbyAvatarFallback" class="text-sm font-black text-amber-300">🪖</span>
+                </div>
+                <div class="min-w-0 leading-none">
+                  <input id="myNameInput" type="text" value="Sardor_UZ" maxlength="16" class="block bg-transparent text-[11px] font-black text-white w-[108px] truncate focus:outline-none focus:border-b focus:border-amber-400" title="Ismingiz" />
+                  <div class="flex items-center gap-1 mt-1">
+                    <span class="text-[9px] font-black text-amber-400 tracking-wide">LV. <span id="lobbyLevelNum">1</span></span>
+                    <span class="text-slate-500 text-[8px]">•</span>
+                    <span id="myDoomId" class="font-mono text-[8px] text-slate-300">DOOM-4886</span>
+                    <button id="btnCopyMyId" type="button" class="text-[8px] bg-slate-800/90 hover:bg-slate-700 border border-slate-600/60 text-amber-300 px-1 py-[1px] rounded active:scale-90 shrink-0 leading-none" title="ID nusxalash">📋</button>
+                  </div>
+                </div>
+              </div>
+    
+              <!-- Tanga Balansi -->
+              <div class="dg-lob-pill-gold flex items-center gap-1.5 rounded-md px-2 py-1 shrink-0">
+                <span class="w-4 h-4 rounded-full bg-gradient-to-b from-amber-300 to-amber-600 text-slate-950 font-black text-[10px] inline-flex items-center justify-center shadow">$</span>
+                <span id="userCoinsLabel" class="font-mono font-black text-[11px] text-amber-300 leading-none">0</span>
+                <button id="btnQuickBonusPlus" type="button" class="text-amber-300 hover:text-white font-black text-xs leading-none pl-0.5 active:scale-90 transition" title="Oltin Sandiq">+</button>
+              </div>
+    
+              <!-- ELO Olmos -->
+              <button id="btnQuickEloPill" type="button" class="dg-lob-pill flex items-center gap-1.5 rounded-md px-2 py-1 shrink-0 active:scale-95 transition" title="Reyting (ELO)">
+                <svg class="w-3.5 h-3.5 text-sky-400 shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M6 2h12l4 6-10 14L2 8l4-6z"/></svg>
+                <span id="lobbyEloLabel" class="font-mono font-black text-[11px] text-sky-300 leading-none">1,000</span>
+                <span class="text-sky-400 font-black text-xs leading-none">+</span>
+              </button>
+    
+              <div class="w-px h-5 bg-slate-500/45 shrink-0"></div>
+    
+              <!-- Qo'ng'iroqcha -->
+              <button id="btnSimulateIncomingInvite" type="button" class="relative w-7 h-7 rounded-lg bg-slate-900/75 hover:bg-slate-800 border border-slate-600/45 flex items-center justify-center text-white active:scale-90 transition shrink-0" title="Bildirishnomalar" aria-label="Bildirishnomalar">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2zm6-6v-5a6 6 0 0 0-5-5.91V4a1 1 0 1 0-2 0v1.09A6 6 0 0 0 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+                <span class="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-red-500"></span>
+              </button>
+    
+              <!-- Sozlamalar -->
+              <button id="btnHeaderSettings" type="button" class="w-7 h-7 rounded-lg bg-slate-900/75 hover:bg-slate-800 border border-slate-600/45 flex items-center justify-center text-white active:scale-90 transition shrink-0" title="Sozlamalar" aria-label="Sozlamalar">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.03 7.03 0 0 0-1.62-.94l-.36-2.54a.5.5 0 0 0-.49-.42h-3.84a.5.5 0 0 0-.49.42l-.36 2.54c-.59.24-1.13.56-1.62.94l-2.39-.96a.5.5 0 0 0-.6.22L2.74 8.84a.5.5 0 0 0 .12.64l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.13.22.39.3.6.22l2.39-.96c.49.38 1.03.7 1.62.94l.36 2.54c.05.24.25.42.49.42h3.84c.24 0 .44-.18.49-.42l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.01-1.58zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/></svg>
+              </button>
             </div>
-            <div class="flex items-center gap-1.5 mt-0.5">
-              <span class="text-[9px] sm:text-[10px] font-black text-amber-400 tracking-wide">LV. <span id="lobbyLevelNum">1</span></span>
-              <span class="text-slate-500 text-[9px]">•</span>
-              <span id="myDoomId" class="font-mono text-[8px] sm:text-[9px] text-slate-300">DOOM-4886</span>
+    
+            <!-- O'ng-Markaz: Wi-Fi va Batareya indikatori (90° rejimda ham doim ko'rinadi!) -->
+            <div class="flex items-center gap-1.5 text-slate-200 pr-2 shrink-0">
+              <svg class="w-4 h-4 text-slate-100" viewBox="0 0 24 24" fill="currentColor"><path d="M12 18a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-4.24-2.83 1.41 1.41a4 4 0 0 1 5.66 0l1.41-1.41a6 6 0 0 0-8.48 0zm-2.83-2.83 1.41 1.41a8 8 0 0 1 11.32 0l1.41-1.41a10 10 0 0 0-14.14 0z"/></svg>
+              <span id="lobbyBatteryPill" class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-950 font-mono font-black text-[9px] leading-none shadow">97</span>
             </div>
           </div>
-        </div>
-
-        <!-- O'rta: Tanga Balansi + ELO Olmos + Bildirishnoma + Sozlamalar -->
-        <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
-          <div class="flex items-center gap-1.5 bg-[#0a1020]/90 border border-amber-500/65 rounded-md px-2 py-1 shadow">
-            <span class="w-4 h-4 rounded-full bg-gradient-to-b from-amber-300 to-amber-600 text-slate-950 font-black text-[10px] inline-flex items-center justify-center shadow">$</span>
-            <span id="userCoinsLabel" class="font-mono font-black text-[11px] sm:text-xs text-amber-300">0</span>
-            <button id="btnQuickBonusPlus" type="button" class="text-amber-400 hover:text-amber-200 font-black text-xs leading-none px-0.5 active:scale-90 transition" title="Oltin Sandiq">+</button>
+    
+          <!-- 2. O'NG USTUN: 7 TA AAA VEKTORLI MENYU TUGMALARI (33512_2.png uslubida 1:1!) -->
+          <div class="absolute top-[13.5%] right-[2%] w-[31%] bottom-[4%] z-20 flex flex-col justify-between gap-[5px]">
+    
+            <!-- 1) BOSHLASH -->
+            <button id="menuBtnStart5v5" type="button" class="dg-lob-btn-gold flex-1 min-h-0 rounded-lg px-2.5 flex items-center justify-between text-left transition overflow-hidden">
+              <svg class="dg-btn-art text-amber-950" viewBox="0 0 80 48" fill="currentColor"><path d="M44 10a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm-8 13h22l18 2v4H57l-4 17h-7l3-13-8 13h-8l7-17-7-2 3-4z"/></svg>
+              <div class="relative z-10 flex items-center gap-2 min-w-0">
+                <svg class="w-5 h-5 text-amber-300 shrink-0 drop-shadow" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                <span class="w-px h-5 bg-amber-300/40 shrink-0"></span>
+                <div class="min-w-0 leading-tight">
+                  <div class="text-[12px] font-black italic text-white tracking-wider truncate">BOSHLASH</div>
+                  <div class="text-[8px] text-amber-100/90 truncate">Botlar bilan o'yin</div>
+                  <span id="botDifficultyBadge" class="sr-only">5 vs 5 • LVL 1</span>
+                </div>
+              </div>
+              <span class="relative z-10 text-amber-100 font-black text-sm shrink-0 pl-1">›</span>
+            </button>
+    
+            <!-- 2) ONLINE -->
+            <button id="menuBtnOnline" type="button" class="dg-lob-btn-dark flex-1 min-h-0 rounded-lg px-2.5 flex items-center justify-between text-left transition overflow-hidden">
+              <svg class="dg-btn-art text-sky-400" viewBox="0 0 80 48" fill="currentColor"><path d="M12 18c6-7 18-10 28-6s16 1 26-4c3 5 1 13-5 17-7 4-11 10-20 11-11 1-24-4-29-18z"/></svg>
+              <div class="relative z-10 flex items-center gap-2 min-w-0">
+                <svg class="w-5 h-5 text-white shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a13 13 0 0 1 0 18M12 3a13 13 0 0 0 0 18"/></svg>
+                <span class="w-px h-5 bg-slate-500/45 shrink-0"></span>
+                <div class="min-w-0 leading-tight">
+                  <div class="text-[11px] font-black italic text-white tracking-wider truncate">ONLINE</div>
+                  <div class="text-[8px] text-slate-300/90 truncate">Do'stlar bilan o'ynash</div>
+                </div>
+              </div>
+              <span class="relative z-10 text-slate-200 font-black text-sm shrink-0 pl-1">›</span>
+            </button>
+    
+            <!-- 3) SOZLAMALAR -->
+            <button id="menuBtnSettings" type="button" class="dg-lob-btn-dark flex-1 min-h-0 rounded-lg px-2.5 flex items-center justify-between text-left transition overflow-hidden">
+              <svg class="dg-btn-art text-slate-400" viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58-1.92-3.32-2.39.96a7 7 0 0 0-1.62-.94L14.87 3h-3.84l-.36 2.54a7 7 0 0 0-1.62.94l-2.39-.96-1.92 3.32 2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58 1.92 3.32 2.39-.96c.49.38 1.03.7 1.62.94L11.03 21h3.84l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96 1.92-3.32-2.02-1.58zM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/></svg>
+              <div class="relative z-10 flex items-center gap-2 min-w-0">
+                <svg class="w-5 h-5 text-white shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7 7 0 0 0-1.62-.94l-.36-2.54a.5.5 0 0 0-.49-.42h-3.84a.5.5 0 0 0-.49.42l-.36 2.54c-.59.24-1.13.56-1.62.94l-2.39-.96a.5.5 0 0 0-.6.22L2.74 8.84a.5.5 0 0 0 .12.64l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.13.22.39.3.6.22l2.39-.96c.49.38 1.03.7 1.62.94l.36 2.54c.05.24.25.42.49.42h3.84c.24 0 .44-.18.49-.42l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.01-1.58zM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/></svg>
+                <span class="w-px h-5 bg-slate-500/45 shrink-0"></span>
+                <div class="min-w-0 leading-tight">
+                  <div class="text-[11px] font-black italic text-white tracking-wider truncate">SOZLAMALAR</div>
+                  <div class="text-[8px] text-slate-300/90 truncate">O'yin sozlamalari</div>
+                </div>
+              </div>
+              <span class="relative z-10 text-slate-200 font-black text-sm shrink-0 pl-1">›</span>
+            </button>
+    
+            <!-- 4) REYTING -->
+            <button id="menuBtnRating" type="button" class="dg-lob-btn-dark flex-1 min-h-0 rounded-lg px-2.5 flex items-center justify-between text-left transition overflow-hidden">
+              <svg class="dg-btn-art text-slate-300" viewBox="0 0 64 44" fill="currentColor"><rect x="4" y="22" width="16" height="20" rx="2"/><rect x="24" y="10" width="16" height="32" rx="2"/><rect x="44" y="26" width="16" height="16" rx="2"/><path d="M32 1l2 4 4 .5-3 3 .8 4-3.8-2-3.8 2 .8-4-3-3 4-.5z"/></svg>
+              <div class="relative z-10 flex items-center gap-2 min-w-0">
+                <svg class="w-5 h-5 text-white shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94A5.01 5.01 0 0 0 11 15.9V19H7v2h10v-2h-4v-3.1a5.01 5.01 0 0 0 3.61-2.96C19.08 12.63 21 10.55 21 8V7c0-1.1-.9-2-2-2zM5 8V7h2v3.82C5.84 10.4 5 9.3 5 8zm14 0c0 1.3-.84 2.4-2 2.82V7h2v1z"/></svg>
+                <span class="w-px h-5 bg-slate-500/45 shrink-0"></span>
+                <div class="min-w-0 leading-tight">
+                  <div class="text-[11px] font-black italic text-white tracking-wider truncate">REYTING</div>
+                  <div class="text-[8px] text-slate-300/90 truncate">Eng yaxshi o'yinchilar</div>
+                  <span id="menuRankBadge" class="sr-only">1000 ELO</span>
+                </div>
+              </div>
+              <span class="relative z-10 text-slate-200 font-black text-sm shrink-0 pl-1">›</span>
+            </button>
+    
+            <!-- 5) DO'KON -->
+            <button id="menuBtnShop" type="button" class="dg-lob-btn-dark flex-1 min-h-0 rounded-lg px-2.5 flex items-center justify-between text-left transition overflow-hidden">
+              <svg class="dg-btn-art text-sky-300" viewBox="0 0 64 44" fill="currentColor"><rect x="8" y="10" width="48" height="28" rx="4"/><path d="M8 18h48v4H8zM26 10h12v28H26z" fill="#0f172a"/></svg>
+              <div class="relative z-10 flex items-center gap-2 min-w-0">
+                <svg class="w-5 h-5 text-white shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zm10 0c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2zM7.16 14.26l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1 1 0 0 0 20 3.5H5.21l-.94-2H1v2h2l3.6 7.59-1.35 2.44C4.52 14.37 5.48 16 7 16h12v-2H7.42c-.14 0-.25-.11-.26-.24z"/></svg>
+                <span class="w-px h-5 bg-slate-500/45 shrink-0"></span>
+                <div class="min-w-0 leading-tight">
+                  <div class="text-[11px] font-black italic text-white tracking-wider truncate">DO'KON</div>
+                  <div class="text-[8px] text-slate-300/90 truncate">Skinlar va bonuslar</div>
+                  <span id="equippedSkinBadge" class="sr-only">Klassik</span>
+                </div>
+              </div>
+              <span class="relative z-10 text-slate-200 font-black text-sm shrink-0 pl-1">›</span>
+            </button>
+    
+            <!-- 6) BONUS -->
+            <button id="menuBtnBonus" type="button" class="dg-lob-btn-dark flex-1 min-h-0 rounded-lg px-2.5 flex items-center justify-between text-left transition overflow-hidden">
+              <svg class="dg-btn-art text-amber-400" style="opacity:0.42" viewBox="0 0 48 44" fill="currentColor"><rect x="8" y="16" width="32" height="24" rx="3"/><rect x="5" y="11" width="38" height="7" rx="2"/><rect x="21" y="11" width="6" height="29" fill="#fde047"/><path d="M24 11c-5-8-13-4-9 1h9zm0 0c5-8 13-4 9 1h-9z" fill="#fde047"/></svg>
+              <div class="relative z-10 flex items-center gap-2 min-w-0">
+                <svg class="w-5 h-5 text-white shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-2.18c.11-.31.18-.65.18-1a2.996 2.996 0 0 0-5.5-1.65l-.5.67-.5-.68C10.96 2.54 10.05 2 9 2 7.34 2 6 3.34 6 5c0 .35.07.69.18 1H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-5-2c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM9 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm11 15H4v-2h16v2zm0-5H4V8h5.08L7 10.83 8.62 12 11 8.76l1-1.36 1 1.36L15.38 12 17 10.83 14.92 8H20v6z"/></svg>
+                <span class="w-px h-5 bg-slate-500/45 shrink-0"></span>
+                <div class="min-w-0 leading-tight">
+                  <div class="text-[11px] font-black italic text-white tracking-wider truncate">BONUS</div>
+                  <div class="text-[8px] text-slate-300/90 truncate">Kunlik mukofotlar</div>
+                </div>
+              </div>
+              <span class="relative z-10 text-slate-200 font-black text-sm shrink-0 pl-1">›</span>
+            </button>
+    
+            <!-- 7) YORDAM -->
+            <button id="menuBtnHelp" type="button" class="dg-lob-btn-dark flex-1 min-h-0 rounded-lg px-2.5 flex items-center justify-between text-left transition overflow-hidden">
+              <svg class="dg-btn-art text-slate-300" viewBox="0 0 48 44" fill="currentColor"><path d="M24 6C14 6 8 13 8 22v10a4 4 0 0 0 4 4h4V24h-4v-2c0-7 5-12 12-12s12 5 12 12v2h-4v12h4a4 4 0 0 0 4-4V22c0-9-6-16-16-16z"/></svg>
+              <div class="relative z-10 flex items-center gap-2 min-w-0">
+                <svg class="w-5 h-5 text-white shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+                <span class="w-px h-5 bg-slate-500/45 shrink-0"></span>
+                <div class="min-w-0 leading-tight">
+                  <div class="text-[11px] font-black italic text-white tracking-wider truncate">YORDAM</div>
+                  <div class="text-[8px] text-slate-300/90 truncate">Savol va yordam</div>
+                </div>
+              </div>
+              <span class="relative z-10 text-slate-200 font-black text-sm shrink-0 pl-1">›</span>
+            </button>
           </div>
-
-          <button id="btnQuickEloPill" type="button" class="flex items-center gap-1.5 bg-[#0a1020]/90 border border-sky-400/65 rounded-md px-2 py-1 shadow active:scale-95 transition" title="Reyting (ELO)">
-            <span class="text-sky-400 text-[11px] leading-none">💎</span>
-            <span id="lobbyEloLabel" class="font-mono font-black text-[11px] sm:text-xs text-sky-300">1,000</span>
-            <span class="text-sky-400 font-black text-xs leading-none">+</span>
+    
+          <!-- 3. PASTKI CHAP: YANGILIKLAR KARTASI (Toza logosiz Dust2 rasmi: /match_end_bg.jpg) -->
+          <button id="btnNewsCard" type="button" class="dg-lob-card absolute left-[1.8%] bottom-[3%] w-[31%] h-[31%] max-h-[126px] min-h-[104px] z-20 rounded-xl p-2 flex flex-col justify-between text-left active:scale-[0.985] transition overflow-hidden">
+            <div class="shrink-0 flex items-center justify-between w-full border-b border-slate-700/60 pb-1">
+              <span class="text-[9px] font-black uppercase text-white tracking-wider flex items-center gap-1">
+                <svg class="w-3 h-3 text-slate-200" viewBox="0 0 24 24" fill="currentColor"><path d="M18 11v2h4v-2h-4zm-2 6.61c.96.71 2.21 1.65 3.2 2.39.4-.53.8-1.07 1.2-1.6-.99-.74-2.24-1.68-3.2-2.4-.4.54-.8 1.08-1.2 1.61zM20.4 5.6c-.4-.53-.8-1.07-1.2-1.6-.99.74-2.24 1.68-3.2 2.4.4.53.8 1.07 1.2 1.6.96-.72 2.21-1.65 3.2-2.4zM4 9c-1.1 0-2 .9-2 2v2c0 1.1.9 2 2 2h1v4h2v-4h1l5 3V6L8 9H4z"/></svg>
+                YANGILIKLAR
+              </span>
+              <span class="text-[8px] font-bold text-sky-400">Barchasi ›</span>
+            </div>
+            <div class="flex items-center gap-2 flex-1 min-h-0 pt-1.5">
+              <div class="w-[46%] h-full rounded-lg overflow-hidden border border-slate-600/60 bg-slate-900 shrink-0">
+                <img src="/match_end_bg.jpg" alt="Dust2" class="w-full h-full object-cover" />
+              </div>
+              <div class="flex flex-col justify-between h-full min-w-0 py-0.5">
+                <div class="text-[9px] font-bold text-slate-100 leading-snug line-clamp-2">Yangi xarita Dust2 yangilandi!</div>
+                <div class="text-[8px] font-mono text-slate-400">📅 02.11.2026</div>
+              </div>
+            </div>
           </button>
-
-          <div class="w-px h-5 bg-slate-500/50 mx-0.5"></div>
-
-          <button id="btnSimulateIncomingInvite" type="button" class="relative w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-slate-900/80 hover:bg-slate-800 border border-slate-600/50 flex items-center justify-center text-white active:scale-90 transition" title="Bildirishnomalar" aria-label="Bildirishnomalar">
-            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2zm6-6v-5a6 6 0 0 0-5-5.91V4a1 1 0 1 0-2 0v1.09A6 6 0 0 0 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
-            <span class="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500"></span>
-          </button>
-
-          <button id="btnHeaderSettings" type="button" class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-slate-900/80 hover:bg-slate-800 border border-slate-600/50 flex items-center justify-center text-white active:scale-90 transition" title="Sozlamalar" aria-label="Sozlamalar">
-            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.03 7.03 0 0 0-1.62-.94l-.36-2.54a.5.5 0 0 0-.49-.42h-3.84a.5.5 0 0 0-.49.42l-.36 2.54c-.59.24-1.13.56-1.62.94l-2.39-.96a.5.5 0 0 0-.6.22L2.74 8.84a.5.5 0 0 0 .12.64l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.13.22.39.3.6.22l2.39-.96c.49.38 1.03.7 1.62.94l.36 2.54c.05.24.25.42.49.42h3.84c.24 0 .44-.18.49-.42l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.01-1.58zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/></svg>
-          </button>
+    
+          <!-- 4. PASTKI MARKAZ: DO'STLAR KARTASI (0% ustma-ust tushish, aniq joylashuv!) -->
+          <div class="dg-lob-card absolute left-[34.5%] bottom-[3%] w-[27.5%] h-[31%] max-h-[126px] min-h-[104px] z-20 rounded-xl p-1.5 px-2 flex flex-col justify-between overflow-hidden">
+            <div class="shrink-0 flex items-center justify-between border-b border-slate-700/60 pb-1">
+              <span class="text-[9px] font-black uppercase text-white tracking-wider flex items-center gap-1">
+                <svg class="w-3 h-3 text-slate-200" viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+                DO'STLAR
+              </span>
+              <span class="text-[8px] font-bold text-emerald-400">● Online: <span id="lobbyOnlineFriendsCount">2</span></span>
+            </div>
+            <div id="lobbyMiniFriendsList" class="flex-1 min-h-0 flex flex-col justify-center gap-1 py-0.5 overflow-hidden"></div>
+            <button id="btnMiniAddFriend" type="button" class="shrink-0 w-full bg-slate-800/95 hover:bg-slate-700 border border-slate-600/65 rounded-md py-[3px] text-[9px] font-extrabold text-slate-100 leading-none active:scale-95 transition">
+              + Do'st qo'shish
+            </button>
+          </div>
+    
         </div>
 
-        <!-- O'ng: Wi-Fi va Batareya indikatori -->
-        <div class="hidden sm:flex items-center gap-1.5 text-slate-200 pr-1 shrink-0">
-          <svg class="w-4 h-4 text-slate-200" viewBox="0 0 24 24" fill="currentColor"><path d="M12 18a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-4.24-2.83 1.41 1.41a4 4 0 0 1 5.66 0l1.41-1.41a6 6 0 0 0-8.48 0zm-2.83-2.83 1.41 1.41a8 8 0 0 1 11.32 0l1.41-1.41a10 10 0 0 0-14.14 0z"/></svg>
-          <span id="lobbyBatteryPill" class="px-1.5 py-0.5 rounded bg-slate-200 text-slate-950 font-mono font-black text-[9px] leading-none">97</span>
-        </div>
-      </div>
-
-      <!-- 2. MARKAZ-YUQORI: DIGI DIGI — GLOBAL OFFENSIVE LOGOTIPI (Toza fon ustida!) -->
-      <div class="absolute top-[14%] left-[26%] sm:left-[28%] z-10 pointer-events-none flex items-center gap-2 sm:gap-3">
-        <!-- CS Mergan silueti SVG -->
-        <svg class="w-10 h-14 sm:w-14 sm:h-20 text-slate-100 drop-shadow-[0_3px_10px_rgba(0,0,0,0.9)] shrink-0" viewBox="0 0 64 90" fill="currentColor">
-          <circle cx="29" cy="14" r="6.5"/>
-          <path d="M22 22h14l5 5h19v3.5H41l-3 2.5 2 18 9 25h-7l-8-21-7 21h-7l8-28-2-14-7 6-4-4 10-12z"/>
-        </svg>
-        <div class="leading-none">
-          <div class="flex items-baseline gap-1.5 sm:gap-2 digi-title-shadow">
-            <span class="text-2xl sm:text-4xl font-black italic tracking-wider bg-gradient-to-b from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">DIGI</span>
-            <span class="text-2xl sm:text-4xl font-black italic tracking-wider bg-gradient-to-b from-amber-200 via-amber-400 to-amber-600 bg-clip-text text-transparent">DIGI</span>
-          </div>
-          <div class="flex items-center gap-1.5 mt-1">
-            <span class="h-px flex-1 bg-gradient-to-r from-transparent to-slate-300/70"></span>
-            <span class="text-[8px] sm:text-[10px] font-extrabold tracking-[0.26em] text-slate-200/95 uppercase drop-shadow">GLOBAL OFFENSIVE</span>
-            <span class="h-px flex-1 bg-gradient-to-l from-transparent to-slate-300/70"></span>
-          </div>
-        </div>
-      </div>
-
-      <!-- 3. O'NG USTUN: 7 TA AAA MENYU TUGMALARI (Skrollsiz 100% ekranga sig'adi!) -->
-      <div class="absolute top-[15%] right-[2.2%] w-[32%] sm:w-[31%] bottom-[6%] z-20 flex flex-col justify-between gap-1.5">
-        <!-- 1) BOSHLASH -->
-        <button id="menuBtnStart5v5" type="button" class="dg-lob-btn-gold flex-1 min-h-0 rounded-lg px-2.5 flex items-center justify-between text-left transition overflow-hidden">
-          <div class="flex items-center gap-2 min-w-0">
-            <span class="w-5 flex items-center justify-center text-amber-300 text-sm sm:text-base shrink-0">▶</span>
-            <span class="w-px h-4 bg-amber-300/35 shrink-0"></span>
-            <div class="min-w-0 leading-tight">
-              <div class="text-[11px] sm:text-xs font-black italic text-white tracking-wider truncate">BOSHLASH</div>
-              <div class="text-[8px] sm:text-[9px] text-amber-100/90 truncate">Botlar bilan o'yin</div>
-              <span id="botDifficultyBadge" class="sr-only">5 vs 5 • LVL 1</span>
-            </div>
-          </div>
-          <span class="text-amber-200 font-black text-xs sm:text-sm shrink-0 pl-1">❯</span>
-        </button>
-
-        <!-- 2) ONLINE -->
-        <button id="menuBtnOnline" type="button" class="dg-lob-btn-dark flex-1 min-h-0 rounded-lg px-2.5 flex items-center justify-between text-left transition overflow-hidden">
-          <div class="flex items-center gap-2 min-w-0">
-            <span class="w-5 flex items-center justify-center text-slate-100 text-xs sm:text-sm shrink-0">🌐</span>
-            <span class="w-px h-4 bg-slate-500/40 shrink-0"></span>
-            <div class="min-w-0 leading-tight">
-              <div class="text-[11px] sm:text-xs font-black italic text-white tracking-wider truncate">ONLINE</div>
-              <div class="text-[8px] sm:text-[9px] text-slate-300/90 truncate">Do'stlar bilan o'ynash</div>
-            </div>
-          </div>
-          <span class="text-slate-300 font-black text-xs sm:text-sm shrink-0 pl-1">❯</span>
-        </button>
-
-        <!-- 3) SOZLAMALAR -->
-        <button id="menuBtnSettings" type="button" class="dg-lob-btn-dark flex-1 min-h-0 rounded-lg px-2.5 flex items-center justify-between text-left transition overflow-hidden">
-          <div class="flex items-center gap-2 min-w-0">
-            <span class="w-5 flex items-center justify-center text-slate-100 text-xs sm:text-sm shrink-0">⚙️</span>
-            <span class="w-px h-4 bg-slate-500/40 shrink-0"></span>
-            <div class="min-w-0 leading-tight">
-              <div class="text-[11px] sm:text-xs font-black italic text-white tracking-wider truncate">SOZLAMALAR</div>
-              <div class="text-[8px] sm:text-[9px] text-slate-300/90 truncate">O'yin sozlamalari</div>
-            </div>
-          </div>
-          <span class="text-slate-300 font-black text-xs sm:text-sm shrink-0 pl-1">❯</span>
-        </button>
-
-        <!-- 4) REYTING -->
-        <button id="menuBtnRating" type="button" class="dg-lob-btn-dark flex-1 min-h-0 rounded-lg px-2.5 flex items-center justify-between text-left transition overflow-hidden">
-          <div class="flex items-center gap-2 min-w-0">
-            <span class="w-5 flex items-center justify-center text-slate-100 text-xs sm:text-sm shrink-0">🏆</span>
-            <span class="w-px h-4 bg-slate-500/40 shrink-0"></span>
-            <div class="min-w-0 leading-tight">
-              <div class="text-[11px] sm:text-xs font-black italic text-white tracking-wider truncate">REYTING</div>
-              <div class="text-[8px] sm:text-[9px] text-slate-300/90 truncate">Eng yaxshi o'yinchilar</div>
-              <span id="menuRankBadge" class="sr-only">1000 ELO</span>
-            </div>
-          </div>
-          <span class="text-slate-300 font-black text-xs sm:text-sm shrink-0 pl-1">❯</span>
-        </button>
-
-        <!-- 5) DO'KON -->
-        <button id="menuBtnShop" type="button" class="dg-lob-btn-dark flex-1 min-h-0 rounded-lg px-2.5 flex items-center justify-between text-left transition overflow-hidden">
-          <div class="flex items-center gap-2 min-w-0">
-            <span class="w-5 flex items-center justify-center text-slate-100 text-xs sm:text-sm shrink-0">🛒</span>
-            <span class="w-px h-4 bg-slate-500/40 shrink-0"></span>
-            <div class="min-w-0 leading-tight">
-              <div class="text-[11px] sm:text-xs font-black italic text-white tracking-wider truncate">DO'KON</div>
-              <div class="text-[8px] sm:text-[9px] text-slate-300/90 truncate">Skinlar va bonuslar</div>
-              <span id="equippedSkinBadge" class="sr-only">Klassik</span>
-            </div>
-          </div>
-          <span class="text-slate-300 font-black text-xs sm:text-sm shrink-0 pl-1">❯</span>
-        </button>
-
-        <!-- 6) BONUS -->
-        <button id="menuBtnBonus" type="button" class="dg-lob-btn-dark flex-1 min-h-0 rounded-lg px-2.5 flex items-center justify-between text-left transition overflow-hidden">
-          <div class="flex items-center gap-2 min-w-0">
-            <span class="w-5 flex items-center justify-center text-amber-300 text-xs sm:text-sm shrink-0">🎁</span>
-            <span class="w-px h-4 bg-slate-500/40 shrink-0"></span>
-            <div class="min-w-0 leading-tight">
-              <div class="text-[11px] sm:text-xs font-black italic text-white tracking-wider truncate">BONUS</div>
-              <div class="text-[8px] sm:text-[9px] text-slate-300/90 truncate">Kunlik mukofotlar</div>
-            </div>
-          </div>
-          <span class="text-slate-300 font-black text-xs sm:text-sm shrink-0 pl-1">❯</span>
-        </button>
-
-        <!-- 7) YORDAM -->
-        <button id="menuBtnHelp" type="button" class="dg-lob-btn-dark flex-1 min-h-0 rounded-lg px-2.5 flex items-center justify-between text-left transition overflow-hidden">
-          <div class="flex items-center gap-2 min-w-0">
-            <span class="w-5 flex items-center justify-center text-slate-100 text-xs sm:text-sm shrink-0">ℹ️</span>
-            <span class="w-px h-4 bg-slate-500/40 shrink-0"></span>
-            <div class="min-w-0 leading-tight">
-              <div class="text-[11px] sm:text-xs font-black italic text-white tracking-wider truncate">YORDAM</div>
-              <div class="text-[8px] sm:text-[9px] text-slate-300/90 truncate">Savol va yordam</div>
-            </div>
-          </div>
-          <span class="text-slate-300 font-black text-xs sm:text-sm shrink-0 pl-1">❯</span>
-        </button>
-      </div>
-
-      <!-- 4. PASTKI CHAP: YANGILIKLAR KARTASI -->
-      <button id="btnNewsCard" type="button" class="dg-lob-card absolute left-[2%] bottom-[4%] w-[31%] h-[28%] max-h-[118px] z-20 rounded-xl p-2 flex flex-col justify-between text-left active:scale-[0.985] transition overflow-hidden">
-        <div class="flex items-center justify-between w-full border-b border-slate-700/60 pb-1">
-          <span class="text-[9px] sm:text-[10px] font-black uppercase text-white tracking-wider">📢 YANGILIKLAR</span>
-          <span class="text-[8px] sm:text-[9px] font-bold text-sky-400">Barchasi ›</span>
-        </div>
-        <div class="flex items-center gap-2 flex-1 min-h-0 pt-1">
-          <div class="w-[44%] h-full rounded-lg overflow-hidden border border-slate-600/60 bg-slate-900 shrink-0">
-            <img src="/lobby_bg_landscape.jpg" alt="Dust2" class="w-full h-full object-cover" />
-          </div>
-          <div class="flex flex-col justify-between h-full min-w-0 py-0.5">
-            <div class="text-[9px] sm:text-[10px] font-bold text-slate-100 leading-snug line-clamp-2">Yangi xarita Dust2 yangilandi!</div>
-            <div class="text-[8px] sm:text-[9px] font-mono text-slate-400">📅 02.11.2026</div>
-          </div>
-        </div>
-      </button>
-
-      <!-- 5. PASTKI MARKAZ: DO'STLAR KARTASI -->
-      <div class="dg-lob-card absolute left-[35%] bottom-[4%] w-[28%] h-[28%] max-h-[118px] z-20 rounded-xl p-2 flex flex-col justify-between overflow-hidden">
-        <div class="flex items-center justify-between border-b border-slate-700/60 pb-1">
-          <span class="text-[9px] sm:text-[10px] font-black uppercase text-white tracking-wider">👥 DO'STLAR</span>
-          <span class="text-[8px] sm:text-[9px] font-bold text-emerald-400">● Online: <span id="lobbyOnlineFriendsCount">2</span></span>
-        </div>
-        <div id="lobbyMiniFriendsList" class="flex-1 min-h-0 flex flex-col justify-center gap-1 py-0.5 overflow-hidden"></div>
-        <button id="btnMiniAddFriend" type="button" class="w-full bg-slate-800/90 hover:bg-slate-700 border border-slate-600/60 rounded-md py-0.5 text-[9px] sm:text-[10px] font-extrabold text-slate-100 active:scale-95 transition">
-          + Do'st qo'shish
-        </button>
-      </div>
-
-    </div>
-
-    <!-- ==================== MODAL 2: ONLINE LOBBI VA DO'STLAR (BOSH PANEL DIZAYNIGA 100% MOS) ==================== -->
+      <!-- ==================== MODAL 2: ONLINE LOBBI VA DO'STLAR (BOSH PANEL DIZAYNIGA 100% MOS) ==================== -->
     <div id="modalOnline" class="hidden fixed inset-0 z-50 cs-modal-backdrop backdrop-blur-md flex flex-col justify-between overflow-hidden">
       
       <!-- Yuqori Tilla-Metallik Sarlavha Paneli -->
@@ -7595,14 +7611,14 @@
         if (elKills) elKills.textContent = String(userStats.totalKills + player.kills);
         if (elHS) elHS.textContent = String(userStats.totalHS);
 
-        // --- AAA LANDSCAPE LOBBY YANGI WIDGETLAR ---
+                // --- AAA LANDSCAPE LOBBY YANGI WIDGETLAR ---
         const lobbyEloEl = document.getElementById('lobbyEloLabel');
         if (lobbyEloEl) lobbyEloEl.textContent = (userStats.elo || 1000).toLocaleString('en-US');
 
         const lobbyLvlEl = document.getElementById('lobbyLevelNum');
         if (lobbyLvlEl) {
           const calcLvl = Math.max(1, Math.floor(((userStats.elo || 1000) - 800) / 25) + 1);
-          lobbyLvlEl.textContent = 'LVL ' + calcLvl;
+          lobbyLvlEl.textContent = String(calcLvl);
         }
 
         // Telegram profil avatari va nomi
@@ -7620,7 +7636,7 @@
           };
         }
 
-        // Mini do'stlar kartasi
+        // Mini do'stlar kartasi (24px balandlik, taktik avatar, 0% kesishish)
         const friendsListEl = document.getElementById('lobbyMiniFriendsList');
         const friendsCountEl = document.getElementById('lobbyOnlineFriendsCount');
         if (friendsListEl) {
@@ -7630,11 +7646,25 @@
             friendsListEl.innerHTML = onlinePlayers.slice(0, 2).map((p, idx) => {
               const pName = (p.name || 'Askar ' + (idx + 1)).substring(0, 14);
               const isPlaying = idx % 2 === 1;
-              const statusDot = isPlaying ? '<span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span><span class="text-[9px] text-amber-300 font-medium">O\x27yinda</span>' : '<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span><span class="text-[9px] text-emerald-300 font-medium">Online</span>';
-              return '<div class="flex items-center justify-between py-1 px-1.5 rounded bg-slate-900/60 border border-slate-700/40 text-[11px]">'                + '<div class="flex items-center gap-1.5 min-w-0">'                  + '<div class="w-5 h-5 rounded-full bg-slate-800 border border-slate-600 flex items-center justify-center text-[10px] shrink-0">🎖️</div>'                  + '<div class="min-w-0 truncate">'                    + '<div class="text-white font-bold truncate leading-tight">' + pName + '</div>'                    + '<div class="flex items-center gap-1 leading-none">' + statusDot + '</div>'                  + '</div>'                + '</div>'                + '<button type="button" onclick="openOnlineModal()" class="px-2 py-0.5 rounded bg-sky-600/80 hover:bg-sky-500 text-white font-bold text-[10px] shrink-0 active:scale-95 transition-transform">💬</button>'              + '</div>';
+              const statusDot = isPlaying
+                ? '<span class="text-[7.5px] font-bold text-amber-300 flex items-center gap-0.5"><span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse inline-block"></span>O\x27ynamoqda</span>'
+                : '<span class="text-[7.5px] font-bold text-emerald-400 flex items-center gap-0.5"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block"></span>Online</span>';
+              const pAvatar = (p.photoUrl)
+                ? `<img src="${p.photoUrl}" class="w-full h-full object-cover" />`
+                : '<svg class="w-3.5 h-3.5 text-slate-300" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a9 9 0 0 0-9 9c0 3.8 2.4 7 5.8 8.3L8 22h8l-.8-2.7c3.4-1.3 5.8-4.5 5.8-8.3a9 9 0 0 0-9-9zm0 4a3 3 0 1 1 0 6 3 3 0 0 1 0-6z"/></svg>';
+              return '<div class="h-6 flex items-center justify-between gap-1.5 px-1 py-0.5 rounded bg-slate-900/70 border border-slate-700/50">'
+                + '<div class="flex items-center gap-1.5 min-w-0">'
+                  + `<div class="w-[22px] h-[22px] rounded-md overflow-hidden border border-slate-500/70 bg-slate-900 shrink-0 flex items-center justify-center">${pAvatar}</div>`
+                  + '<div class="min-w-0 leading-tight">'
+                    + `<div class="text-[9.5px] font-bold text-white truncate">${pName}</div>`
+                    + statusDot
+                  + '</div>'
+                + '</div>'
+                + '<button type="button" onclick="openOnlineModal()" class="w-5 h-5 rounded flex items-center justify-center text-slate-200 hover:text-white bg-slate-800/80 hover:bg-slate-700 border border-slate-600/50 active:scale-90 transition shrink-0 text-[10px]" title="Xabar yozish">💬</button>'
+              + '</div>';
             }).join('');
           } else {
-            friendsListEl.innerHTML = '<div class="py-2 text-center text-[11px] text-slate-400">Hozircha online do\x27stlar yo\x27q</div>';
+            friendsListEl.innerHTML = '<div class="py-1 text-center text-[10px] text-slate-400 font-medium">Hozircha online do\x27stlar yo\x27q</div>';
           }
         }
 
