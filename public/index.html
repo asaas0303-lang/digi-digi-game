@@ -522,9 +522,12 @@
           height: 3.5rem !important;
         }
 
-    /* === iPHONE (iOS DARK MODE) DO'STLAR HUBI (#modalFriendsHub) === */
+    /* === PREMIUM 3D NEUMORPHISM + GLASSMORPHISM + FUTURISTIC iOS (#modalFriendsHub) === */
     #modalFriendsHub {
-      background: rgba(0, 0, 0, 0.56) !important;
+      background:
+        radial-gradient(circle at 18% 16%, rgba(14, 165, 233, 0.24), transparent 44%),
+        radial-gradient(circle at 84% 82%, rgba(245, 158, 11, 0.16), transparent 46%),
+        rgba(3, 7, 18, 0.74) !important;
       font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", sans-serif;
     }
     /* 90° burilgan rejimda Telegramning "✕ Yopish" va "⌄ ⋮" tugmalaridan xavfsiz chekinish! */
@@ -536,33 +539,66 @@
       max-height: 96% !important;
     }
     .ios-fh-sheet {
-      background: rgba(24, 24, 27, 0.90);
-      backdrop-filter: blur(26px) saturate(165%);
-      -webkit-backdrop-filter: blur(26px) saturate(165%);
-      border: 1px solid rgba(255, 255, 255, 0.13);
+      position: relative;
+      background:
+        radial-gradient(circle at 15% 0%, rgba(56, 189, 248, 0.14), transparent 45%),
+        radial-gradient(circle at 90% 100%, rgba(251, 191, 36, 0.10), transparent 42%),
+        linear-gradient(148deg, rgba(13, 22, 44, 0.86) 0%, rgba(6, 11, 25, 0.92) 55%, rgba(10, 17, 36, 0.90) 100%);
+      backdrop-filter: blur(26px) saturate(185%);
+      -webkit-backdrop-filter: blur(26px) saturate(185%);
+      border: 1px solid rgba(56, 189, 248, 0.36);
       border-radius: 22px;
-      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.72), inset 0 1px 0 rgba(255, 255, 255, 0.10);
+      box-shadow:
+        0 26px 64px rgba(0, 0, 0, 0.84),
+        0 0 28px rgba(14, 165, 233, 0.18),
+        inset 0 1px 1px rgba(254, 240, 138, 0.36),
+        inset 0 -1px 1px rgba(56, 189, 248, 0.22);
+    }
+    .ios-fh-sheet::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 8%;
+      right: 8%;
+      height: 1.5px;
+      pointer-events: none;
+      z-index: 30;
+      background: linear-gradient(90deg, transparent 0%, rgba(56, 189, 248, 0.72) 28%, rgba(251, 191, 36, 0.88) 50%, rgba(56, 189, 248, 0.72) 72%, transparent 100%);
     }
     .ios-fh-nav {
-      background: rgba(34, 34, 38, 0.78);
-      border-bottom: 0.5px solid rgba(255, 255, 255, 0.10);
+      background: linear-gradient(180deg, rgba(22, 36, 68, 0.78) 0%, rgba(10, 17, 36, 0.62) 100%);
+      border-bottom: 1px solid rgba(96, 165, 250, 0.24);
+      box-shadow:
+        0 4px 16px rgba(0, 0, 0, 0.32),
+        inset 0 1px 0 rgba(255, 255, 255, 0.14);
     }
     .ios-fh-search {
-      background: rgba(118, 118, 128, 0.24);
-      border: 0.5px solid rgba(255, 255, 255, 0.08);
-      color: #ffffff;
+      background: linear-gradient(180deg, rgba(5, 10, 22, 0.84) 0%, rgba(12, 20, 40, 0.72) 100%);
+      border: 1px solid rgba(96, 165, 250, 0.30);
+      color: #f8fafc;
       border-radius: 9999px;
-      transition: background 150ms ease, border-color 150ms ease;
+      box-shadow:
+        inset 0 2px 6px rgba(0, 0, 0, 0.72),
+        inset 0 -1px 0 rgba(255, 255, 255, 0.12),
+        0 1px 8px rgba(14, 165, 233, 0.10);
+      transition: border-color 150ms ease, box-shadow 150ms ease, background 150ms ease;
     }
     .ios-fh-search:focus {
       outline: none;
-      background: rgba(118, 118, 128, 0.34);
-      border-color: rgba(10, 132, 255, 0.75);
+      border-color: rgba(56, 189, 248, 0.85);
+      box-shadow:
+        inset 0 2px 6px rgba(0, 0, 0, 0.68),
+        0 0 14px rgba(14, 165, 233, 0.44);
     }
     .ios-fh-group {
-      background: rgba(38, 38, 42, 0.78);
-      border: 0.5px solid rgba(255, 255, 255, 0.09);
-      border-radius: 16px;
+      background: linear-gradient(162deg, rgba(16, 27, 52, 0.72) 0%, rgba(7, 13, 28, 0.86) 100%);
+      border: 1px solid rgba(96, 165, 250, 0.26);
+      border-radius: 18px;
+      box-shadow:
+        0 12px 28px rgba(0, 0, 0, 0.54),
+        0 0 18px rgba(14, 165, 233, 0.10),
+        inset 0 1px 1px rgba(255, 255, 255, 0.15),
+        inset 0 -2px 8px rgba(0, 0, 0, 0.48);
     }
     .ios-fh-row {
       position: relative;
@@ -571,7 +607,7 @@
       justify-content: space-between;
       gap: 8px;
       padding: 7px 10px;
-      transition: background 120ms ease;
+      transition: background 140ms ease;
     }
     .ios-fh-row:not(:last-child)::after {
       content: "";
@@ -579,46 +615,161 @@
       left: 52px;
       right: 10px;
       bottom: 0;
-      height: 0.5px;
-      background: rgba(255, 255, 255, 0.09);
+      height: 1px;
+      background: linear-gradient(90deg, rgba(56, 189, 248, 0.06) 0%, rgba(96, 165, 250, 0.26) 45%, rgba(251, 191, 36, 0.18) 75%, transparent 100%);
     }
     .ios-fh-row:active {
-      background: rgba(255, 255, 255, 0.06);
+      background: linear-gradient(90deg, rgba(56, 189, 248, 0.12), rgba(251, 191, 36, 0.06));
+    }
+    /* Premium 3D Convex Glossy Pill Buttons */
+    .ios-btn-blue,
+    .ios-btn-gold,
+    .ios-btn-green,
+    .ios-btn-tinted,
+    .ios-btn-gray,
+    .ios-btn-circle {
+      position: relative;
+      overflow: hidden;
+      transition: transform 110ms ease, box-shadow 140ms ease, filter 140ms ease;
+    }
+    .ios-btn-blue::before,
+    .ios-btn-gold::before,
+    .ios-btn-green::before,
+    .ios-btn-tinted::before,
+    .ios-btn-gray::before,
+    .ios-btn-circle::before {
+      content: "";
+      position: absolute;
+      top: 1px;
+      left: 10%;
+      right: 10%;
+      height: 44%;
+      border-radius: 9999px;
+      pointer-events: none;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.42) 0%, rgba(255, 255, 255, 0.02) 100%);
     }
     .ios-btn-blue {
-      background: #0A84FF;
+      background: linear-gradient(180deg, #4cc9ff 0%, #0a84ff 48%, #004ec4 100%);
       color: #ffffff;
       border-radius: 9999px;
-      font-weight: 600;
+      border: 1px solid rgba(186, 230, 253, 0.72);
+      font-weight: 700;
+      text-shadow: 0 1px 2px rgba(0, 28, 84, 0.65);
+      box-shadow:
+        0 5px 14px rgba(10, 132, 255, 0.48),
+        0 2px 5px rgba(0, 0, 0, 0.60),
+        inset 0 1.5px 1px rgba(255, 255, 255, 0.58),
+        inset 0 -2px 4px rgba(0, 32, 100, 0.55);
+    }
+    .ios-btn-gold {
+      background: linear-gradient(180deg, #fef08a 0%, #f59e0b 48%, #b45309 100%);
+      color: #1c1202;
+      border-radius: 9999px;
+      border: 1px solid rgba(254, 249, 195, 0.82);
+      font-weight: 800;
+      text-shadow: 0 1px 0 rgba(255, 251, 235, 0.45);
+      box-shadow:
+        0 5px 14px rgba(245, 158, 11, 0.42),
+        0 2px 5px rgba(0, 0, 0, 0.58),
+        inset 0 1.5px 1px rgba(255, 255, 255, 0.65),
+        inset 0 -2px 4px rgba(120, 53, 15, 0.52);
     }
     .ios-btn-green {
-      background: #30D158;
-      color: #052e16;
+      background: linear-gradient(180deg, #6ee7b7 0%, #10b981 50%, #047857 100%);
+      color: #022c22;
       border-radius: 9999px;
-      font-weight: 700;
+      border: 1px solid rgba(167, 243, 208, 0.75);
+      font-weight: 800;
+      text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+      box-shadow:
+        0 5px 14px rgba(16, 185, 129, 0.44),
+        0 2px 5px rgba(0, 0, 0, 0.56),
+        inset 0 1.5px 1px rgba(255, 255, 255, 0.56),
+        inset 0 -2px 4px rgba(6, 78, 59, 0.52);
     }
     .ios-btn-tinted {
-      background: rgba(10, 132, 255, 0.18);
-      color: #409CFF;
+      background: linear-gradient(180deg, rgba(56, 189, 248, 0.34) 0%, rgba(10, 132, 255, 0.22) 100%);
+      color: #e0f2fe;
       border-radius: 9999px;
-      font-weight: 600;
+      border: 1px solid rgba(96, 165, 250, 0.58);
+      font-weight: 700;
+      box-shadow:
+        0 4px 12px rgba(10, 132, 255, 0.30),
+        0 2px 4px rgba(0, 0, 0, 0.48),
+        inset 0 1px 1px rgba(255, 255, 255, 0.38),
+        inset 0 -2px 3px rgba(0, 24, 68, 0.45);
     }
     .ios-btn-gray {
-      background: rgba(118, 118, 128, 0.28);
-      color: #EBEBF5;
+      background: linear-gradient(180deg, rgba(48, 63, 94, 0.82) 0%, rgba(15, 23, 42, 0.94) 100%);
+      color: #e2e8f0;
       border-radius: 9999px;
+      border: 1px solid rgba(148, 163, 184, 0.38);
       font-weight: 600;
+      box-shadow:
+        0 4px 10px rgba(0, 0, 0, 0.52),
+        inset 0 1px 1px rgba(255, 255, 255, 0.24),
+        inset 0 -2px 3px rgba(0, 0, 0, 0.52);
     }
     .ios-btn-circle {
-      width: 26px;
-      height: 26px;
+      width: 28px;
+      height: 28px;
       border-radius: 9999px;
-      background: rgba(118, 118, 128, 0.28);
-      color: rgba(235, 235, 245, 0.85);
+      background: linear-gradient(180deg, rgba(44, 64, 104, 0.88) 0%, rgba(13, 21, 40, 0.96) 100%);
+      border: 1px solid rgba(96, 165, 250, 0.48);
+      color: #e0f2fe;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
+      box-shadow:
+        0 4px 12px rgba(0, 0, 0, 0.58),
+        0 0 12px rgba(14, 165, 233, 0.22),
+        inset 0 1.5px 1px rgba(255, 255, 255, 0.36),
+        inset 0 -2px 4px rgba(0, 0, 0, 0.58);
+    }
+    .ios-btn-blue:active,
+    .ios-btn-gold:active,
+    .ios-btn-green:active,
+    .ios-btn-tinted:active,
+    .ios-btn-gray:active,
+    .ios-btn-circle:active {
+      transform: translateY(1px) scale(0.96);
+    }
+    /* Glossy 3D Avatar Frame */
+    .ios-fh-avatar {
+      position: relative;
+      border-radius: 9999px;
+      border: 1.5px solid rgba(96, 165, 250, 0.62);
+      box-shadow:
+        0 4px 12px rgba(0, 0, 0, 0.62),
+        0 0 10px rgba(14, 165, 233, 0.28),
+        inset 0 1.5px 2px rgba(255, 255, 255, 0.45);
+    }
+    .ios-fh-avatar-gold {
+      border-color: rgba(251, 191, 36, 0.88);
+      box-shadow:
+        0 4px 12px rgba(0, 0, 0, 0.62),
+        0 0 12px rgba(251, 191, 36, 0.38),
+        inset 0 1.5px 2px rgba(254, 249, 195, 0.58);
+    }
+    .ios-fh-stat-pill {
+      background: linear-gradient(180deg, rgba(24, 39, 72, 0.84) 0%, rgba(10, 17, 36, 0.92) 100%);
+      border: 1px solid rgba(251, 191, 36, 0.38);
+      box-shadow:
+        0 3px 10px rgba(0, 0, 0, 0.45),
+        inset 0 1px 0 rgba(255, 255, 255, 0.22);
+    }
+    .ios-fh-rank-1 {
+      color: #fde047;
+      text-shadow: 0 0 10px rgba(250, 204, 21, 0.72), 0 1px 2px rgba(0, 0, 0, 0.85);
+    }
+    .ios-fh-rank-2 {
+      color: #bae6fd;
+      text-shadow: 0 0 8px rgba(56, 189, 248, 0.62), 0 1px 2px rgba(0, 0, 0, 0.85);
+    }
+    .ios-fh-rank-3 {
+      color: #fbbf24;
+      text-shadow: 0 0 8px rgba(245, 158, 11, 0.58), 0 1px 2px rgba(0, 0, 0, 0.85);
     }
   </style>
 </head>
@@ -885,11 +1036,11 @@
     <div id="modalFriendsHub" class="hidden fixed inset-0 z-50 flex items-center justify-center p-2.5">
       <div class="ios-fh-sheet w-full max-w-4xl h-[94%] flex flex-col overflow-hidden">
 
-        <!-- iOS Navigation Bar (Ixcham, toza, ortiqcha bezaklarsiz) -->
+        <!-- iOS Navigation Bar (Ixcham, toza, 3D aksentlar) -->
         <div class="ios-fh-nav shrink-0 h-[44px] px-3.5 flex items-center justify-between gap-2.5">
           <div class="flex items-center gap-2 min-w-0">
-            <h2 class="text-[15px] font-bold tracking-tight text-white truncate">Do'stlar</h2>
-            <span id="fhStatsBadge" class="inline-flex items-center gap-1 bg-white/[0.08] text-[#AEAEB2] text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0">0 o'yinchi • 0 online</span>
+            <h2 class="text-[15px] font-bold tracking-tight bg-gradient-to-b from-white via-sky-100 to-amber-200 bg-clip-text text-transparent drop-shadow truncate">Do'stlar</h2>
+            <span id="fhStatsBadge" class="ios-fh-stat-pill inline-flex items-center gap-1.5 text-sky-100 text-[10px] font-medium px-2.5 py-0.5 rounded-full shrink-0">0 o'yinchi • 0 online</span>
           </div>
 
           <div class="flex items-center gap-2 shrink-0">
@@ -911,13 +1062,13 @@
           </div>
         </div>
 
-        <!-- iOS Split-View Kontent (2 ta toza Inset Grouped ustun) -->
+        <!-- iOS Split-View Kontent (2 ta toza 3D Inset Grouped ustun) -->
         <div class="grid grid-cols-2 gap-3 p-3 flex-1 min-h-0 overflow-hidden">
 
           <!-- CHAP USTUN: BARCHA O'YINCHILAR (TOP) -->
           <div class="flex flex-col min-h-0 overflow-hidden">
             <div class="shrink-0 px-2 pb-1.5 flex items-center justify-between">
-              <span class="text-[10px] font-semibold uppercase tracking-[0.06em] text-[#8E8E93]">Barcha o'yinchilar</span>
+              <span class="text-[10px] font-semibold uppercase tracking-[0.06em] text-sky-300/90">Barcha o'yinchilar</span>
               <span id="fhAllCountBadge" class="text-[10px] font-medium text-[#8E8E93]">0</span>
             </div>
             <div id="fhAllPlayersList" class="ios-fh-group flex-1 min-h-0 overflow-y-auto">
@@ -929,10 +1080,10 @@
           <div class="flex flex-col min-h-0 overflow-hidden">
             <div class="shrink-0 px-2 pb-1.5 flex items-center justify-between gap-2">
               <div class="flex items-center gap-1.5 min-w-0">
-                <span class="text-[10px] font-semibold uppercase tracking-[0.06em] text-[#8E8E93]">Do'stlarim</span>
+                <span class="text-[10px] font-semibold uppercase tracking-[0.06em] text-amber-300/90">Do'stlarim</span>
                 <span id="fhFriendsCountBadge" class="text-[10px] font-medium text-[#8E8E93]">0</span>
               </div>
-              <button id="btnFhInviteTelegram" type="button" class="inline-flex items-center gap-1 text-[11px] font-semibold text-[#0A84FF] active:opacity-60 transition shrink-0">
+              <button id="btnFhInviteTelegram" type="button" class="ios-btn-tinted inline-flex items-center gap-1 px-2.5 py-0.5 text-[10px] font-semibold active:opacity-75 transition shrink-0">
                 <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
                 <span>Taklif</span>
               </button>
@@ -8114,16 +8265,17 @@
         }).join('');
       }
 
-      function buildIosAvatarHtml(name, id, photoUrl, isOnline) {
+      function buildIosAvatarHtml(name, id, photoUrl, isOnline, isGold = false) {
+        const ringCls = isGold ? 'ios-fh-avatar ios-fh-avatar-gold' : 'ios-fh-avatar';
         const dotHtml = isOnline
-          ? '<span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-[#30D158] ring-2 ring-[#26262a]" title="Online"></span>'
+          ? '<span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-[#30D158] ring-2 ring-[#0b1326] shadow-[0_0_8px_rgba(48,209,88,0.9)]" title="Online"></span>'
           : '';
 
         if (photoUrl) {
           const escUrl = escapeFhHtml(photoUrl);
-          return `<div class="relative w-8 h-8 shrink-0">`
-            + `<img src="${escUrl}" class="w-8 h-8 rounded-full object-cover" onerror="this.onerror=null;this.classList.add('hidden');if(this.nextElementSibling)this.nextElementSibling.classList.remove('hidden');" />`
-            + `<div class="hidden w-8 h-8 rounded-full bg-gradient-to-br from-[#0A84FF] to-[#5E5CE6] text-white text-[11px] font-bold flex items-center justify-center select-none">P</div>`
+          return `<div class="relative w-8 h-8 shrink-0 ${ringCls}">`
+            + `<img src="${escUrl}" class="w-full h-full rounded-full object-cover" onerror="this.onerror=null;this.classList.add('hidden');if(this.nextElementSibling)this.nextElementSibling.classList.remove('hidden');" />`
+            + `<div class="hidden w-full h-full rounded-full bg-gradient-to-br from-[#0A84FF] to-[#5E5CE6] text-white text-[11px] font-bold flex items-center justify-center select-none">P</div>`
             + dotHtml
             + `</div>`;
         }
@@ -8153,8 +8305,8 @@
           initials = clean.substring(0, Math.min(2, clean.length)).toUpperCase();
         }
 
-        return `<div class="relative w-8 h-8 shrink-0">`
-          + `<div class="w-8 h-8 rounded-full text-white text-[11px] font-bold tracking-tight flex items-center justify-center select-none shadow-inner" style="background: ${grad};">${escapeFhHtml(initials)}</div>`
+        return `<div class="relative w-8 h-8 shrink-0 ${ringCls}">`
+          + `<div class="w-full h-full rounded-full text-white text-[11px] font-bold tracking-tight flex items-center justify-center select-none shadow-inner" style="background: ${grad};">${escapeFhHtml(initials)}</div>`
           + dotHtml
           + `</div>`;
       }
@@ -8166,7 +8318,7 @@
         if (statsBadge) {
           const tot = Number(data.totalPlayers || 0);
           const onl = Number(data.onlineCount || 0);
-          statsBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-[#30D158] inline-block"></span><span>${tot} o'yinchi · ${onl} online</span>`;
+          statsBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-[#30D158] shadow-[0_0_8px_rgba(48,209,88,0.9)] inline-block"></span><span>${tot} o'yinchi · ${onl} online</span>`;
         }
 
         const allCountBadge = document.getElementById('fhAllCountBadge');
@@ -8187,21 +8339,22 @@
           } else {
             allListEl.innerHTML = data.allPlayers.map((p, idx) => {
               const rank = p.rank || (idx + 1);
-              let rankColor = 'text-[#8E8E93]';
-              if (rank === 1) rankColor = 'text-[#FFD60A] font-extrabold';
-              else if (rank === 2) rankColor = 'text-[#D1D1D6] font-bold';
-              else if (rank === 3) rankColor = 'text-[#FF9F0A] font-bold';
+              let rankCls = 'text-slate-400';
+              if (rank === 1) rankCls = 'ios-fh-rank-1 font-extrabold';
+              else if (rank === 2) rankCls = 'ios-fh-rank-2 font-bold';
+              else if (rank === 3) rankCls = 'ios-fh-rank-3 font-bold';
 
-              const rankHtml = `<span class="w-5 text-center text-[11px] ${rankColor} shrink-0">${rank}</span>`;
-              const avatarHtml = buildIosAvatarHtml(p.name, p.id, p.photoUrl, p.isOnline);
+              const rankHtml = `<span class="w-5 text-center text-[11px] ${rankCls} shrink-0">${rank}</span>`;
+              const isGoldAvatar = rank <= 3 || p.relation === 'self';
+              const avatarHtml = buildIosAvatarHtml(p.name, p.id, p.photoUrl, p.isOnline, isGoldAvatar);
 
               let actionBtn = '';
               const pid = escapeFhHtml(p.id);
               const pname = escapeFhHtml(p.name);
               if (p.relation === 'self') {
-                actionBtn = '<span class="ios-btn-gray px-2.5 py-1 text-[10px]">Siz</span>';
+                actionBtn = '<span class="ios-btn-gold px-2.5 py-1 text-[10px]">Siz</span>';
               } else if (p.relation === 'friend') {
-                actionBtn = '<span class="px-2.5 py-1 text-[10px] font-semibold rounded-full bg-[#30D158]/15 text-[#30D158]">Do\x27st</span>';
+                actionBtn = '<span class="px-2.5 py-1 text-[10px] font-semibold rounded-full border border-emerald-400/55 bg-emerald-500/20 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.28)]">Do\x27st</span>';
               } else if (p.relation === 'outgoing') {
                 actionBtn = '<span class="ios-btn-gray px-2.5 py-1 text-[10px] text-[#AEAEB2]">Yuborildi</span>';
               } else if (p.relation === 'incoming') {
@@ -8236,11 +8389,11 @@
 
           // 1) Kelgan so'rovlar
           if (hasIncoming) {
-            rightHtml += `<div class="px-3 pt-2 pb-1 text-[9.5px] font-semibold uppercase tracking-wider text-[#8E8E93]">Kelgan so\x27rovlar (${data.incomingRequests.length})</div>`;
+            rightHtml += `<div class="px-3 pt-2 pb-1 text-[9.5px] font-semibold uppercase tracking-wider text-amber-300/90">Kelgan so\x27rovlar (${data.incomingRequests.length})</div>`;
             rightHtml += data.incomingRequests.map(r => {
               const pid = escapeFhHtml(r.id);
               const pname = escapeFhHtml(r.name);
-              const avatarHtml = buildIosAvatarHtml(r.name, r.id, r.photoUrl, false);
+              const avatarHtml = buildIosAvatarHtml(r.name, r.id, r.photoUrl, false, false);
               return `<div class="ios-fh-row">`
                 + `<div class="flex items-center gap-2 min-w-0 flex-1">`
                   + avatarHtml
@@ -8260,15 +8413,15 @@
           // 2) Do'stlarim
           if (hasFriends) {
             if (hasIncoming || hasOutgoing) {
-              rightHtml += `<div class="px-3 pt-2 pb-1 text-[9.5px] font-semibold uppercase tracking-wider text-[#8E8E93]">Do\x27stlar (${data.myFriends.length})</div>`;
+              rightHtml += `<div class="px-3 pt-2 pb-1 text-[9.5px] font-semibold uppercase tracking-wider text-emerald-300/90">Do\x27stlar (${data.myFriends.length})</div>`;
             }
             rightHtml += data.myFriends.map(f => {
               const pid = escapeFhHtml(f.id);
               const fname = escapeFhHtml(f.name);
-              const avatarHtml = buildIosAvatarHtml(f.name, f.id, f.photoUrl, f.isOnline);
+              const avatarHtml = buildIosAvatarHtml(f.name, f.id, f.photoUrl, f.isOnline, false);
               const statusLine = f.isOnline
-                ? `<span class="text-[#30D158]">Online</span> · ${f.powerScore} ball`
-                : `<span class="text-[#8E8E93]">Offline · ${f.totalMatches} o\x27yin · ${f.powerScore} ball</span>`;
+                ? `<span class="text-[#30D158] font-bold">Online</span> · ${f.powerScore} ball`
+                : `<span class="text-slate-400">Offline · ${f.totalMatches} o\x27yin · ${f.powerScore} ball</span>`;
 
               return `<div class="ios-fh-row">`
                 + `<div class="flex items-center gap-2 min-w-0 flex-1">`
@@ -8288,11 +8441,11 @@
 
           // 3) Yuborilgan so'rovlar
           if (hasOutgoing) {
-            rightHtml += `<div class="px-3 pt-2 pb-1 text-[9.5px] font-semibold uppercase tracking-wider text-[#8E8E93]">Kutilmoqda (${data.outgoingRequests.length})</div>`;
+            rightHtml += `<div class="px-3 pt-2 pb-1 text-[9.5px] font-semibold uppercase tracking-wider text-slate-400">Kutilmoqda (${data.outgoingRequests.length})</div>`;
             rightHtml += data.outgoingRequests.map(o => {
               const pid = escapeFhHtml(o.id);
               const oname = escapeFhHtml(o.name);
-              const avatarHtml = buildIosAvatarHtml(o.name, o.id, o.photoUrl, false);
+              const avatarHtml = buildIosAvatarHtml(o.name, o.id, o.photoUrl, false, false);
               return `<div class="ios-fh-row">`
                 + `<div class="flex items-center gap-2 min-w-0 flex-1">`
                   + avatarHtml
