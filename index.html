@@ -882,6 +882,150 @@
       background: linear-gradient(90deg, rgba(251, 191, 36, 0.14) 0%, rgba(14, 165, 233, 0.12) 100%);
       box-shadow: inset 2.5px 0 0 #fbbf24;
     }
+
+    /* === 3D iOS GLASS: SOZLAMALAR, DO'KON VA BONUS (#modalSettings, #modalShop, #modalBonus) === */
+    #modalSettings,
+    #modalShop,
+    #modalBonus {
+      background:
+        radial-gradient(circle at 18% 18%, rgba(14, 165, 233, 0.22), transparent 45%),
+        radial-gradient(circle at 84% 82%, rgba(251, 191, 36, 0.18), transparent 46%),
+        rgba(3, 7, 18, 0.74) !important;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", sans-serif;
+    }
+    #lobbyView.digi-lobby-rot90 #modalSettings,
+    #lobbyView.digi-lobby-rot90 #modalShop,
+    #lobbyView.digi-lobby-rot90 #modalBonus {
+      padding: 8px 14px 8px max(66px, calc(var(--digi-safe-left, 58px) + 8px)) !important;
+    }
+    #lobbyView.digi-lobby-rot90 #modalSettings > div,
+    #lobbyView.digi-lobby-rot90 #modalShop > div,
+    #lobbyView.digi-lobby-rot90 #modalBonus > div {
+      height: 95% !important;
+      max-height: 95% !important;
+    }
+
+    /* Haqiqiy iOS 3D Toggle Switch (checkbox ID va JS hodisalarini 100% saqlaydi) */
+    .ios-switch {
+      appearance: none;
+      -webkit-appearance: none;
+      position: relative;
+      width: 42px;
+      height: 24px;
+      border-radius: 9999px;
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.92), rgba(30, 41, 59, 0.85));
+      border: 1px solid rgba(148, 163, 184, 0.34);
+      box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.72);
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+    }
+    .ios-switch::after {
+      content: "";
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 18px;
+      height: 18px;
+      border-radius: 9999px;
+      background: linear-gradient(180deg, #ffffff 0%, #cbd5e1 100%);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.55), inset 0 1px 1px #ffffff;
+      transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .ios-switch:checked {
+      background: linear-gradient(180deg, #38bdf8 0%, #0a84ff 100%);
+      border-color: rgba(186, 230, 253, 0.78);
+      box-shadow: 0 0 12px rgba(10, 132, 255, 0.55), inset 0 1px 2px rgba(255, 255, 255, 0.35);
+    }
+    .ios-switch:checked::after {
+      transform: translateX(18px);
+    }
+    .ios-switch-sm {
+      width: 34px;
+      height: 20px;
+    }
+    .ios-switch-sm::after {
+      width: 14px;
+      height: 14px;
+    }
+    .ios-switch-sm:checked::after {
+      transform: translateX(14px);
+    }
+
+    /* Neon 3D iOS Slayder */
+    .ios-slider {
+      appearance: none;
+      -webkit-appearance: none;
+      height: 6px;
+      border-radius: 9999px;
+      background: linear-gradient(180deg, rgba(5, 10, 22, 0.92), rgba(22, 36, 68, 0.85));
+      border: 1px solid rgba(96, 165, 250, 0.32);
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.8);
+      cursor: pointer;
+    }
+    .ios-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 17px;
+      height: 17px;
+      border-radius: 9999px;
+      background: linear-gradient(180deg, #fef08a 0%, #f59e0b 65%, #b45309 100%);
+      border: 1.5px solid #ffffff;
+      box-shadow: 0 2px 8px rgba(245, 158, 11, 0.65), 0 0 0 2px rgba(10, 132, 255, 0.28);
+    }
+    .ios-slider-blue::-webkit-slider-thumb {
+      background: linear-gradient(180deg, #bae6fd 0%, #0a84ff 65%, #004ec4 100%);
+      box-shadow: 0 2px 8px rgba(10, 132, 255, 0.72), 0 0 0 2px rgba(56, 189, 248, 0.28);
+    }
+
+    /* Sozlamalar ichidagi radio/gyro segment tugmalari JS klasslarini o'zgartirganda ham 3D pill ko'rinishini saqlasin */
+    #modalSettings .radio-lang-btn,
+    #modalSettings .gyro-mode-btn {
+      border-radius: 9999px !important;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 3px 8px rgba(0, 0, 0, 0.42);
+    }
+
+    /* Do'kon 3D Glass Skin Kartasi */
+    .ios-shop-card {
+      background: linear-gradient(160deg, rgba(18, 30, 58, 0.78) 0%, rgba(7, 13, 28, 0.90) 100%);
+      border: 1px solid rgba(96, 165, 250, 0.28);
+      border-radius: 16px;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.52), inset 0 1px 1px rgba(255, 255, 255, 0.14);
+      transition: transform 130ms ease, border-color 160ms ease, box-shadow 160ms ease;
+    }
+    .ios-shop-card-equipped {
+      background: linear-gradient(155deg, rgba(16, 185, 129, 0.20) 0%, rgba(10, 24, 42, 0.88) 58%, rgba(6, 14, 26, 0.94) 100%);
+      border: 1px solid rgba(52, 211, 153, 0.65);
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.54), 0 0 18px rgba(16, 185, 129, 0.22), inset 0 1px 1px rgba(167, 243, 208, 0.28);
+    }
+    .ios-shop-preview {
+      background: radial-gradient(circle at 50% 45%, rgba(56, 189, 248, 0.10), rgba(3, 7, 18, 0.92) 75%);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 11px;
+      box-shadow: inset 0 3px 10px rgba(0, 0, 0, 0.72);
+    }
+
+    /* Bonus 3D Sandiq va Ruletka Ramkalari */
+    .ios-bonus-stage {
+      background:
+        radial-gradient(circle at 50% 35%, rgba(251, 191, 36, 0.16), transparent 62%),
+        radial-gradient(circle at 50% 90%, rgba(14, 165, 233, 0.14), transparent 55%),
+        rgba(5, 9, 20, 0.92);
+      border: 1px solid rgba(251, 191, 36, 0.45);
+      border-radius: 18px;
+      box-shadow:
+        0 12px 28px rgba(0, 0, 0, 0.62),
+        0 0 22px rgba(245, 158, 11, 0.16),
+        inset 0 0 36px rgba(245, 158, 11, 0.14);
+    }
+    .ios-bonus-roulette {
+      background: linear-gradient(180deg, rgba(4, 8, 18, 0.96) 0%, rgba(11, 19, 38, 0.92) 100%);
+      border: 1px solid rgba(96, 165, 250, 0.42);
+      border-radius: 16px;
+      box-shadow:
+        inset 0 4px 14px rgba(0, 0, 0, 0.85),
+        0 6px 18px rgba(0, 0, 0, 0.45),
+        0 0 14px rgba(14, 165, 233, 0.14);
+    }
   </style>
 </head>
 <body class="relative w-full h-full flex flex-col justify-between horror-bg select-none">
@@ -1308,109 +1452,159 @@
       </div>
     </div>
 
-    <!-- ==================== MODAL 3: SOZLAMALAR (BOSH PANEL USLUBIDA) ==================== -->
-    <div id="modalSettings" class="hidden fixed inset-0 z-50 cs-modal-backdrop backdrop-blur-md flex items-center justify-center p-4">
-      <div class="cs-panel-card rounded-2xl max-w-md w-full max-h-[92%] flex flex-col overflow-hidden shadow-2xl">
-        <div class="cs-gold-header shrink-0 px-4 py-3 flex items-center justify-between">
-          <h2 class="text-sm font-black italic uppercase text-white flex items-center gap-2">⚙️ O'YIN SOZLAMALARI</h2>
-          <button id="btnCloseSettingsModal" class="menu-btn-dark text-white text-xs font-bold px-3 py-1.5 rounded-xl">✕ Yopish</button>
+    <!-- ==================== MODAL 3: 3D iOS GLASS O'YIN SOZLAMALARI ==================== -->
+    <div id="modalSettings" class="hidden fixed inset-0 z-50 flex items-center justify-center p-2.5">
+      <div class="ios-fh-sheet w-full max-w-4xl h-[94%] flex flex-col overflow-hidden">
+
+        <!-- Yuqori 3D iOS Glass Sarlavha -->
+        <div class="ios-fh-nav shrink-0 h-[44px] px-3.5 flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="w-7 h-7 rounded-full ios-fh-avatar bg-slate-900/90 flex items-center justify-center text-sky-300 text-xs shrink-0">⚙️</span>
+            <h2 class="text-[15px] font-bold tracking-tight bg-gradient-to-b from-white via-sky-100 to-amber-200 bg-clip-text text-transparent drop-shadow truncate">Sozlamalar</h2>
+            <span class="ios-fh-stat-pill text-sky-100 text-[10px] font-semibold px-2.5 py-0.5 rounded-full shrink-0">Grafika · Ovoz · Boshqaruv</span>
+          </div>
+          <button id="btnCloseSettingsModal" type="button" class="ios-btn-circle" title="Yopish" aria-label="Yopish">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
         </div>
 
-        <div class="p-4 space-y-3 text-xs max-h-[78vh] flex-1 min-h-0 overflow-y-auto">
-          <div class="bg-slate-950/85 border border-slate-800 rounded-xl p-3 space-y-2.5">
-            <h3 class="font-black text-amber-400 uppercase text-[11px]">🎨 Grafika va Muhit</h3>
-            <div class="flex items-center justify-between">
-              <span class="text-slate-200 font-medium">🕯️ Labirint Qorong'uligi (Tuman):</span>
-              <input id="fogSlider" type="range" min="1" max="3" value="2" class="w-28 accent-amber-500 cursor-pointer" />
-            </div>
-            <div class="flex items-center justify-between">
-              <span class="text-slate-200 font-medium">👹 Qo'rqinchli chaqnash (Jumpscare):</span>
-              <input id="horrorToggle" type="checkbox" checked class="w-4 h-4 accent-amber-500 rounded cursor-pointer" />
-            </div>
-          </div>
+        <!-- 2 USTUNLI ASOSIY SOZLAMALAR MAYDONI -->
+        <div class="grid grid-cols-2 gap-3 p-3 flex-1 min-h-0 overflow-hidden text-xs">
 
-          <div class="flex items-center justify-between bg-slate-900/90 border border-slate-800 rounded-xl px-3.5 py-2.5 mt-2">
-            <div>
-              <div class="text-xs font-bold text-slate-200">📶 FPS va PING ko'rsatkichi</div>
-              <div class="text-[10px] text-slate-400">O'yin vaqtida burchakda kadr va tarmoq tezligini ko'rsatish</div>
-            </div>
-            <input id="toggleNetGraph" type="checkbox" class="w-5 h-5 accent-amber-500 rounded cursor-pointer">
-          </div>
-          <div class="flex items-center justify-between bg-slate-900/90 border border-slate-800 rounded-xl px-3.5 py-2.5 mt-2">
-            <div>
-              <div class="text-xs font-bold text-slate-200">📱 PUBG Yonbosh Ekran (Landscape)</div>
-              <div class="text-[10px] text-slate-400">Jangda keng yonbosh ekran rejimi (Bosh menyu tik qoladi)</div>
-            </div>
-            <input id="toggleLandscapeMode" type="checkbox" checked class="w-5 h-5 accent-amber-500 rounded cursor-pointer">
-          </div>
+          <!-- CHAP USTUN: GRAFIKA/EKRAN + AKUSTIKA/RADIO -->
+          <div class="flex flex-col gap-2.5 min-h-0 overflow-y-auto pr-0.5">
 
-          <div class="bg-slate-950/85 border border-slate-800 rounded-xl p-3 space-y-2.5">
-            <h3 class="font-black text-sky-400 uppercase text-[11px]">🔊 Akustika va 3D Ovoz</h3>
-            <div class="flex items-center justify-between">
-              <span class="text-slate-200 font-medium">3D Stereo O'q va Qadam Tovushi:</span>
-              <button id="btnToggleAudio" class="menu-btn-gold text-white px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5">
-                <span id="audioIcon">🔊</span>
-                <span id="audioText">Ovoz: Yoqilgan</span>
-              </button>
-            </div>
-            <div class="flex items-center justify-between gap-2 pt-1.5 border-t border-slate-800/80">
-              <span class="text-slate-200 font-medium">🔫 Qurol Ovozi: <b id="weaponVolVal" class="text-sky-300 font-mono">100%</b></span>
-              <input id="weaponVolSlider" type="range" min="0" max="150" step="5" value="100" class="w-32 accent-sky-400 cursor-pointer" />
-            </div>
-            <div class="border-t border-slate-800/90 pt-2 space-y-2">
-              <div class="flex items-center justify-between">
-                <span class="text-slate-200 font-bold">📻 Askarlar Radiosi (CS 1.6):</span>
-                <span id="radioStatusBadge" class="text-[10px] font-mono text-emerald-400">O'zbekcha</span>
-              </div>
-              <div id="radioLangBtns" class="grid grid-cols-3 gap-1.5">
-                <button type="button" data-radio-lang="uz" class="radio-lang-btn px-2 py-1.5 rounded-lg text-[10px] font-extrabold border border-sky-400 bg-sky-500/20 text-sky-300 transition">🇺🇿 O'zbekcha</button>
-                <button type="button" data-radio-lang="ru" class="radio-lang-btn px-2 py-1.5 rounded-lg text-[10px] font-extrabold border border-slate-700 bg-slate-900 text-slate-300 transition">🇷🇺 Русский</button>
-                <button type="button" data-radio-lang="off" class="radio-lang-btn px-2 py-1.5 rounded-lg text-[10px] font-extrabold border border-slate-700 bg-slate-900 text-slate-300 transition">🔇 O'chiq</button>
-              </div>
-            </div>
-          </div>
-
-          <div class="bg-slate-950/85 border border-slate-800 rounded-xl p-3 space-y-2.5">
-            <h3 class="font-black text-emerald-400 uppercase text-[11px]">🕹️ Joystik va Sensor Boshqaruvi</h3>
-            <div class="flex items-center justify-between">
-              <span class="text-slate-200 font-medium">Burilish sezgirligi (Sensitivity):</span>
-              <input id="sensSlider" type="range" min="5" max="25" value="14" class="w-28 accent-emerald-500 cursor-pointer" />
-            </div>
-
-            <div class="border-t border-slate-800/90 pt-2.5 space-y-2">
-              <div class="flex items-center justify-between">
-                <span class="text-slate-200 font-bold">🎯 Giroskop (PUBG uslubi):</span>
-                <span id="gyroStatusBadge" class="text-[10px] font-mono text-slate-400">O'chiq</span>
-              </div>
-
-              <div id="gyroModeBtns" class="grid grid-cols-3 gap-1.5">
-                <button type="button" data-gyro-mode="off" class="gyro-mode-btn px-2 py-1.5 rounded-lg text-[10px] font-extrabold border border-amber-400 bg-amber-500/20 text-amber-300 transition">O'chiq</button>
-                <button type="button" data-gyro-mode="ads" class="gyro-mode-btn px-2 py-1.5 rounded-lg text-[10px] font-extrabold border border-slate-700 bg-slate-900 text-slate-300 transition">Faqat Pritsel</button>
-                <button type="button" data-gyro-mode="always" class="gyro-mode-btn px-2 py-1.5 rounded-lg text-[10px] font-extrabold border border-slate-700 bg-slate-900 text-slate-300 transition">Doim Yoniq</button>
-              </div>
-
-              <div id="gyroSlidersWrap" class="hidden space-y-2 pt-1">
-                <div class="flex items-center justify-between gap-2">
-                  <span class="text-slate-300 text-[11px]">Giroskop sezgirligi (<span id="gyroSensVal" class="text-emerald-400 font-bold">120%</span>):</span>
-                  <input id="gyroSensSlider" type="range" min="20" max="300" step="5" value="120" class="w-28 accent-emerald-500 cursor-pointer" />
+            <!-- 1) Grafika va Ekran -->
+            <div class="shrink-0">
+              <div class="px-2 pb-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-amber-300/90">Grafika va ekran</div>
+              <div class="ios-fh-group overflow-hidden">
+                <div class="ios-fh-row">
+                  <div class="min-w-0">
+                    <div class="text-[11.5px] font-semibold text-white truncate">🕯️ Labirint tumani</div>
+                    <div class="text-[9.5px] text-slate-400 truncate">Qorong'ulik darajasi</div>
+                  </div>
+                  <input id="fogSlider" type="range" min="1" max="3" value="2" class="ios-slider w-24 shrink-0" />
                 </div>
-                <div class="flex items-center justify-between gap-2">
-                  <span class="text-slate-300 text-[11px]">Pritsel (ADS) giroskop (<span id="gyroAdsSensVal" class="text-sky-400 font-bold">100%</span>):</span>
-                  <input id="gyroAdsSensSlider" type="range" min="20" max="300" step="5" value="100" class="w-28 accent-sky-500 cursor-pointer" />
+
+                <div class="ios-fh-row">
+                  <div class="min-w-0">
+                    <div class="text-[11.5px] font-semibold text-white truncate">👹 Qo'rqinchli chaqnash</div>
+                    <div class="text-[9.5px] text-slate-400 truncate">Jumpscare effekti</div>
+                  </div>
+                  <input id="horrorToggle" type="checkbox" checked class="ios-switch" />
                 </div>
-                <div class="flex items-center justify-between pt-0.5 text-[10px] text-slate-400">
-                  <label class="flex items-center gap-1.5 cursor-pointer">
-                    <input id="gyroInvertX" type="checkbox" class="w-3.5 h-3.5 accent-amber-500 rounded cursor-pointer" />
-                    <span>Teskari X (Chap/O'ng)</span>
-                  </label>
-                  <label class="flex items-center gap-1.5 cursor-pointer">
-                    <input id="gyroInvertY" type="checkbox" class="w-3.5 h-3.5 accent-amber-500 rounded cursor-pointer" />
-                    <span>Teskari Y (Tepa/Past)</span>
-                  </label>
+
+                <div class="ios-fh-row">
+                  <div class="min-w-0">
+                    <div class="text-[11.5px] font-semibold text-white truncate">📶 FPS va PING</div>
+                    <div class="text-[9.5px] text-slate-400 truncate">Jangda kadr va tarmoq tezligi</div>
+                  </div>
+                  <input id="toggleNetGraph" type="checkbox" class="ios-switch" />
+                </div>
+
+                <div class="ios-fh-row">
+                  <div class="min-w-0">
+                    <div class="text-[11.5px] font-semibold text-white truncate">📱 Yonbosh ekran</div>
+                    <div class="text-[9.5px] text-slate-400 truncate">PUBG Landscape jang rejimi</div>
+                  </div>
+                  <input id="toggleLandscapeMode" type="checkbox" checked class="ios-switch" />
                 </div>
               </div>
             </div>
+
+            <!-- 2) Akustika va 3D Ovoz -->
+            <div class="shrink-0">
+              <div class="px-2 pb-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-sky-300/90">Akustika va 3D ovoz</div>
+              <div class="ios-fh-group overflow-hidden">
+                <div class="ios-fh-row">
+                  <div class="min-w-0">
+                    <div class="text-[11.5px] font-semibold text-white truncate">3D Stereo Ovoz</div>
+                    <div class="text-[9.5px] text-slate-400 truncate">O'q va qadam tovushlari</div>
+                  </div>
+                  <button id="btnToggleAudio" type="button" class="ios-btn-gold px-3 py-1 text-[10.5px] flex items-center gap-1 shrink-0">
+                    <span id="audioIcon">🔊</span>
+                    <span id="audioText">Ovoz: Yoqilgan</span>
+                  </button>
+                </div>
+
+                <div class="ios-fh-row">
+                  <div class="min-w-0">
+                    <div class="text-[11.5px] font-semibold text-white truncate">🔫 Qurol ovozi: <b id="weaponVolVal" class="text-sky-300 font-mono">100%</b></div>
+                  </div>
+                  <input id="weaponVolSlider" type="range" min="0" max="150" step="5" value="100" class="ios-slider ios-slider-blue w-28 shrink-0" />
+                </div>
+
+                <div class="p-2.5 space-y-1.5 border-t border-white/10">
+                  <div class="flex items-center justify-between">
+                    <span class="text-[11px] font-semibold text-white">📻 Askarlar radiosi</span>
+                    <span id="radioStatusBadge" class="ios-fh-stat-pill text-[9.5px] font-semibold text-emerald-300 px-2 py-0.5 rounded-full">O'zbekcha</span>
+                  </div>
+                  <div id="radioLangBtns" class="grid grid-cols-3 gap-1.5">
+                    <button type="button" data-radio-lang="uz" class="radio-lang-btn px-2 py-1.5 rounded-full text-[10px] font-bold border border-sky-400 bg-sky-500/20 text-sky-200 transition">🇺🇿 O'zbek</button>
+                    <button type="button" data-radio-lang="ru" class="radio-lang-btn px-2 py-1.5 rounded-full text-[10px] font-bold border border-slate-700 bg-slate-900/90 text-slate-300 transition">🇷🇺 Русский</button>
+                    <button type="button" data-radio-lang="off" class="radio-lang-btn px-2 py-1.5 rounded-full text-[10px] font-bold border border-slate-700 bg-slate-900/90 text-slate-300 transition">🔇 O'chiq</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
           </div>
+
+          <!-- O'NG USTUN: JOYSTIK SEZGIRLIGI VA PUBG GIROSKOP -->
+          <div class="flex flex-col gap-2.5 min-h-0 overflow-y-auto pr-0.5">
+
+            <!-- 3) Joystik va Sensor Boshqaruvi -->
+            <div class="shrink-0">
+              <div class="px-2 pb-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-emerald-300/90">Joystik va giroskop</div>
+              <div class="ios-fh-group overflow-hidden">
+
+                <div class="ios-fh-row">
+                  <div class="min-w-0">
+                    <div class="text-[11.5px] font-semibold text-white truncate">🕹️ Burilish sezgirligi</div>
+                    <div class="text-[9.5px] text-slate-400 truncate">Kamera va nishon tezligi</div>
+                  </div>
+                  <input id="sensSlider" type="range" min="5" max="25" value="14" class="ios-slider ios-slider-blue w-28 shrink-0" />
+                </div>
+
+                <div class="p-2.5 space-y-2 border-t border-white/10">
+                  <div class="flex items-center justify-between">
+                    <span class="text-[11.5px] font-semibold text-white">🎯 Giroskop (PUBG uslubi)</span>
+                    <span id="gyroStatusBadge" class="ios-fh-stat-pill text-[9.5px] font-semibold text-slate-300 px-2 py-0.5 rounded-full">O'chiq</span>
+                  </div>
+
+                  <div id="gyroModeBtns" class="grid grid-cols-3 gap-1.5">
+                    <button type="button" data-gyro-mode="off" class="gyro-mode-btn px-2 py-1.5 rounded-full text-[10px] font-bold border border-amber-400 bg-amber-500/20 text-amber-200 transition">O'chiq</button>
+                    <button type="button" data-gyro-mode="ads" class="gyro-mode-btn px-2 py-1.5 rounded-full text-[10px] font-bold border border-slate-700 bg-slate-900/90 text-slate-300 transition">Faqat Pritsel</button>
+                    <button type="button" data-gyro-mode="always" class="gyro-mode-btn px-2 py-1.5 rounded-full text-[10px] font-bold border border-slate-700 bg-slate-900/90 text-slate-300 transition">Doim Yoniq</button>
+                  </div>
+
+                  <div id="gyroSlidersWrap" class="hidden space-y-2.5 pt-2 border-t border-white/10">
+                    <div class="flex items-center justify-between gap-2">
+                      <span class="text-slate-200 text-[10.5px]">Giroskop (<span id="gyroSensVal" class="text-emerald-400 font-bold font-mono">120%</span>)</span>
+                      <input id="gyroSensSlider" type="range" min="20" max="300" step="5" value="120" class="ios-slider ios-slider-blue w-28 shrink-0" />
+                    </div>
+                    <div class="flex items-center justify-between gap-2">
+                      <span class="text-slate-200 text-[10.5px]">Pritsel ADS (<span id="gyroAdsSensVal" class="text-sky-300 font-bold font-mono">100%</span>)</span>
+                      <input id="gyroAdsSensSlider" type="range" min="20" max="300" step="5" value="100" class="ios-slider w-28 shrink-0" />
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 pt-1">
+                      <label class="ios-rt-stat-box px-2.5 py-1.5 flex items-center justify-between gap-1.5 cursor-pointer">
+                        <span class="text-[10px] text-slate-200 font-medium truncate">Teskari X</span>
+                        <input id="gyroInvertX" type="checkbox" class="ios-switch ios-switch-sm" />
+                      </label>
+                      <label class="ios-rt-stat-box px-2.5 py-1.5 flex items-center justify-between gap-1.5 cursor-pointer">
+                        <span class="text-[10px] text-slate-200 font-medium truncate">Teskari Y</span>
+                        <input id="gyroInvertY" type="checkbox" class="ios-switch ios-switch-sm" />
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+          </div>
+
         </div>
       </div>
     </div>
@@ -1544,64 +1738,111 @@
       </div>
     </div>
 
-    <!-- ==================== MODAL 5: DO'KON (QUROL SKINLARI) ==================== -->
-    <div id="modalShop" class="hidden fixed inset-0 z-50 cs-modal-backdrop backdrop-blur-md flex items-center justify-center p-4">
-      <div class="cs-panel-card rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl max-h-[90vh] flex flex-col">
-        <div class="cs-gold-header px-4 py-3 flex items-center justify-between shrink-0">
-          <div>
-            <h2 class="text-sm font-black italic uppercase text-amber-300 flex items-center gap-2">🛒 QUROL SKINLARI DO'KONI</h2>
-            <p class="text-[10px] text-amber-100/80">O'rnatilgan skin 3D o'yin ichida qo'lingizdagi qurolni o'zgartiradi</p>
-          </div>
-          <button id="btnCloseShopModal" class="menu-btn-dark text-white text-xs font-bold px-3 py-1.5 rounded-xl">✕ Yopish</button>
-        </div>
+    <!-- ==================== MODAL 5: 3D iOS GLASS QUROL SKINLARI DO'KONI ==================== -->
+    <div id="modalShop" class="hidden fixed inset-0 z-50 flex items-center justify-center p-2.5">
+      <div class="ios-fh-sheet w-full max-w-4xl h-[94%] flex flex-col overflow-hidden">
 
-        <div class="p-4 space-y-3 overflow-y-auto">
-          <div class="flex items-center justify-between bg-slate-950/90 px-3.5 py-2.5 rounded-xl border border-amber-500/40 text-xs">
-            <span class="text-slate-200 font-bold">Hisobingizdagi balans:</span>
-            <span class="font-mono font-black text-amber-400 text-sm">$ <span id="shopCoinsLabel">12,500</span></span>
+        <!-- Yuqori 3D iOS Glass Sarlavha + Jonli Balans -->
+        <div class="ios-fh-nav shrink-0 h-[44px] px-3.5 flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="w-7 h-7 rounded-full ios-fh-avatar ios-fh-avatar-gold bg-slate-900/90 flex items-center justify-center text-amber-300 text-xs shrink-0">🛒</span>
+            <h2 class="text-[15px] font-bold tracking-tight bg-gradient-to-b from-white via-sky-100 to-amber-200 bg-clip-text text-transparent drop-shadow truncate">Qurol Do'koni</h2>
+            <span class="text-[10px] text-slate-400 truncate hidden sm:inline">3D qurol dizaynlari</span>
           </div>
 
-          <div id="shopSkinsContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5"></div>
+          <div class="flex items-center gap-2 shrink-0">
+            <div class="ios-fh-stat-pill px-3 py-1 rounded-full flex items-center gap-1.5 text-[11px] font-mono font-extrabold text-amber-300">
+              <span>💰</span>
+              <span>$ <span id="shopCoinsLabel">0</span></span>
+            </div>
+            <button id="btnCloseShopModal" type="button" class="ios-btn-circle" title="Yopish" aria-label="Yopish">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
+          </div>
         </div>
+
+        <!-- 3 ustunli 3D Shisha Skinlar Vitrinasi (90° rejimda ham sm:/md: siz aniq 3 ustun!) -->
+        <div class="flex-1 min-h-0 overflow-y-auto p-3">
+          <div id="shopSkinsContainer" class="grid grid-cols-3 gap-2.5"></div>
+        </div>
+
       </div>
     </div>
 
-    <!-- ==================== MODAL 6: BONUS (3D OLTIN SANDIQ) ==================== -->
-    <div id="modalBonus" class="hidden fixed inset-0 z-50 cs-modal-backdrop backdrop-blur-md flex items-center justify-center p-3 sm:p-4">
-      <div class="cs-panel-card rounded-2xl max-w-md w-full overflow-hidden text-center shadow-2xl border-2 border-amber-500/50">
-        <!-- Minimal va toza sarlavha: faqat nom, balans va yopish tugmasi -->
-        <div class="cs-gold-header px-4 py-2.5 flex items-center justify-between">
-          <div class="flex items-center gap-2.5">
-            <h2 class="text-sm font-black italic uppercase text-amber-300">🧰 OLTIN SANDIQ</h2>
-            <span class="bg-black/75 border border-amber-500/50 rounded-lg px-2.5 py-0.5 text-xs font-mono font-extrabold text-amber-300">
-              💰 $<span id="caseModalCoinsLabel">12,500</span>
-            </span>
+    <!-- ==================== MODAL 6: 3D iOS GLASS OLTIN SANDIQ (BONUS) ==================== -->
+    <div id="modalBonus" class="hidden fixed inset-0 z-50 flex items-center justify-center p-2.5">
+      <div class="ios-fh-sheet w-full max-w-4xl h-[94%] flex flex-col overflow-hidden">
+
+        <!-- Yuqori 3D iOS Glass Sarlavha + Jonli Balans -->
+        <div class="ios-fh-nav shrink-0 h-[44px] px-3.5 flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="w-7 h-7 rounded-full ios-fh-avatar ios-fh-avatar-gold bg-slate-900/90 flex items-center justify-center text-amber-300 text-xs shrink-0">🧰</span>
+            <h2 class="text-[15px] font-bold tracking-tight bg-gradient-to-b from-white via-sky-100 to-amber-200 bg-clip-text text-transparent drop-shadow truncate">Oltin Sandiq</h2>
+            <span class="ios-fh-stat-pill text-sky-100 text-[10px] font-semibold px-2.5 py-0.5 rounded-full shrink-0">Kunlik Bonus</span>
           </div>
-          <button id="btnCloseBonusModal" class="menu-btn-dark text-white text-xs font-bold px-3 py-1.5 rounded-xl shrink-0">✕ Yopish</button>
+
+          <div class="flex items-center gap-2 shrink-0">
+            <div class="ios-fh-stat-pill px-3 py-1 rounded-full flex items-center gap-1.5 text-[11px] font-mono font-extrabold text-amber-300">
+              <span>💰</span>
+              <span>$<span id="caseModalCoinsLabel">0</span></span>
+            </div>
+            <button id="btnCloseBonusModal" type="button" class="ios-btn-circle" title="Yopish" aria-label="Yopish">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
+          </div>
         </div>
 
-        <div class="p-3.5 space-y-3 bg-gradient-to-b from-slate-950 via-zinc-950 to-slate-950">
-          <!-- 1) TOZA 3D HARBIY SANDIQ SAHNASI (Ustida hech qanday ortiqcha yozuv yo'q!) -->
-          <div class="relative w-full h-52 sm:h-56 rounded-2xl overflow-hidden border-2 border-amber-500/50 bg-zinc-950 shadow-[inset_0_0_50px_rgba(245,158,11,0.18)]">
+        <!-- 2 USTUNLI ASOSIY MAYDON: CHAP — 3D OLTIN SANDIQ | O'NG — RULETKA + OCHISH -->
+        <div class="grid grid-cols-2 gap-3 p-3 flex-1 min-h-0 overflow-hidden">
+
+          <!-- CHAP USTUN: TOZA 3D HARBIY OLTIN SANDIQ SAHNASI -->
+          <div class="ios-bonus-stage relative flex-1 min-h-0 overflow-hidden">
             <canvas id="csCase3DCanvas" class="w-full h-full block cursor-grab active:cursor-grabbing touch-none"></canvas>
-            <!-- Faqat yutuq chiqqanda ko'rinadigan ixcham badge -->
-            <p id="slotResultText" class="hidden absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/85 border border-amber-400/80 text-amber-300 text-xs font-black px-3.5 py-1 rounded-full shadow-lg whitespace-nowrap pointer-events-none"></p>
+            <p id="slotResultText" class="hidden absolute bottom-2.5 left-1/2 -translate-x-1/2 ios-fh-stat-pill border-amber-400/80 text-amber-300 text-[11px] font-extrabold px-3.5 py-1 rounded-full shadow-lg whitespace-nowrap pointer-events-none"></p>
           </div>
 
-          <!-- 2) CS:GO USLUBIDAGI GORIZONTAL RULETKA LENTASI -->
-          <div class="relative w-full h-20 rounded-xl bg-zinc-950 border-2 border-zinc-700 overflow-hidden shadow-inner">
-            <div class="absolute inset-y-0 left-1/2 -translate-x-1/2 w-[3px] bg-amber-400 z-20 shadow-[0_0_12px_#fbbf24] pointer-events-none"></div>
-            <div class="absolute top-0 left-1/2 -translate-x-1/2 text-amber-400 text-xs font-black z-20 leading-none pointer-events-none">▼</div>
-            <div class="absolute bottom-0 left-1/2 -translate-x-1/2 text-amber-400 text-xs font-black z-20 leading-none pointer-events-none">▲</div>
-            <div class="absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-zinc-950 to-transparent z-10 pointer-events-none"></div>
-            <div class="absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-zinc-950 to-transparent z-10 pointer-events-none"></div>
-            <div id="csCaseRouletteTrack" class="flex items-center h-full gap-2 px-2 will-change-transform" style="transform: translate3d(0px, 0px, 0px);"></div>
+          <!-- O'NG USTUN: CS:GO RULETKA LENTASI + SOVRINLAR + OCHISH TUGMASI -->
+          <div class="ios-fh-group p-3 flex flex-col justify-between gap-2.5 min-h-0 overflow-hidden">
+            <div class="space-y-2">
+              <div class="flex items-center justify-between px-1">
+                <span class="text-[10px] font-semibold uppercase tracking-[0.06em] text-amber-300/90">Yutuq ruletkasi</span>
+                <span class="text-[9.5px] text-sky-300 font-medium">3D Sandiqni barmoq bilan aylantiring</span>
+              </div>
+
+              <!-- CS:GO Gorizontal Ruletka Lentasi -->
+              <div class="ios-bonus-roulette relative w-full h-24 overflow-hidden">
+                <div class="absolute inset-y-0 left-1/2 -translate-x-1/2 w-[3px] bg-amber-400 z-20 shadow-[0_0_12px_#fbbf24] pointer-events-none"></div>
+                <div class="absolute top-0.5 left-1/2 -translate-x-1/2 text-amber-400 text-[11px] font-black z-20 leading-none pointer-events-none">▼</div>
+                <div class="absolute bottom-0.5 left-1/2 -translate-x-1/2 text-amber-400 text-[11px] font-black z-20 leading-none pointer-events-none">▲</div>
+                <div class="absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-[#050914] to-transparent z-10 pointer-events-none"></div>
+                <div class="absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-[#050914] to-transparent z-10 pointer-events-none"></div>
+                <div id="csCaseRouletteTrack" class="flex items-center h-full gap-2 px-2 will-change-transform" style="transform: translate3d(0px, 0px, 0px);"></div>
+              </div>
+
+              <!-- Sovrin toifalari (ixcham 3D shisha nishonlar) -->
+              <div class="grid grid-cols-3 gap-1.5 text-center pt-1">
+                <div class="ios-rt-stat-box py-1.5 px-1">
+                  <div class="text-[9px] text-sky-300 font-bold">Harbiy</div>
+                  <div class="text-[10px] font-mono text-white">+$1,500</div>
+                </div>
+                <div class="ios-rt-stat-box py-1.5 px-1">
+                  <div class="text-[9px] text-purple-300 font-bold">Taktik</div>
+                  <div class="text-[10px] font-mono text-white">+$2,500</div>
+                </div>
+                <div class="ios-rt-stat-box py-1.5 px-1">
+                  <div class="text-[9px] text-amber-300 font-bold">Elita / Jackpot</div>
+                  <div class="text-[10px] font-mono text-amber-200">+$4,500+</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 3D Oltin Ochish Tugmasi -->
+            <button id="btnSpinSlotMachine" type="button" class="w-full ios-btn-gold text-[12.5px] py-3 px-5 flex items-center justify-center gap-2 shrink-0">
+              <span>🔑</span>
+              <span>OLTIN SANDIQNI OCHISH (BEPUL)</span>
+            </button>
           </div>
 
-          <!-- 3) OCHISH TUGMASI -->
-          <button id="btnSpinSlotMachine" class="w-full menu-btn-gold text-white font-black italic text-sm py-3.5 px-6 rounded-xl shadow-xl transition active:scale-95 flex items-center justify-center gap-2">
-            🔑 OLTIN SANDIQNI OCHISH (BEPUL)
-          </button>
         </div>
       </div>
     </div>
@@ -8489,27 +8730,28 @@
           const owned = userStats.ownedSkins.includes(sk.id);
           const equipped = userStats.equippedSkinId === sk.id;
           const card = document.createElement('div');
-          card.className = `rounded-xl p-3 border flex flex-col justify-between gap-2 ${equipped ? 'bg-emerald-950/30 border-emerald-400' : 'bg-slate-900 border-slate-800'}`;
+          card.className = `ios-shop-card ${equipped ? 'ios-shop-card-equipped' : ''} p-2.5 flex flex-col justify-between gap-2`;
           card.innerHTML = `
             <div>
-              <div class="flex items-center justify-between">
-                <span class="text-xs font-extrabold text-white">${sk.name}</span>
-                <span class="text-[10px] font-mono font-bold ${sk.price === 0 ? 'text-emerald-400' : 'text-amber-400'}">${sk.price === 0 ? 'BEPUL' : '$ ' + sk.price.toLocaleString('en-US')}</span>
+              <div class="flex items-center justify-between gap-1 mb-1.5">
+                <span class="text-[11px] font-bold text-white truncate" title="${sk.name}">${sk.name}</span>
+                <span class="ios-fh-stat-pill px-2 py-0.5 rounded-full text-[9.5px] font-mono font-bold shrink-0 ${sk.price === 0 ? 'text-emerald-300' : 'text-amber-300'}">${sk.price === 0 ? 'BEPUL' : '$' + sk.price.toLocaleString('en-US')}</span>
               </div>
-              <div class="mt-2 h-10 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-center gap-1.5 p-2">
-                <span class="w-8 h-3 rounded" style="background:${sk.bodyColor}"></span>
-                <span class="w-12 h-4 rounded" style="background:${sk.barrelColor}"></span>
-                <span class="w-6 h-3 rounded" style="background:${sk.accentColor}"></span>
+              <div class="ios-shop-preview h-11 flex items-center justify-center gap-1.5 px-2 relative overflow-hidden" style="box-shadow: inset 0 3px 10px rgba(0,0,0,0.72), 0 0 14px ${sk.glowColor}88;">
+                <span class="w-8 h-3.5 rounded-sm shadow-md" style="background:${sk.bodyColor}"></span>
+                <span class="w-12 h-4 rounded-sm shadow-md" style="background:${sk.barrelColor}; box-shadow: 0 0 10px ${sk.glowColor}88;"></span>
+                <span class="w-6 h-3 rounded-sm shadow-md" style="background:${sk.accentColor}"></span>
               </div>
             </div>
           `;
           const btn = document.createElement('button');
+          btn.type = 'button';
           if (equipped) {
-            btn.className = 'w-full py-1.5 rounded-lg text-xs font-extrabold bg-emerald-600 text-white cursor-default';
+            btn.className = 'ios-btn-green w-full py-1.5 text-[10.5px] cursor-default';
             btn.textContent = '✓ Oʻrnatilgan';
           } else if (owned) {
-            btn.className = 'w-full py-1.5 rounded-lg text-xs font-bold bg-sky-600 hover:bg-sky-500 text-white transition';
-            btn.textContent = 'Oʻrnatish (Equip)';
+            btn.className = 'ios-btn-blue w-full py-1.5 text-[10.5px]';
+            btn.textContent = 'Oʻrnatish';
             btn.addEventListener('click', () => {
               userStats.equippedSkinId = sk.id;
               saveUserData();
@@ -8519,8 +8761,8 @@
               showToast(`${sk.name} qurolingizga o'rnatildi!`, '🎨');
             });
           } else {
-            btn.className = 'w-full py-1.5 rounded-lg text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 transition';
-            btn.textContent = `🛒 Sotib olish ($${sk.price.toLocaleString('en-US')})`;
+            btn.className = 'ios-btn-gold w-full py-1.5 text-[10.5px]';
+            btn.textContent = `🛒 $${sk.price.toLocaleString('en-US')}`;
             btn.addEventListener('click', () => {
               if (userStats.coins < sk.price) {
                 showToast('Tangalar yetarli emas! 777 Bonus mashinasini aylantiring.', '⚠️');
@@ -9425,6 +9667,17 @@
         document.getElementById('modalShop').classList.add('hidden');
       });
 
+      // Tashqi qora fonga (backdrop) bosilganda modalni xavfsiz yopish
+      ['modalSettings', 'modalShop', 'modalBonus'].forEach(id => {
+        const m = document.getElementById(id);
+        if (m && !m._boundBackdrop) {
+          m._boundBackdrop = true;
+          m.addEventListener('click', (e) => {
+            if (e.target === m) m.classList.add('hidden');
+          });
+        }
+      });
+
       // ==================== 6) CS:GO 3D OLTIN HARBIY SANDIQ (3D CASE OPENING + RULETKA) ====================
       const CS_CASE_ITEMS = [
         { title: 'Harbiy Zaxira', reward: 1500, badge: '🧰', rarity: 'blue', border: '#3b82f6', bg: 'linear-gradient(180deg,#0f172a 0%,#1e3a8a 100%)', hex: 0x3b82f6 },
@@ -9826,6 +10079,17 @@
         if (!caseAnimFrameId) {
           caseAnimFrameId = requestAnimationFrame(renderCase3DLoop);
         }
+        requestAnimationFrame(() => {
+          if (caseThreeRenderer && caseThreeCamera) {
+            const cvs = caseThreeRenderer.domElement;
+            const rect = cvs.getBoundingClientRect();
+            const w = Math.max(240, Math.floor(rect.width));
+            const h = Math.max(140, Math.floor(rect.height));
+            caseThreeRenderer.setSize(w, h, false);
+            caseThreeCamera.aspect = w / h;
+            caseThreeCamera.updateProjectionMatrix();
+          }
+        });
       }
       document.getElementById('menuBtnBonus').addEventListener('click', openBonusModal);
       document.getElementById('btnQuickBonusPlus').addEventListener('click', openBonusModal);
