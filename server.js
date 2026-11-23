@@ -293,6 +293,8 @@ app.post("/api/tg/friend-request", (req, res) => {
       db.players[cleanFrom].savedFriends.push({
         id: cleanTo,
         name: toObj.name || cleanTo,
+        username: toObj.username || "",
+        tgId: toObj.tgId || null,
         elo: (toObj.userStats && toObj.userStats.elo) || 1000
       });
     }
@@ -302,6 +304,8 @@ app.post("/api/tg/friend-request", (req, res) => {
       db.players[cleanTo].savedFriends.push({
         id: cleanFrom,
         name: fromObj.name || cleanFrom,
+        username: fromObj.username || "",
+        tgId: fromObj.tgId || null,
         elo: (fromObj.userStats && fromObj.userStats.elo) || (fromElo || 1000)
       });
     }
@@ -379,6 +383,8 @@ app.post("/api/tg/friend-respond", (req, res) => {
       myObj.savedFriends.push({
         id: cleanSender,
         name: senderObj.name || cleanSender,
+        username: senderObj.username || "",
+        tgId: senderObj.tgId || null,
         elo: (senderObj.userStats && senderObj.userStats.elo) || 1050
       });
     }
@@ -389,6 +395,8 @@ app.post("/api/tg/friend-respond", (req, res) => {
         db.players[cleanSender].savedFriends.push({
           id: cleanMy,
           name: myObj.name || cleanMy,
+          username: myObj.username || "",
+          tgId: myObj.tgId || null,
           elo: (myObj.userStats && myObj.userStats.elo) || 1050
         });
       }
@@ -454,6 +462,9 @@ app.get("/api/tg/directory", (req, res) => {
                  (myFriendIds.has(p.id) ? "friend" :
                  (incomingSet.has(p.id) ? "incoming" :
                  (outgoingSet.has(p.id) ? "outgoing" : "none")));
+    if (p.relation === "friend") {
+      p.tgId = (db.players[p.id] && db.players[p.id].tgId) || null;
+    }
   });
 
   let filtered = allSorted;
@@ -474,6 +485,7 @@ app.get("/api/tg/directory", (req, res) => {
         id: p.id,
         name: p.name || p.id,
         username: p.username || "",
+        tgId: p.tgId || null,
         photoUrl: p.photoUrl || "",
         elo: score.elo,
         level: score.level,
@@ -489,7 +501,8 @@ app.get("/api/tg/directory", (req, res) => {
     return {
       id: fid,
       name: (sf && sf.name) || fid,
-      username: "",
+      username: (sf && sf.username) || "",
+      tgId: (sf && sf.tgId) || null,
       photoUrl: "",
       elo: (sf && sf.elo) || 1000,
       level: 1,

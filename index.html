@@ -8221,6 +8221,52 @@
         return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
       }
 
+      function openFriendTelegramChat(username, tgId, displayName) {
+        const label = displayName || "Do'stingiz";
+        let cleanUser = String(username || '').trim().replace(/^@+/, '');
+        if (!cleanUser && /^@[a-zA-Z0-9_]{3,32}$/.test(String(displayName || '').trim())) {
+          cleanUser = String(displayName).trim().replace(/^@+/, '');
+        }
+        const cleanTgId = String(tgId || '').replace(/\D/g, '');
+        const tg = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
+
+        if (cleanUser) {
+          const chatUrl = 'https://t.me/' + encodeURIComponent(cleanUser);
+          try {
+            if (tg && typeof tg.openTelegramLink === 'function') {
+              tg.openTelegramLink(chatUrl);
+            } else {
+              window.open(chatUrl, '_blank', 'noopener');
+            }
+          } catch (e) {
+            window.open(chatUrl, '_blank', 'noopener');
+          }
+          if (typeof showToast === 'function') showToast(`${label} (@${cleanUser}) Telegram chati ochilmoqda...`, '💬');
+          return;
+        }
+
+        if (cleanTgId) {
+          const deepUrl = 'tg://user?id=' + cleanTgId;
+          try {
+            const a = document.createElement('a');
+            a.href = deepUrl;
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => { try { a.remove(); } catch (_) {} }, 250);
+          } catch (e) {
+            window.location.href = deepUrl;
+          }
+          if (typeof showToast === 'function') showToast(`${label} bilan Telegram chati ochilmoqda...`, '💬');
+          return;
+        }
+
+        if (typeof showToast === 'function') {
+          showToast(`${label} hali Telegram profili bilan ulanmagan (username/ID topilmadi).`, 'ℹ️');
+        }
+      }
+      window.openFriendTelegramChat = openFriendTelegramChat;
+
       function getActiveMyId() {
         return (window.DIGI_TG_PROFILE && window.DIGI_TG_PROFILE.myId) ||
                (typeof myProfile !== 'undefined' && myProfile && myProfile.id) ||
@@ -8243,8 +8289,9 @@
         if (!listEl) return;
 
         const myId = getActiveMyId();
+        const isRealFriendList = Array.isArray(data.myFriends) && data.myFriends.length > 0;
         let displayList = [];
-        if (Array.isArray(data.myFriends) && data.myFriends.length > 0) {
+        if (isRealFriendList) {
           displayList = data.myFriends.slice(0, 2);
         } else if (Array.isArray(data.allPlayers) && data.allPlayers.length > 0) {
           displayList = data.allPlayers.filter(p => p.id !== myId).slice(0, 2);
@@ -8267,6 +8314,10 @@
             ? `<img src="${escapeFhHtml(p.photoUrl)}" class="w-full h-full object-cover" onerror="this.onerror=null;this.classList.add('hidden');if(this.nextElementSibling)this.nextElementSibling.classList.remove('hidden');" /><span class="hidden flex items-center justify-center w-full h-full">${defaultSvg}</span>`
             : defaultSvg;
 
+          const chatBtnAction = isRealFriendList
+            ? `event.stopPropagation(); openFriendTelegramChat('${escapeFhHtml(p.username || '')}', '${escapeFhHtml(p.tgId || '')}', '${pName}')`
+            : `openFriendsHubModal()`;
+
           return '<div class="h-6 flex items-center justify-between gap-1.5 px-1 py-0.5 rounded bg-slate-900/70 border border-slate-700/50">'
             + '<div class="flex items-center gap-1.5 min-w-0">'
               + `<div class="w-[22px] h-[22px] rounded-md overflow-hidden border border-slate-500/70 bg-slate-900 shrink-0 flex items-center justify-center">${avatarHtml}</div>`
@@ -8275,7 +8326,7 @@
                 + statusDot
               + '</div>'
             + '</div>'
-            + '<button type="button" onclick="openFriendsHubModal()" class="w-5 h-5 rounded flex items-center justify-center text-slate-200 hover:text-white bg-slate-800/80 hover:bg-slate-700 border border-slate-600/50 active:scale-90 transition shrink-0 text-[10px]" title="Do\x27stlar">💬</button>'
+            + `<button type="button" onclick="${chatBtnAction}" class="w-5 h-5 rounded flex items-center justify-center text-slate-200 hover:text-white bg-slate-800/80 hover:bg-slate-700 border border-slate-600/50 active:scale-90 transition shrink-0 text-[10px]" title="${isRealFriendList ? 'Telegramda xabar yozish' : 'Do\x27stlar'}">💬</button>`
           + '</div>';
         }).join('');
       }
@@ -8369,7 +8420,7 @@
               if (p.relation === 'self') {
                 actionBtn = '<span class="ios-btn-gold px-2.5 py-1 text-[10px]">Siz</span>';
               } else if (p.relation === 'friend') {
-                actionBtn = '<span class="px-2.5 py-1 text-[10px] font-semibold rounded-full border border-emerald-400/55 bg-emerald-500/20 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.28)]">Do\x27st</span>';
+                actionBtn = `<button type="button" data-fh-action="chat" data-pid="${pid}" data-pname="${pname}" data-tg-user="${escapeFhHtml(p.username || '')}" data-tg-id="${escapeFhHtml(p.tgId || '')}" class="ios-btn-blue px-2.5 py-1 text-[10px] inline-flex items-center gap-1 shrink-0" title="Telegramda xabar yozish">💬 Xabar</button>`;
               } else if (p.relation === 'outgoing') {
                 actionBtn = '<span class="ios-btn-gray px-2.5 py-1 text-[10px] text-[#AEAEB2]">Yuborildi</span>';
               } else if (p.relation === 'incoming') {
@@ -8446,8 +8497,9 @@
                     + `<div class="text-[10px] truncate leading-tight">${statusLine}</div>`
                   + `</div>`
                 + `</div>`
-                + `<div class="flex items-center gap-1.5 shrink-0">`
-                  + `<button type="button" data-fh-action="play" data-pid="${pid}" class="ios-btn-tinted px-2.5 py-1 text-[10px] active:opacity-75 transition" title="Online lobbi ochish">O\x27ynash</button>`
+                + `<div class="flex items-center gap-1 shrink-0">`
+                  + `<button type="button" data-fh-action="chat" data-pid="${pid}" data-pname="${fname}" data-tg-user="${escapeFhHtml(f.username || '')}" data-tg-id="${escapeFhHtml(f.tgId || '')}" class="ios-btn-blue px-2.5 py-1 text-[10px] inline-flex items-center gap-1 shrink-0" title="Telegramda yozish"><svg class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/></svg><span>Xabar</span></button>`
+                  + `<button type="button" data-fh-action="play" data-pid="${pid}" class="ios-btn-tinted px-2 py-1 text-[10px] active:opacity-75 transition" title="Online lobbi ochish">O\x27ynash</button>`
                   + `<button type="button" data-fh-action="remove" data-pid="${pid}" class="ios-btn-circle active:opacity-75 transition text-[#FF453A]" title="Do\x27stlikdan chiqarish">✕</button>`
                 + `</div>`
               + `</div>`;
@@ -8532,7 +8584,10 @@
             const myElo = (typeof userStats !== 'undefined' && userStats.elo) ? userStats.elo : 1000;
             const curQ = document.getElementById('fhSearchInput') ? document.getElementById('fhSearchInput').value.trim() : '';
 
-            if (action === 'add') {
+            if (action === 'chat') {
+              openFriendTelegramChat(btn.getAttribute('data-tg-user') || btn.dataset.tgUser || '', btn.getAttribute('data-tg-id') || btn.dataset.tgId || '', btn.getAttribute('data-pname') || btn.dataset.pname || '');
+              return;
+            } else if (action === 'add') {
               try {
                 btn.disabled = true;
                 const res = await fetch('/api/tg/friend-request', {
@@ -8591,7 +8646,10 @@
             const myId = getActiveMyId();
             const curQ = document.getElementById('fhSearchInput') ? document.getElementById('fhSearchInput').value.trim() : '';
 
-            if (action === 'accept' || action === 'reject') {
+            if (action === 'chat') {
+              openFriendTelegramChat(btn.getAttribute('data-tg-user') || btn.dataset.tgUser || '', btn.getAttribute('data-tg-id') || btn.dataset.tgId || '', btn.getAttribute('data-pname') || btn.dataset.pname || '');
+              return;
+            } else if (action === 'accept' || action === 'reject') {
               try {
                 btn.disabled = true;
                 const res = await fetch('/api/tg/friend-respond', {
