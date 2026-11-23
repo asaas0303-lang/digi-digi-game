@@ -446,26 +446,21 @@
       const data = await res.json();
       const rooms = Array.isArray(data.rooms) ? data.rooms : [];
       if (rooms.length === 0) {
-        listEl.innerHTML = `<div class="text-[10px] text-slate-400 text-center py-1.5">Hozircha ochiq xona yo'q — yangi xona oching yoki Tezkor Qidiruvni bosing!</div>`;
+        listEl.innerHTML = `<div class="py-8 px-3 text-center text-[11px] text-slate-400 leading-relaxed">Hozircha ochiq xona yo'q.<br/><span class="text-sky-300 font-semibold">Tez o'yin</span> yoki <span class="text-amber-300 font-semibold">Xona ochish</span> ni bosing.</div>`;
         return;
       }
       listEl.innerHTML = rooms.map((r) => `
-        <div class="flex items-center justify-between gap-2 bg-slate-900/90 border border-slate-700/80 rounded-lg px-2.5 py-1.5">
-          <div class="min-w-0">
-            <div class="flex items-center gap-1.5">
-              <span class="font-mono font-black text-xs text-amber-300">${escHtml(r.code)}</span>
-              <span class="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-500/40">${escHtml(r.mode)}</span>
-              <span class="text-[10px] text-slate-200 truncate">${escHtml(r.hostName)}</span>
-            </div>
+        <div class="ios-fh-row my-1">
+          <div class="flex items-center gap-2 min-w-0 flex-1">
+            <span class="ios-fh-stat-pill text-[9.5px] font-bold text-amber-300 px-2 py-0.5 rounded-full shrink-0">${escHtml(r.mode)}</span>
+            <span class="text-[12px] font-mono font-bold text-white tracking-wide">${escHtml(r.code)}</span>
+            <span class="text-[10px] text-slate-400 truncate">${r.playersCount}/${r.maxPlayers}</span>
           </div>
-          <div class="flex items-center gap-2 shrink-0">
-            <span class="font-mono text-[10px] font-bold text-slate-300">${r.playersCount}/${r.maxPlayers}</span>
-            <button data-join-code="${escHtml(r.code)}" class="mp-join-room-btn bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-black text-[10px] px-2.5 py-1 rounded-lg">KIRISH</button>
-          </div>
+          <button type="button" data-join-code="${escHtml(r.code)}" data-code="${escHtml(r.code)}" class="mp-join-room-btn ios-btn-blue px-3 py-1 text-[10px] shrink-0">Kirish</button>
         </div>
       `).join("");
       listEl.querySelectorAll(".mp-join-room-btn").forEach((btn) => {
-        btn.addEventListener("click", () => joinRoomByCode(btn.getAttribute("data-join-code")));
+        btn.addEventListener("click", () => joinRoomByCode(btn.getAttribute("data-join-code") || btn.getAttribute("data-code")));
       });
     } catch (e) {}
   }
@@ -482,11 +477,11 @@
     const b4 = document.getElementById("mpMode4v4");
     if (!b1 || !b4) return;
     if (selectedMpMode === "1v1") {
-      b1.className = "py-1.5 px-2 rounded-lg text-[11px] font-black uppercase bg-emerald-600 text-white border border-emerald-400 transition";
-      b4.className = "py-1.5 px-2 rounded-lg text-[11px] font-bold uppercase bg-slate-900 text-slate-300 border border-slate-700 transition";
+      b1.className = "ios-btn-blue flex-1 py-1.5 text-[11px] tracking-wide";
+      b4.className = "flex-1 py-1.5 text-[11px] font-semibold text-slate-300 rounded-full transition";
     } else {
-      b4.className = "py-1.5 px-2 rounded-lg text-[11px] font-black uppercase bg-emerald-600 text-white border border-emerald-400 transition";
-      b1.className = "py-1.5 px-2 rounded-lg text-[11px] font-bold uppercase bg-slate-900 text-slate-300 border border-slate-700 transition";
+      b1.className = "flex-1 py-1.5 text-[11px] font-semibold text-slate-300 rounded-full transition";
+      b4.className = "ios-btn-blue flex-1 py-1.5 text-[11px] tracking-wide";
     }
   }
 
@@ -522,12 +517,16 @@
     if (metaEl) metaEl.textContent = `${currentRoom.mode.toUpperCase()} • ${players.length}/${currentRoom.maxPlayers}`;
 
     const renderTeam = (arr, colorCls) => {
-      if (!arr.length) return `<div class="text-[10px] text-slate-500 italic py-1">Kutilmoqda...</div>`;
+      if (!arr.length) return `<div class="text-[10px] text-slate-500 italic py-2 text-center">Kutilmoqda...</div>`;
       return arr.map((p) => {
         const isMe = p.id === me.id;
+        const hostBadge = p.isHost ? `<span class="ios-btn-gold px-1.5 py-0.2 text-[8.5px] font-black uppercase shrink-0">HOST</span>` : "";
         return `
-          <div class="flex items-center justify-between gap-1 bg-black/40 border ${colorCls} rounded-lg px-2 py-1 text-[11px]">
-            <span class="font-bold ${isMe ? "text-amber-300" : "text-white"} truncate">${p.isHost ? "👑 " : ""}${escHtml(p.name)}${isMe ? " (Siz)" : ""}</span>
+          <div class="ios-fh-row py-1 px-2 my-1">
+            <div class="flex items-center gap-1.5 min-w-0 flex-1">
+              ${hostBadge}
+              <span class="text-[11px] font-semibold ${isMe ? "text-amber-300" : "text-white"} truncate">${escHtml(p.name)}${isMe ? " (Siz)" : ""}</span>
+            </div>
           </div>
         `;
       }).join("");
@@ -556,12 +555,12 @@
         const canStart = players.length >= 2;
         startBtn.disabled = !canStart;
         startBtn.className = canStart
-          ? "flex-1 menu-btn-gold text-white font-black italic text-xs py-2.5 px-3 rounded-xl uppercase transition"
-          : "flex-1 bg-slate-800 border border-slate-700 text-slate-400 font-bold text-xs py-2.5 px-3 rounded-xl uppercase cursor-not-allowed";
+          ? "ios-btn-gold px-4 py-1.5 text-[11px] uppercase transition cursor-pointer"
+          : "ios-btn-gray px-4 py-1.5 text-[11px] uppercase opacity-50 cursor-not-allowed";
         if (currentRoom.status === "ended") {
-          startBtn.textContent = canStart ? "🔥 QAYTA O'YNASH" : "⏳ RAQIB KUTILMOQDA (1/" + currentRoom.maxPlayers + ")";
+          startBtn.textContent = canStart ? "🔥 Qayta o'ynash" : "⏳ Raqib kutilmoqda";
         } else {
-          startBtn.textContent = canStart ? "🔥 JONLI JANGNI BOSHLASH" : "⏳ RAQIB KUTILMOQDA (1/" + currentRoom.maxPlayers + ")";
+          startBtn.textContent = canStart ? "🔥 Boshlash" : "⏳ Raqib kutilmoqda";
         }
       } else {
         startBtn.classList.add("hidden");
@@ -575,82 +574,99 @@
 
     const wrap = document.createElement("div");
     wrap.id = "mpLivePanel";
-    wrap.className = "bg-slate-950/95 border-2 border-emerald-500/55 rounded-2xl p-2.5 space-y-2 shadow-xl";
+    wrap.className = "flex-1 min-h-0 flex flex-col";
     wrap.innerHTML = `
-      <div class="flex items-center justify-between gap-2 border-b border-emerald-500/30 pb-1.5">
-        <div class="flex items-center gap-1.5 min-w-0">
-          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0"></span>
-          <span class="text-xs font-black italic uppercase text-emerald-300 tracking-wide truncate">🌐 JONLI ONLINE MULTIPLAYER</span>
+      <!-- 1. XONAGA KIRISHDAN OLDIN: 2 TA SODDA SHISHA USTUN -->
+      <div id="mpLobbyControls" class="grid grid-cols-2 gap-3 flex-1 min-h-0 overflow-hidden">
+
+        <!-- CHAP USTUN: REJIM + TEZ O'YIN + XONA OCHISH + KOD BILAN KIRISH -->
+        <div class="ios-fh-group p-3 flex flex-col justify-between gap-2.5">
+          <div class="space-y-2.5">
+            <div class="text-[10px] font-semibold uppercase tracking-[0.06em] text-sky-300/90 px-1">O'yin rejimi</div>
+            <div class="ios-mp-seg flex items-center gap-1">
+              <button id="mpMode1v1" type="button">1v1 Duel</button>
+              <button id="mpMode4v4" type="button">4v4 Jamoa</button>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 pt-1">
+              <button id="mpBtnQuick" type="button" class="ios-btn-gold py-2.5 px-2 text-[11px] flex items-center justify-center gap-1">
+                <span>⚡</span><span>Tez o'yin</span>
+              </button>
+              <button id="mpBtnCreate" type="button" class="ios-btn-blue py-2.5 px-2 text-[11px] flex items-center justify-center gap-1">
+                <span>+</span><span>Xona ochish</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Pastda: Xona kodi bilan kirish -->
+          <div class="space-y-1.5 pt-2 border-t border-white/10">
+            <div class="text-[10px] font-semibold uppercase tracking-[0.06em] text-amber-300/90 px-1">Kod orqali kirish</div>
+            <div class="flex items-center gap-1.5">
+              <input id="mpCodeInput" type="text" maxlength="6" placeholder="Kod (A7K9)" class="ios-fh-search flex-1 min-w-0 px-3 py-1.5 text-[11px] font-mono uppercase placeholder-slate-400" />
+              <button id="mpBtnJoinCode" type="button" class="ios-btn-green px-3.5 py-1.5 text-[11px] shrink-0">Kirish</button>
+            </div>
+          </div>
         </div>
-        <span class="text-[9px] font-mono font-bold bg-emerald-950 text-emerald-300 border border-emerald-500/40 px-1.5 py-0.5 rounded uppercase shrink-0">REAL-TIME SYNC</span>
+
+        <!-- O'NG USTUN: OCHIQ JONLI XONALAR -->
+        <div class="flex flex-col min-h-0 overflow-hidden">
+          <div class="shrink-0 px-2 pb-1.5 flex items-center justify-between gap-2">
+            <span class="text-[10px] font-semibold uppercase tracking-[0.06em] text-amber-300/90">Ochiq xonalar</span>
+            <button id="mpBtnRefreshRooms" type="button" class="ios-btn-tinted px-2.5 py-0.5 text-[10px]">Yangilash</button>
+          </div>
+          <div id="mpOpenRoomsList" class="ios-fh-group flex-1 min-h-0 overflow-y-auto">
+            <div class="py-8 text-center text-[11px] text-slate-400">Yuklanmoqda...</div>
+          </div>
+        </div>
+
       </div>
 
-      <div id="mpLobbyControls" class="space-y-2">
-        <div class="grid grid-cols-2 gap-1.5">
-          <button id="mpMode1v1" type="button">🎯 1v1 Jonli Duel</button>
-          <button id="mpMode4v4" type="button">⚔️ 4v4 Jonli Jamoa</button>
-        </div>
+      <!-- 2. XONA ICHIDA: SODDA 3D iOS XONA PANELI -->
+      <div id="mpRoomPanel" class="hidden flex-1 min-h-0 flex flex-col justify-between gap-2.5 overflow-hidden">
 
-        <div class="grid grid-cols-2 gap-1.5">
-          <button id="mpBtnQuick" type="button" class="menu-btn-gold py-2 px-2 rounded-xl text-[11px] font-black uppercase text-white active:scale-95 transition">⚡ Tezkor Qidiruv</button>
-          <button id="mpBtnCreate" type="button" class="bg-sky-700 hover:bg-sky-600 active:scale-95 border border-sky-400/70 py-2 px-2 rounded-xl text-[11px] font-black uppercase text-white transition">🏠 Xona Ochish</button>
-        </div>
-
-        <div class="flex gap-1.5">
-          <input id="mpCodeInput" type="text" maxlength="6" placeholder="Xona kodi (A7K9)" class="flex-1 min-w-0 bg-slate-900 border border-slate-700 focus:border-emerald-400 rounded-xl px-2.5 py-1.5 text-xs font-mono font-bold text-white uppercase focus:outline-none" />
-          <button id="mpBtnJoinCode" type="button" class="bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-black text-xs px-3 py-1.5 rounded-xl shrink-0 transition">🔑 Kirish</button>
-        </div>
-
-        <div class="bg-slate-900/70 border border-slate-800 rounded-xl p-2 space-y-1.5">
-          <div class="flex items-center justify-between text-[10px] font-extrabold uppercase text-slate-300">
-            <span>📋 Ochiq Jonli Xonalar</span>
-            <button id="mpBtnRefreshRooms" type="button" class="text-emerald-300 hover:text-emerald-200 font-bold">🔄 Yangilash</button>
+        <!-- Xona kodi va Telegram taklif -->
+        <div class="ios-fh-group shrink-0 px-3 py-2 flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="text-[10px] uppercase tracking-wider text-slate-400">Xona:</span>
+            <span id="mpActiveRoomCode" class="font-mono text-[14px] font-black text-amber-300 tracking-widest">----</span>
+            <button id="mpBtnCopyCode" type="button" class="ios-btn-gray px-2 py-0.5 text-[10px]" title="Nusxalash">Nusxa</button>
+            <span id="mpActiveRoomMeta" class="ios-fh-stat-pill text-[10px] text-sky-200 px-2 py-0.5 rounded-full truncate">1v1 • 1/2</span>
           </div>
-          <div id="mpOpenRoomsList" class="space-y-1 max-h-28 overflow-y-auto">
-            <div class="text-[10px] text-slate-400 text-center py-1">Yuklanmoqda...</div>
-          </div>
-        </div>
-      </div>
-
-      <div id="mpRoomPanel" class="hidden space-y-2">
-        <div class="flex items-center justify-between gap-2 bg-slate-900 border border-amber-500/50 rounded-xl px-2.5 py-2">
-          <div class="flex items-center gap-2">
-            <span class="text-[10px] font-bold uppercase text-slate-400">KOD:</span>
-            <span id="mpActiveRoomCode" class="font-mono font-black text-base tracking-widest text-amber-300">----</span>
-            <button id="mpBtnCopyCode" type="button" class="bg-slate-800 hover:bg-slate-700 text-amber-200 text-[10px] font-bold px-2 py-0.5 rounded-lg border border-slate-600">📋</button>
-          </div>
-          <span id="mpActiveRoomMeta" class="font-mono text-[10px] font-extrabold text-emerald-300 bg-emerald-950/90 border border-emerald-500/40 px-2 py-0.5 rounded-full">1V1 • 1/2</span>
+          <button id="mpBtnInviteTg" type="button" class="ios-btn-tinted px-3 py-1 text-[10.5px] shrink-0">📤 Do'st chaqirish</button>
         </div>
 
-        <button id="mpBtnInviteTg" type="button" class="w-full bg-sky-600 hover:bg-sky-500 active:scale-95 text-white font-black text-xs py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 shadow transition">
-          <span>✈️</span> <span>DO'STNI TELEGRAMDA XONAGA CHAQIRISH</span>
-        </button>
-
-        <div class="grid grid-cols-2 gap-2">
-          <div class="bg-red-950/25 border border-red-500/40 rounded-xl p-2 space-y-1.5">
-            <div class="flex items-center justify-between">
-              <span class="text-[10px] font-black text-red-400">🔴 T-FORCE</span>
-              <button id="mpBtnTeamRed" type="button" class="text-[9px] font-bold bg-red-900/70 text-red-200 px-1.5 py-0.5 rounded border border-red-500/50">O'tish</button>
+        <!-- 2 ta Jamoa Ustuni -->
+        <div class="grid grid-cols-2 gap-2.5 flex-1 min-h-0 overflow-hidden">
+          <div class="ios-fh-group flex flex-col min-h-0 overflow-hidden">
+            <div class="shrink-0 px-3 py-1.5 border-b border-white/10 flex items-center justify-between">
+              <span class="text-[10.5px] font-bold text-red-300 flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444]"></span>Qizil jamoa
+              </span>
+              <button id="mpBtnTeamRed" type="button" class="ios-btn-gray px-2 py-0.5 text-[9.5px]">O'tish</button>
             </div>
-            <div id="mpRedRoster" class="space-y-1"></div>
+            <div id="mpRedRoster" class="flex-1 min-h-0 overflow-y-auto p-1"></div>
           </div>
-          <div class="bg-sky-950/25 border border-sky-500/40 rounded-xl p-2 space-y-1.5">
-            <div class="flex items-center justify-between">
-              <span class="text-[10px] font-black text-sky-400">🔵 CT-SPEC</span>
-              <button id="mpBtnTeamBlue" type="button" class="text-[9px] font-bold bg-sky-900/70 text-sky-200 px-1.5 py-0.5 rounded border border-sky-500/50">O'tish</button>
+
+          <div class="ios-fh-group flex flex-col min-h-0 overflow-hidden">
+            <div class="shrink-0 px-3 py-1.5 border-b border-white/10 flex items-center justify-between">
+              <span class="text-[10.5px] font-bold text-sky-300 flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-sky-400 shadow-[0_0_8px_#38bdf8]"></span>Ko'k jamoa
+              </span>
+              <button id="mpBtnTeamBlue" type="button" class="ios-btn-gray px-2 py-0.5 text-[9.5px]">O'tish</button>
             </div>
-            <div id="mpBlueRoster" class="space-y-1"></div>
+            <div id="mpBlueRoster" class="flex-1 min-h-0 overflow-y-auto p-1"></div>
           </div>
         </div>
 
-        <div id="mpRoomStatusText" class="text-[10px] text-center font-bold text-amber-200 bg-black/50 border border-slate-800 rounded-lg py-1.5 px-2">
-          ⏳ Raqib kutilmoqda...
+        <!-- Pastki holat va Boshlash / Chiqish -->
+        <div class="shrink-0 flex items-center justify-between gap-2">
+          <div id="mpRoomStatusText" class="flex-1 min-w-0 text-[10.5px] font-medium text-sky-200 truncate px-1">O'yinchilar kutilmoqda...</div>
+          <div class="flex items-center gap-2 shrink-0">
+            <button id="mpBtnStartLive" type="button" class="ios-btn-gold px-4 py-1.5 text-[11px]">🔥 Boshlash</button>
+            <button id="mpBtnLeaveRoom" type="button" class="ios-btn-danger px-3.5 py-1.5 text-[11px]">Chiqish</button>
+          </div>
         </div>
 
-        <div class="flex items-center gap-1.5">
-          <button id="mpBtnStartLive" type="button" class="flex-1 menu-btn-gold text-white font-black italic text-xs py-2.5 px-3 rounded-xl uppercase">🔥 JONLI JANGNI BOSHLASH</button>
-          <button id="mpBtnLeaveRoom" type="button" class="bg-red-950/90 hover:bg-red-800 border border-red-500/60 text-red-200 font-bold text-xs py-2.5 px-3 rounded-xl shrink-0">🚪 Chiqish</button>
-        </div>
       </div>
     `;
 

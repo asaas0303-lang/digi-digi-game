@@ -815,6 +815,28 @@
       max-width: 420px !important;
       z-index: 60 !important;
     }
+    /* === 3D iOS GLASS O'TA SODDA ONLINE LOBBI (#modalOnline) === */
+    #modalOnline {
+      background:
+        radial-gradient(circle at 18% 18%, rgba(14, 165, 233, 0.24), transparent 44%),
+        radial-gradient(circle at 84% 82%, rgba(245, 158, 11, 0.16), transparent 46%),
+        rgba(3, 7, 18, 0.72) !important;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", sans-serif;
+    }
+    #lobbyView.digi-lobby-rot90 #modalOnline {
+      padding: 8px 14px 8px max(66px, calc(var(--digi-safe-left, 58px) + 8px)) !important;
+    }
+    #lobbyView.digi-lobby-rot90 #modalOnline > div {
+      height: 94% !important;
+      max-height: 94% !important;
+    }
+    .ios-mp-seg {
+      background: linear-gradient(180deg, rgba(5, 10, 22, 0.86) 0%, rgba(12, 20, 40, 0.74) 100%);
+      border: 1px solid rgba(96, 165, 250, 0.26);
+      border-radius: 9999px;
+      padding: 3px;
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.72);
+    }
   </style>
 </head>
 <body class="relative w-full h-full flex flex-col justify-between horror-bg select-none">
@@ -1177,152 +1199,68 @@
       </div>
     </div>
 
-      <!-- ==================== MODAL 2: ONLINE LOBBI VA DO'STLAR (BOSH PANEL DIZAYNIGA 100% MOS) ==================== -->
-    <div id="modalOnline" class="hidden fixed inset-0 z-50 cs-modal-backdrop backdrop-blur-md flex flex-col justify-between overflow-hidden">
-      
-      <!-- Yuqori Tilla-Metallik Sarlavha Paneli -->
-      <div class="shrink-0 cs-gold-header px-3.5 py-2.5 flex items-center justify-between gap-2 shadow-xl">
-        <div class="flex items-center gap-2.5 min-w-0">
-          <div class="w-10 h-10 rounded-xl overflow-hidden border-2 border-amber-400 shadow shrink-0 bg-slate-900">
-            <img src="data:image/jpeg;base64,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" alt="Avatar" class="w-full h-full object-cover" />
+    <!-- ==================== MODAL 2: O'TA SODDA 3D iOS ONLINE LOBBI ==================== -->
+    <div id="modalOnline" class="hidden fixed inset-0 z-50 flex items-center justify-center p-2.5">
+      <div class="ios-fh-sheet w-full max-w-4xl h-[94%] flex flex-col overflow-hidden">
+
+        <!-- Yuqori 3D iOS Glass Sarlavha (Ortiqcha bezak va tablar yo'q!) -->
+        <div class="ios-fh-nav shrink-0 h-[44px] px-3.5 flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="w-7 h-7 rounded-full ios-fh-avatar bg-slate-900/90 flex items-center justify-center text-sky-300 shrink-0">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a13 13 0 0 1 0 18M12 3a13 13 0 0 0 0 18"/></svg>
+            </span>
+            <h2 class="text-[15px] font-bold tracking-tight bg-gradient-to-b from-white via-sky-100 to-amber-200 bg-clip-text text-transparent drop-shadow truncate">Online</h2>
+            <span class="ios-fh-stat-pill inline-flex items-center gap-1.5 text-sky-100 text-[10px] font-semibold px-2.5 py-0.5 rounded-full shrink-0">
+              <span class="w-1.5 h-1.5 rounded-full bg-[#30D158] shadow-[0_0_8px_rgba(48,209,88,0.95)]"></span>
+              <span>Jonli o'yin</span>
+            </span>
           </div>
-          <div class="min-w-0">
-            <div class="flex items-center gap-1.5">
-              <h2 class="text-xs sm:text-sm font-black italic tracking-wider uppercase text-white digi-title-shadow truncate">DIGI DIGI • ONLINE LOBBI</h2>
-              <span class="bg-amber-400/20 border border-amber-400/60 text-amber-300 text-[9px] font-extrabold px-1.5 py-0.5 rounded uppercase shrink-0">LIVE</span>
-            </div>
-            <p class="text-[10px] text-amber-100/80 truncate">Do'stlar bilan jamoaviy 4v4 yoki 1v1 Duel o'ynash</p>
+
+          <div class="flex items-center gap-1.5 shrink-0">
+            <button id="btnCloseOnlineModal" type="button" class="ios-btn-circle" title="Yopish" aria-label="Yopish">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
           </div>
         </div>
-        <button id="btnCloseOnlineModal" class="menu-btn-dark hover:border-red-500 text-white text-xs font-extrabold px-3.5 py-2 rounded-xl transition shrink-0 flex items-center gap-1">
-          <span>✕</span> <span>Yopish</span>
-        </button>
-      </div>
 
-      <!-- 3 ta Metallik Navigatsiya Tablari -->
-      <div class="shrink-0 px-3 pt-2 pb-1 max-w-4xl w-full mx-auto">
-        <div class="grid grid-cols-3 gap-2 p-1 rounded-2xl bg-slate-950/85 border border-slate-700/70 shadow-inner">
-          <button id="tabBtnSquad" class="lobby-tab-btn cs-tab-active py-2 px-2 rounded-xl text-xs italic tracking-wide uppercase transition flex items-center justify-center gap-1.5">
-            <span>⚔️</span> <span>Jamoa</span>
-          </button>
-          <button id="tabBtnFriends" class="lobby-tab-btn cs-tab-inactive py-2 px-2 rounded-xl text-xs italic tracking-wide uppercase transition flex items-center justify-center gap-1.5">
-            <span>👥</span> <span>Do'stlar (7)</span>
-          </button>
-          <button id="tabBtnMaze" class="lobby-tab-btn cs-tab-inactive py-2 px-2 rounded-xl text-xs italic tracking-wide uppercase transition flex items-center justify-center gap-1.5">
-            <span>🕸️</span> <span>Xarita</span>
-          </button>
+        <!-- Asosiy Maydon: mp-client.js shu yerga (#panelSquad) sodda 2-ustunli 3D iOS panelni ulaydi -->
+        <div class="flex-1 min-h-0 overflow-y-auto p-3 flex flex-col">
+          <section id="panelSquad" class="flex-1 min-h-0 flex flex-col"></section>
         </div>
+
+        <!-- Eski oflayn/tab ID lari uchun ko'rinmas himoya qutisi (0% JS null-xato kafolati) -->
+        <div class="hidden" aria-hidden="true">
+          <button id="tabBtnSquad" type="button"></button>
+          <button id="tabBtnFriends" type="button"></button>
+          <button id="tabBtnMaze" type="button"></button>
+          <button id="btnMode4v4" type="button"></button>
+          <button id="btnMode1v1" type="button"></button>
+          <button id="btnJoinRedTeam" type="button"></button>
+          <button id="btnJoinBlueTeam" type="button"></button>
+          <button id="btnAutoFillSquads" type="button"></button>
+          <span id="redTeamCount"></span>
+          <div id="redTeamSlots"></div>
+          <span id="blueTeamCount"></span>
+          <div id="blueTeamSlots"></div>
+          <span id="lobbyReadyText"></span>
+          <button id="btnStartMatch" type="button"></button>
+          <button data-weapon="0" class="weapon-pick-btn" type="button"></button>
+          <button data-weapon="1" class="weapon-pick-btn" type="button"></button>
+          <button data-weapon="2" class="weapon-pick-btn" type="button"></button>
+          <button data-weapon="3" class="weapon-pick-btn" type="button"></button>
+          <section id="panelFriends">
+            <input id="friendIdInput" type="text" />
+            <button id="btnSendFriendReq" type="button"></button>
+            <span id="onlineCountLabel">0</span>
+            <div id="playersListContainer"></div>
+          </section>
+          <section id="panelMaze">
+            <button id="btnChangeMaze" type="button"></button>
+            <canvas id="lobbyMazePreview" width="16" height="16"></canvas>
+          </section>
+        </div>
+
       </div>
-
-      <!-- O'rta Kontent Maydoni -->
-      <div class="flex-1 min-h-0 overflow-y-auto px-3 py-2 max-w-4xl w-full mx-auto grid grid-cols-1 lg:grid-cols-12 gap-3 touch-auto">
-        
-        <!-- 1) JAMOA VA DUEL LOBBISI -->
-        <section id="panelSquad" class="lg:col-span-5 flex flex-col gap-2.5 cs-panel-card rounded-2xl p-3">
-          
-          <!-- Rejim tanlash: Matnlar hech qachon ustma-ust tushmaydi! -->
-          <div class="grid grid-cols-2 gap-2 bg-slate-950/90 p-1.5 rounded-xl border border-slate-700/70">
-            <button id="btnMode4v4" class="menu-btn-gold py-2 px-2 rounded-lg text-[11px] font-black italic uppercase text-white transition flex items-center justify-center gap-1">
-              <span>⚔️</span> <span class="truncate">4 vs 4 Jamoaviy (PUBG Lobby)</span>
-            </button>
-            <button id="btnMode1v1" class="menu-btn-dark py-2 px-2 rounded-lg text-[11px] font-bold italic uppercase text-slate-300 transition flex items-center justify-center gap-1">
-              <span>🎯</span> <span class="truncate">1 vs 1 Maxsus Duel</span>
-            </button>
-          </div>
-
-          <!-- Jamoa tanlash va Avto-to'ldirish (3 ta chiroyli bir tekis tugma) -->
-          <div class="grid grid-cols-3 gap-1.5">
-            <button id="btnJoinRedTeam" class="py-2 px-2 rounded-xl text-[11px] font-black uppercase bg-gradient-to-r from-red-700 to-red-900 text-white border border-red-400 shadow transition truncate">
-              🔴 Qizil Jamoa
-            </button>
-            <button id="btnJoinBlueTeam" class="py-2 px-2 rounded-xl text-[11px] font-black uppercase bg-slate-900 text-sky-300 border border-sky-500/50 hover:bg-sky-950 transition truncate">
-              🔵 Ko'k Jamoa
-            </button>
-            <button id="btnAutoFillSquads" class="py-2 px-2 rounded-xl text-[10px] font-extrabold uppercase bg-amber-500/20 text-amber-300 border border-amber-400/60 hover:bg-amber-500/30 transition truncate">
-              ⚡ Bo'sh joylarni to'ldirish
-            </button>
-          </div>
-
-          <!-- Ikkita Jamoa Kartochkalari (To'liq ismlar ko'rinadi, qisqarib qolmaydi!) -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 flex-1">
-            <!-- QIZIL JAMOA (T-FORCE) -->
-            <div class="bg-slate-950/80 border border-red-500/40 rounded-xl p-2.5 flex flex-col shadow-inner">
-              <div class="flex items-center justify-between pb-1.5 mb-2 border-b border-red-500/30">
-                <div class="flex items-center gap-1.5">
-                  <span class="w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444]"></span>
-                  <span class="text-xs font-black italic uppercase text-red-400 tracking-wide">T-FORCE (ALFA)</span>
-                </div>
-                <span id="redTeamCount" class="text-[10px] font-mono font-bold bg-red-950 text-red-200 px-2 py-0.5 rounded-full border border-red-700">4/4</span>
-              </div>
-              <div id="redTeamSlots" class="space-y-1.5 flex-1"></div>
-            </div>
-
-            <!-- KO'K JAMOA (CT-SPEC) -->
-            <div class="bg-slate-950/80 border border-sky-500/40 rounded-xl p-2.5 flex flex-col shadow-inner">
-              <div class="flex items-center justify-between pb-1.5 mb-2 border-b border-sky-500/30">
-                <div class="flex items-center gap-1.5">
-                  <span class="w-2.5 h-2.5 rounded-full bg-sky-400 shadow-[0_0_8px_#38bdf8]"></span>
-                  <span class="text-xs font-black italic uppercase text-sky-400 tracking-wide">CT-SPEC (OMEGA)</span>
-                </div>
-                <span id="blueTeamCount" class="text-[10px] font-mono font-bold bg-sky-950 text-sky-200 px-2 py-0.5 rounded-full border border-sky-700">4/4</span>
-              </div>
-              <div id="blueTeamSlots" class="space-y-1.5 flex-1"></div>
-            </div>
-          </div>
-
-          <!-- Qurol Arsenali (Metallik kartochkalar) -->
-          <div class="bg-slate-950/90 border border-slate-700/80 rounded-xl p-2.5">
-            <div class="flex items-center justify-between mb-1.5">
-              <span class="text-[10px] font-black uppercase tracking-wider text-amber-400">🔫 Boshlang'ich Qurol Arsenali:</span>
-              <span id="lobbyReadyText" class="text-[10px] text-emerald-400 font-bold">Lobbi jamoasi tayyor!</span>
-            </div>
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-              <button data-weapon="0" class="weapon-pick-btn menu-btn-dark text-slate-200 text-[11px] font-bold py-2 px-2 rounded-xl truncate">1. To'pponcha</button>
-              <button data-weapon="1" class="weapon-pick-btn menu-btn-gold text-white text-[11px] font-black py-2 px-2 rounded-xl truncate">2. Shotgun (Ov miltig'i)</button>
-              <button data-weapon="2" class="weapon-pick-btn menu-btn-dark text-slate-200 text-[11px] font-bold py-2 px-2 rounded-xl truncate">3. Plazma</button>
-              <button data-weapon="3" class="weapon-pick-btn menu-btn-dark text-slate-200 text-[11px] font-bold py-2 px-2 rounded-xl truncate">4. CS Pichoq</button>
-            </div>
-          </div>
-
-          <!-- JANGNI BOSHLASH TUGMASI (Aynan karta ichida — pastdagi Gemini `✦` tugmasidan ancha tepada va 100% ochiq!) -->
-          <button id="btnStartMatch" class="menu-btn-gold w-full py-3.5 px-5 rounded-2xl flex items-center justify-center gap-2.5 shadow-2xl transition mt-0.5 text-sm sm:text-base font-black italic tracking-wider text-white uppercase">
-            <span>🔥</span> <span>LABIRINTGA KIRISH</span>
-          </button>
-        </section>
-
-        <!-- 2) DO'STLAR RO'YXATI (Online / Offline oxirgi kirgan vaqti bilan) -->
-        <section id="panelFriends" class="hidden lg:flex lg:col-span-4 flex-col gap-2.5 cs-panel-card rounded-2xl p-3">
-          <div class="bg-slate-950/90 border border-amber-500/40 rounded-xl p-2.5">
-            <label for="friendIdInput" class="block text-[11px] font-black uppercase text-amber-400 mb-1.5">➕ ID orqali do'st qo'shish</label>
-            <div class="flex gap-1.5">
-              <input id="friendIdInput" type="text" placeholder="Masalan: DOOM-1042" class="flex-1 min-w-0 bg-slate-900 border border-slate-700 focus:border-amber-400 rounded-xl px-3 py-2 text-xs font-mono text-white uppercase focus:outline-none" />
-              <button id="btnSendFriendReq" class="menu-btn-gold text-white font-black text-xs px-3.5 py-2 rounded-xl shrink-0">Taklif yuborish</button>
-            </div>
-          </div>
-          <div class="flex items-center justify-between text-[11px] font-extrabold uppercase text-slate-300 px-1">
-            <span>Do'stlar va O'yinchilar (<span id="onlineCountLabel">9</span>)</span>
-            <span class="text-[10px] text-emerald-400">🟢 Online & ⚪ Offline</span>
-          </div>
-          <div id="playersListContainer" class="flex-1 overflow-y-auto space-y-2 pr-0.5"></div>
-        </section>
-
-        <!-- 3) LABIRINT XARITASI -->
-        <section id="panelMaze" class="hidden lg:flex lg:col-span-3 flex-col gap-2.5 cs-panel-card rounded-2xl p-3">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-black italic uppercase text-amber-400">🕸️ Taktik Xarita (Dust2 Labirint)</span>
-            <button id="btnChangeMaze" class="text-[11px] font-bold menu-btn-dark text-slate-200 px-2.5 py-1 rounded-lg">🔄 Yangi Labirint</button>
-          </div>
-          <div class="relative w-full aspect-square max-h-52 mx-auto bg-slate-950 border-2 border-amber-500/40 rounded-2xl overflow-hidden flex items-center justify-center shadow-inner">
-            <canvas id="lobbyMazePreview" width="192" height="192" class="w-full h-full object-contain"></canvas>
-          </div>
-          <p class="text-[11px] text-slate-300 leading-relaxed bg-slate-950/80 border border-slate-800 rounded-xl p-2.5">
-            🔴 <strong class="text-red-400">T-Force (Qizil)</strong> shimoli-g'arbdan, 🔵 <strong class="text-sky-400">CT-Spec (Ko'k)</strong> janubi-sharqdan jangni boshlaydi.
-          </p>
-        </section>
-      </div>
-
-      <!-- Pastki xavfsiz bo'shliq (Gemini `✦` tugmasi hech narsani to'sib qo'ymasligi uchun) -->
-      <div class="shrink-0 h-14 pointer-events-none"></div>
     </div>
 
     <!-- ==================== MODAL 3: SOZLAMALAR (BOSH PANEL USLUBIDA) ==================== -->
