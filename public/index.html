@@ -512,15 +512,7 @@
       touch-action: pan-x pan-y !important;
       overscroll-behavior: contain !important;
     }
-#lobbyView.digi-lobby-landscape #modalBonus #csCase3DCanvas {
-          max-height: 120px;
-        }
-        #lobbyView.digi-lobby-landscape #modalBonus .h-52 {
-          height: 7.5rem !important;
-        }
-        #lobbyView.digi-lobby-landscape #modalBonus .h-20 {
-          height: 3.5rem !important;
-        }
+    /* #modalBonus 3D sahnasi endi moslashuvchan .ios-bonus-stage qoidasi bilan boshqariladi */
 
     /* === PREMIUM 3D NEUMORPHISM + GLASSMORPHISM + FUTURISTIC iOS (#modalFriendsHub) === */
     #modalFriendsHub {
@@ -1016,6 +1008,27 @@
         0 12px 28px rgba(0, 0, 0, 0.62),
         0 0 22px rgba(245, 158, 11, 0.16),
         inset 0 0 36px rgba(245, 158, 11, 0.14);
+    }
+    #lobbyView #modalBonus .ios-bonus-stage,
+    #lobbyView.digi-lobby-landscape #modalBonus .ios-bonus-stage,
+    #lobbyView.digi-lobby-rot90 #modalBonus .ios-bonus-stage {
+      position: relative !important;
+      width: 100% !important;
+      height: 100% !important;
+      min-height: 0 !important;
+      overflow: hidden !important;
+    }
+    #lobbyView #modalBonus #csCase3DCanvas,
+    #lobbyView.digi-lobby-landscape #modalBonus #csCase3DCanvas,
+    #lobbyView.digi-lobby-rot90 #modalBonus #csCase3DCanvas {
+      position: absolute !important;
+      inset: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      max-width: none !important;
+      max-height: none !important;
+      min-height: 0 !important;
+      display: block !important;
     }
     .ios-bonus-roulette {
       background: linear-gradient(180deg, rgba(4, 8, 18, 0.96) 0%, rgba(11, 19, 38, 0.92) 100%);
@@ -9959,30 +9972,30 @@
         caseThreeRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
         caseThreeRenderer.shadowMap.enabled = false;
         caseThreeRenderer.toneMapping = THREE.ACESFilmicToneMapping;
-        caseThreeRenderer.toneMappingExposure = 1.18;
+        caseThreeRenderer.toneMappingExposure = 1.24;
         if (THREE.sRGBEncoding) caseThreeRenderer.outputEncoding = THREE.sRGBEncoding;
 
         caseThreeScene = new THREE.Scene();
         caseThreeScene.environment = generateCaseStudioEnvMap(caseThreeRenderer);
 
         // 2) Kamera (Cho'zilmasdan mukammal kadr)
-        caseThreeCamera = new THREE.PerspectiveCamera(38, 1.35, 0.1, 20);
-        caseThreeCamera.position.set(0, 1.32, 3.65);
-        caseThreeCamera.lookAt(0, 0.08, 0);
+        caseThreeCamera = new THREE.PerspectiveCamera(36, 1.25, 0.1, 20);
+        caseThreeCamera.position.set(0, 1.12, 3.35);
+        caseThreeCamera.lookAt(0, 0.04, 0);
 
         // 3) 3 Nuqtali Kinematik Studiya Yoritishi (Yengil, 0% lag)
-        const hemiLight = new THREE.HemisphereLight(0xdbeafe, 0x1e140a, 0.65);
+        const hemiLight = new THREE.HemisphereLight(0xdbeafe, 0x0b0f1a, 0.42);
         caseThreeScene.add(hemiLight);
 
-        const dirLight = new THREE.DirectionalLight(0xfff1d0, 1.65);
+        const dirLight = new THREE.DirectionalLight(0xfff3d1, 1.95);
         dirLight.position.set(2.8, 4.5, 3.4);
         caseThreeScene.add(dirLight);
 
-        const rimLight = new THREE.DirectionalLight(0x38bdf8, 0.95);
+        const rimLight = new THREE.DirectionalLight(0x38bdf8, 1.15);
         rimLight.position.set(-3.2, 1.8, -2.5);
         caseThreeScene.add(rimLight);
 
-        const goldBounce = new THREE.PointLight(0xf59e0b, 0.75, 6);
+        const goldBounce = new THREE.PointLight(0xf59e0b, 0.95, 6);
         goldBounce.position.set(1.8, -0.4, 2.2);
         caseThreeScene.add(goldBounce);
 
@@ -10245,8 +10258,27 @@
         });
       }
 
-      let caseLastCanvasW = 0;
-      let caseLastCanvasH = 0;
+      function syncCase3DViewport() {
+        if (!caseThreeRenderer || !caseThreeCamera) return false;
+        const cvs = caseThreeRenderer.domElement;
+        const stage = cvs.parentElement || cvs;
+        const cssW = Math.floor(stage.clientWidth || cvs.clientWidth || 0);
+        const cssH = Math.floor(stage.clientHeight || cvs.clientHeight || 0);
+        if (cssW < 20 || cssH < 20) return false;
+        const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+        const targetW = Math.round(cssW * dpr);
+        const targetH = Math.round(cssH * dpr);
+        if (cvs.width !== targetW || cvs.height !== targetH) {
+          caseThreeRenderer.setPixelRatio(dpr);
+          caseThreeRenderer.setSize(cssW, cssH, false);
+        }
+        const trueAspect = cssW / cssH;
+        if (Math.abs(caseThreeCamera.aspect - trueAspect) > 0.002) {
+          caseThreeCamera.aspect = trueAspect;
+          caseThreeCamera.updateProjectionMatrix();
+        }
+        return true;
+      }
 
       function renderCase3DLoop() {
         const modal = document.getElementById('modalBonus');
@@ -10257,17 +10289,7 @@
         }
         initCase3DEngine();
         if (caseThreeRenderer && caseThreeScene && caseThreeCamera) {
-          const cvs = caseThreeRenderer.domElement;
-          // 90° burilishda getBoundingClientRect() eni/bo'yini almashtirib yuboradi — faqat clientWidth/clientHeight ishlatiladi!
-          const w = Math.max(160, Math.floor(cvs.clientWidth || (cvs.parentElement ? cvs.parentElement.clientWidth : 300)));
-          const h = Math.max(140, Math.floor(cvs.clientHeight || (cvs.parentElement ? cvs.parentElement.clientHeight : 220)));
-          if (caseLastCanvasW !== w || caseLastCanvasH !== h) {
-            caseLastCanvasW = w;
-            caseLastCanvasH = h;
-            caseThreeRenderer.setSize(w, h, false);
-            caseThreeCamera.aspect = w / h;
-            caseThreeCamera.updateProjectionMatrix();
-          }
+          syncCase3DViewport();
 
           const now = performance.now();
           const elapsed = (now - caseStateStart) * 0.001;
@@ -10418,15 +10440,8 @@
           caseAnimFrameId = requestAnimationFrame(renderCase3DLoop);
         }
         requestAnimationFrame(() => {
-          if (caseThreeRenderer && caseThreeCamera) {
-            const cvs = caseThreeRenderer.domElement;
-            const rect = cvs.getBoundingClientRect();
-            const w = Math.max(240, Math.floor(rect.width));
-            const h = Math.max(140, Math.floor(rect.height));
-            caseThreeRenderer.setSize(w, h, false);
-            caseThreeCamera.aspect = w / h;
-            caseThreeCamera.updateProjectionMatrix();
-          }
+          syncCase3DViewport();
+          setTimeout(syncCase3DViewport, 120);
         });
       }
       document.getElementById('menuBtnBonus').addEventListener('click', openBonusModal);
