@@ -771,6 +771,50 @@
       color: #fbbf24;
       text-shadow: 0 0 8px rgba(245, 158, 11, 0.58), 0 1px 2px rgba(0, 0, 0, 0.85);
     }
+    /* === 3D iOS GLASS BILDIRISHNOMALAR OYNASI (#modalNotifications) VA #incomingModal === */
+    #modalNotifications {
+      background:
+        radial-gradient(circle at 78% 18%, rgba(14, 165, 233, 0.22), transparent 44%),
+        radial-gradient(circle at 22% 84%, rgba(245, 158, 11, 0.14), transparent 46%),
+        rgba(3, 7, 18, 0.68) !important;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", sans-serif;
+    }
+    #lobbyView.digi-lobby-rot90 #modalNotifications {
+      padding: 8px 14px 8px max(66px, calc(var(--digi-safe-left, 58px) + 8px)) !important;
+    }
+    #lobbyView.digi-lobby-rot90 #modalNotifications > div {
+      max-height: 92% !important;
+      height: auto !important;
+    }
+    .ios-btn-danger {
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(180deg, rgba(248, 113, 113, 0.34) 0%, rgba(185, 28, 28, 0.42) 100%);
+      color: #fecaca;
+      border-radius: 9999px;
+      border: 1px solid rgba(248, 113, 113, 0.58);
+      font-weight: 700;
+      box-shadow:
+        0 4px 10px rgba(220, 38, 38, 0.28),
+        inset 0 1px 1px rgba(255, 255, 255, 0.28),
+        inset 0 -2px 3px rgba(69, 10, 10, 0.55);
+      transition: transform 110ms ease;
+    }
+    .ios-btn-danger:active {
+      transform: translateY(1px) scale(0.95);
+    }
+    /* Jonli #incomingModal ham 90° burilgan lobbida Telegram tugmalariga tegmasin va 3D iOS Glass uslubida bo'lsin */
+    #incomingModal {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", sans-serif;
+    }
+    #lobbyView.digi-lobby-rot90 #incomingModal {
+      position: absolute !important;
+      top: 12px !important;
+      left: 52% !important;
+      width: 78% !important;
+      max-width: 420px !important;
+      z-index: 60 !important;
+    }
   </style>
 </head>
 <body class="relative w-full h-full flex flex-col justify-between horror-bg select-none">
@@ -800,23 +844,19 @@
     <span>HIMOYA QALQONI (3s)</span>
   </div>
 
-  <!-- Yuqori Xabarnoma (Toast / Taklif oynasi) -->
-  <div id="incomingModal" class="hidden fixed top-3 left-1/2 -translate-x-1/2 z-50 w-[94%] max-w-md bg-zinc-950/95 border-2 border-red-600 rounded-2xl p-3.5 shadow-2xl blood-glow">
-    <div class="flex items-start gap-3">
-      <div class="w-10 h-10 rounded-xl bg-red-900/50 border border-red-500 flex items-center justify-center shrink-0 text-xl" id="incomingIcon">🔔</div>
+  <!-- Jonli Kiruvchi Taklif Oynasi (3D iOS Glassmorphism) -->
+  <div id="incomingModal" class="hidden fixed top-3 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-sm ios-fh-sheet p-3">
+    <div class="flex items-start gap-2.5">
+      <div id="incomingIcon" class="w-9 h-9 rounded-full ios-fh-avatar ios-fh-avatar-gold bg-slate-900/90 flex items-center justify-center shrink-0 text-base">🔔</div>
       <div class="flex-1 min-w-0">
         <div class="flex items-center justify-between gap-2">
-          <span id="incomingTitle" class="text-xs font-bold uppercase tracking-wider text-red-400">Yangi Taklifnoma</span>
-          <span id="incomingBadge" class="text-[10px] font-mono bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-300 whitespace-nowrap">DOOM-ID</span>
+          <span id="incomingTitle" class="text-[11px] font-bold uppercase tracking-wide text-amber-300 truncate">Yangi Taklifnoma</span>
+          <span id="incomingBadge" class="ios-fh-stat-pill text-[9px] font-mono text-sky-200 px-2 py-0.5 rounded-full whitespace-nowrap shrink-0">DOOM-ID</span>
         </div>
-        <p id="incomingText" class="text-xs sm:text-sm font-medium text-zinc-100 mt-1 leading-snug">Sizni do'stlashishga taklif qildi. Rozilik berasizmi?</p>
-        <div class="flex items-center gap-2 mt-2.5">
-          <button id="btnAcceptIncoming" class="flex-1 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-xs py-2 px-3 rounded-xl transition">
-            ✓ Rozilik berish
-          </button>
-          <button id="btnRejectIncoming" class="flex-1 bg-zinc-800 hover:bg-zinc-700 active:scale-95 text-zinc-300 font-semibold text-xs py-2 px-3 rounded-xl transition">
-            ✕ Rad etish
-          </button>
+        <p id="incomingText" class="text-[11px] font-medium text-slate-100 mt-1 leading-snug">Sizni do'stlashishga taklif qildi. Rozilik berasizmi?</p>
+        <div class="flex items-center gap-1.5 mt-2.5">
+          <button id="btnAcceptIncoming" class="flex-1 ios-btn-green text-[10px] py-1.5 px-2.5 transition">✓ Rozilik</button>
+          <button id="btnRejectIncoming" class="flex-1 ios-btn-gray text-[10px] py-1.5 px-2.5 transition">✕ Rad etish</button>
         </div>
       </div>
     </div>
@@ -874,7 +914,7 @@
               <!-- Qo'ng'iroqcha -->
               <button id="btnSimulateIncomingInvite" type="button" class="relative w-7 h-7 rounded-lg bg-slate-900/75 hover:bg-slate-800 border border-slate-600/45 flex items-center justify-center text-white active:scale-90 transition shrink-0" title="Bildirishnomalar" aria-label="Bildirishnomalar">
                 <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2zm6-6v-5a6 6 0 0 0-5-5.91V4a1 1 0 1 0-2 0v1.09A6 6 0 0 0 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
-                <span class="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                <span id="bellUnreadDot" class="hidden absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.95)] ring-1 ring-slate-950"></span>
               </button>
     
               <!-- Sozlamalar -->
@@ -1031,6 +1071,38 @@
           </div>
     
         </div>
+
+    <!-- ==================== MODAL: 3D iOS GLASS BILDIRISHNOMALAR MARKAZI ==================== -->
+    <div id="modalNotifications" class="hidden fixed inset-0 z-50 flex items-center justify-center p-2.5">
+      <div class="ios-fh-sheet w-[92%] max-w-[440px] max-h-[88%] flex flex-col overflow-hidden">
+
+        <!-- Yuqori 3D iOS Glass Sarlavha -->
+        <div class="ios-fh-nav shrink-0 h-[44px] px-3.5 flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="w-7 h-7 rounded-full ios-fh-avatar ios-fh-avatar-gold bg-slate-900/90 flex items-center justify-center text-sky-200 shrink-0">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2zm6-6v-5a6 6 0 0 0-5-5.91V4a1 1 0 1 0-2 0v1.09A6 6 0 0 0 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+            </span>
+            <h2 class="text-[14px] font-bold tracking-tight bg-gradient-to-b from-white via-sky-100 to-amber-200 bg-clip-text text-transparent drop-shadow truncate">Bildirishnomalar</h2>
+            <span id="notifCountBadge" class="ios-fh-stat-pill text-sky-100 text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0">0 yangi</span>
+          </div>
+
+          <div class="flex items-center gap-1.5 shrink-0">
+            <button id="btnRefreshNotif" type="button" class="ios-btn-circle" title="Yangilash" aria-label="Yangilash">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+            </button>
+            <button id="btnCloseNotifModal" type="button" class="ios-btn-circle" title="Yopish" aria-label="Yopish">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Ichki Skroll Kontent (Haqiqiy So'rovlar + O'yin Xabarlari) -->
+        <div id="notifModalBody" class="flex-1 min-h-0 overflow-y-auto p-3 space-y-2.5">
+          <div class="py-8 text-center text-[11px] text-slate-400">Yuklanmoqda...</div>
+        </div>
+
+      </div>
+    </div>
 
     <!-- ==================== MODAL: iPHONE (iOS) DO'STLAR VA O'YINCHILAR HUBI ==================== -->
     <div id="modalFriendsHub" class="hidden fixed inset-0 z-50 flex items-center justify-center p-2.5">
@@ -2721,10 +2793,12 @@
         showToast('Taklif rad etildi.', '✕');
       });
 
-      document.getElementById('btnSimulateIncomingInvite').addEventListener('click', () => {
-        const nextType = Math.random() > 0.45 ? 'friend' : 'duel';
-        triggerIncomingInviteModal(nextType);
-      });
+      const btnNotifBell = document.getElementById('btnSimulateIncomingInvite');
+      if (btnNotifBell) {
+        btnNotifBell.addEventListener('click', () => {
+          if (typeof openNotificationsModal === 'function') openNotificationsModal();
+        });
+      }
 
       document.getElementById('btnSendFriendReq').addEventListener('click', () => {
         const inp = document.getElementById('friendIdInput');
@@ -6631,6 +6705,7 @@
         const vh = window.innerHeight || document.documentElement.clientHeight || 640;
         const ins = (typeof getTelegramSafeInsets === 'function') ? getTelegramSafeInsets() : { top: 0, left: 0, right: 0, bottom: 0 };
         const toastBox = document.getElementById('toastBox');
+        const incModal = document.getElementById('incomingModal');
         if (vh > vw) {
           lv.classList.add('digi-lobby-rot90');
           lv.style.width = vh + 'px';
@@ -6641,6 +6716,7 @@
           lv.style.setProperty('--digi-safe-left', rotLeftSafe + 'px');
           lv.style.setProperty('--digi-safe-right', Math.max(8, ins.bottom || 0) + 'px');
           if (toastBox && toastBox.parentElement !== lv) lv.appendChild(toastBox);
+          if (incModal && incModal.parentElement !== lv) lv.appendChild(incModal);
         } else {
           lv.classList.remove('digi-lobby-rot90');
           lv.style.width = '';
@@ -6650,6 +6726,7 @@
           lv.style.setProperty('--digi-safe-left', (ins.left || 0) + 'px');
           lv.style.setProperty('--digi-safe-right', (ins.right || 0) + 'px');
           if (toastBox && toastBox.parentElement === lv) document.body.appendChild(toastBox);
+          if (incModal && incModal.parentElement === lv) document.body.appendChild(incModal);
         }
       }
       (function bindRotatedModalTouchScroll() {
@@ -8480,10 +8557,19 @@
             if (!searchQuery) {
               window._friendsDirCache = data;
               updateLobbyMiniFriendsCard(data);
+              if (typeof updateBellUnreadDot === 'function') {
+                updateBellUnreadDot((data.incomingRequests || []).length);
+              }
             }
             const hubEl = document.getElementById('modalFriendsHub');
             if (hubEl && !hubEl.classList.contains('hidden')) {
               renderFriendsHubModal(data);
+            }
+            const notifModal = document.getElementById('modalNotifications');
+            if (notifModal && !notifModal.classList.contains('hidden')) {
+              if (typeof renderNotificationsModal === 'function') {
+                renderNotificationsModal(data);
+              }
             }
           }
         } catch (err) {
@@ -8613,6 +8699,219 @@
           });
         }
       }
+
+      function updateBellUnreadDot(count) {
+        const dot = document.getElementById("bellUnreadDot");
+        if (!dot) return;
+        if (count > 0) dot.classList.remove("hidden");
+        else dot.classList.add("hidden");
+      }
+
+      function renderNotificationsModal(data) {
+        const notifBody = document.getElementById("notifModalBody");
+        const countBadge = document.getElementById("notifCountBadge");
+        const incoming = (data && Array.isArray(data.incomingRequests)) ? data.incomingRequests : [];
+        const outgoing = (data && Array.isArray(data.outgoingRequests)) ? data.outgoingRequests : [];
+
+        updateBellUnreadDot(incoming.length);
+        if (countBadge) {
+          countBadge.textContent = incoming.length > 0 ? (incoming.length + " yangi") : "Hammasi o'qilgan";
+        }
+        if (!notifBody) return;
+
+        let html = "";
+
+        // 1) KELGAN SO'ROVLAR
+        html += '<div class="ios-fh-group p-2.5">';
+        html += '<div class="flex items-center justify-between pb-1.5 mb-1.5 border-b border-slate-700/40">';
+        html += '<span class="text-[11px] font-bold tracking-wide text-amber-300/90 uppercase">Kelgan so\'rovlar</span>';
+        html += '<span class="text-[10px] font-mono text-slate-400">' + incoming.length + ' ta</span>';
+        html += '</div>';
+
+        if (incoming.length > 0) {
+          html += '<div class="space-y-1.5">';
+          incoming.forEach(r => {
+            const pid = escapeFhHtml(r.id);
+            const pname = escapeFhHtml(r.name);
+            const avatarHtml = buildIosAvatarHtml(r.name, r.id, r.photoUrl, r.isOnline, true);
+            html += '<div class="ios-fh-row">'
+              + '<div class="flex items-center gap-2 min-w-0 flex-1">'
+                + avatarHtml
+                + '<div class="min-w-0 flex-1 leading-tight">'
+                  + '<div class="flex items-center gap-1.5"><span class="text-[12px] font-semibold text-white truncate">' + pname + '</span><span class="text-[10px] font-medium text-amber-300/90 shrink-0">Lv.' + (r.level || 1) + '</span></div>'
+                  + '<div class="text-[10px] text-slate-300 truncate">Siz bilan do\'stlashmoqchi</div>'
+                + '</div>'
+              + '</div>'
+              + '<div class="shrink-0 flex items-center gap-1.5">'
+                + '<button type="button" data-notif-action="accept" data-pid="' + pid + '" data-pname="' + pname + '" class="ios-btn-green px-2.5 py-1 text-[10px] active:scale-95 transition">Qabul</button>'
+                + '<button type="button" data-notif-action="reject" data-pid="' + pid + '" data-pname="' + pname + '" class="ios-btn-gray px-2 py-1 text-[10px] active:scale-95 transition">Rad</button>'
+                + '<button type="button" data-notif-action="block_1_week" data-pid="' + pid + '" data-pname="' + pname + '" title="1 haftaga bloklash" class="ios-btn-danger w-6 h-6 text-[10px] inline-flex items-center justify-center active:scale-95 transition">🚫</button>'
+              + '</div>'
+            + '</div>';
+          });
+          html += '</div>';
+        } else {
+          html += '<div class="flex items-center justify-between py-2 px-1 text-[11px] text-slate-300">'
+            + '<span>Yangi do\'stlik so\'rovlari yo\'q</span>'
+            + '<button type="button" data-notif-action="open-friends" class="ios-btn-tinted px-2.5 py-1 text-[10px]">Do\'stlar</button>'
+          + '</div>';
+        }
+        html += '</div>';
+
+        // 2) O'YIN XABARLARI
+        html += '<div class="ios-fh-group p-2.5">';
+        html += '<div class="flex items-center justify-between pb-1.5 mb-1.5 border-b border-slate-700/40">';
+        html += '<span class="text-[11px] font-bold tracking-wide text-sky-300/90 uppercase">O\'yin xabarlari</span>';
+        html += '<span class="text-[10px] font-mono text-slate-400">Tizim</span>';
+        html += '</div>';
+        html += '<div class="space-y-1.5">';
+
+        if (outgoing.length > 0) {
+          html += '<div class="ios-fh-row">'
+            + '<div class="flex items-center gap-2 min-w-0 flex-1">'
+              + '<span class="w-7 h-7 rounded-full ios-fh-avatar bg-slate-900/90 flex items-center justify-center text-xs shrink-0">📨</span>'
+              + '<div class="min-w-0 flex-1 leading-tight">'
+                + '<div class="text-[11px] font-semibold text-white truncate">' + outgoing.length + ' ta yuborilgan do\'stlik so\'rovi kutilmoqda</div>'
+                + '<div class="text-[10px] text-slate-400">Javob berilishi kutilmoqda</div>'
+              + '</div>'
+            + '</div>'
+            + '<button type="button" data-notif-action="open-friends" class="ios-btn-tinted px-2.5 py-1 text-[10px] shrink-0">Ko\'rish</button>'
+          + '</div>';
+        }
+
+        html += '<div class="ios-fh-row">'
+          + '<div class="flex items-center gap-2 min-w-0 flex-1">'
+            + '<span class="w-7 h-7 rounded-full ios-fh-avatar ios-fh-avatar-gold bg-slate-900/90 flex items-center justify-center text-xs shrink-0">🗺️</span>'
+            + '<div class="min-w-0 flex-1 leading-tight">'
+              + '<div class="text-[11px] font-semibold text-white truncate">Dust2 Labirint va Yonbosh Menyu yangilandi</div>'
+              + '<div class="text-[10px] text-sky-200/80 truncate">Yangi 3D Glass interfeys va to\'liq ekran faol</div>'
+            + '</div>'
+          + '</div>'
+          + '<span class="ios-fh-stat-pill text-[9px] text-amber-200 px-2 py-0.5 rounded-full shrink-0">Bugun</span>'
+        + '</div>';
+
+        html += '<div class="ios-fh-row">'
+          + '<div class="flex items-center gap-2 min-w-0 flex-1">'
+            + '<span class="w-7 h-7 rounded-full ios-fh-avatar bg-slate-900/90 flex items-center justify-center text-xs shrink-0">⚔️</span>'
+            + '<div class="min-w-0 flex-1 leading-tight">'
+              + '<div class="text-[11px] font-semibold text-white truncate">1v1 Duel va 4v4 Online Rejim</div>'
+              + '<div class="text-[10px] text-slate-400 truncate">Do\'stlaringizni xona kodi orqali jangga chaqiring</div>'
+            + '</div>'
+          + '</div>'
+          + '<button type="button" data-notif-action="open-online" class="ios-btn-blue px-2.5 py-1 text-[10px] shrink-0">Kirish</button>'
+        + '</div>';
+
+        html += '</div></div>';
+
+        notifBody.innerHTML = html;
+      }
+
+      function initNotificationsModalEvents() {
+        const notifBody = document.getElementById("notifModalBody");
+        if (notifBody && !notifBody._boundDelegation) {
+          notifBody._boundDelegation = true;
+          notifBody.addEventListener("click", async (e) => {
+            const btn = e.target.closest("[data-notif-action]");
+            if (!btn) return;
+            const action = btn.getAttribute("data-notif-action");
+            const pid = btn.getAttribute("data-pid");
+            const pname = btn.getAttribute("data-pname") || pid;
+
+            if (action === "open-friends") {
+              const modalN = document.getElementById("modalNotifications");
+              if (modalN) modalN.classList.add("hidden");
+              if (typeof openFriendsHubModal === "function") openFriendsHubModal();
+              return;
+            }
+
+            if (action === "open-online") {
+              const modalN = document.getElementById("modalNotifications");
+              if (modalN) modalN.classList.add("hidden");
+              if (typeof openOnlineModal === "function") openOnlineModal();
+              return;
+            }
+
+            if (action === "accept" || action === "reject" || action === "block_1_week") {
+              if (!pid) return;
+              btn.disabled = true;
+              const myId = getActiveMyId();
+              try {
+                const res = await fetch("/api/tg/friend-respond", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ myId, senderId: pid, action })
+                });
+                const d = await res.json();
+                if (d && d.ok) {
+                  if (action === "accept") {
+                    if (typeof showToast === "function") showToast(pname + " bilan do'stlashdingiz!", "🤝");
+                  } else if (action === "block_1_week") {
+                    if (typeof showToast === "function") showToast(pname + " 1 haftaga bloklandi", "🚫");
+                  } else {
+                    if (typeof showToast === "function") showToast("So'rov rad etildi", "✕");
+                  }
+                  await fetchFriendsDirectory("");
+                  if (window._friendsDirCache) {
+                    renderNotificationsModal(window._friendsDirCache);
+                  }
+                } else {
+                  const msg = (d && (d.message || d.error)) || "Xatolik yuz berdi";
+                  if (typeof showToast === "function") showToast(msg, "⚠️");
+                }
+              } catch (err) {
+                if (typeof showToast === "function") showToast("Tarmoq xatosi", "⚠️");
+              } finally {
+                btn.disabled = false;
+              }
+            }
+          });
+        }
+
+        const btnRefresh = document.getElementById("btnRefreshNotif");
+        if (btnRefresh && !btnRefresh._boundClick) {
+          btnRefresh._boundClick = true;
+          btnRefresh.addEventListener("click", async () => {
+            await fetchFriendsDirectory("");
+            if (window._friendsDirCache) {
+              renderNotificationsModal(window._friendsDirCache);
+            }
+          });
+        }
+
+        const btnClose = document.getElementById("btnCloseNotifModal");
+        const modalN = document.getElementById("modalNotifications");
+        if (btnClose && !btnClose._boundClick) {
+          btnClose._boundClick = true;
+          btnClose.addEventListener("click", () => {
+            if (modalN) modalN.classList.add("hidden");
+          });
+        }
+
+        if (modalN && !modalN._boundBackdrop) {
+          modalN._boundBackdrop = true;
+          modalN.addEventListener("click", (e) => {
+            if (e.target === modalN) {
+              modalN.classList.add("hidden");
+            }
+          });
+        }
+      }
+
+      async function openNotificationsModal() {
+        const notifModal = document.getElementById("modalNotifications");
+        if (!notifModal) return;
+        notifModal.classList.remove("hidden");
+        initNotificationsModalEvents();
+        if (window._friendsDirCache) {
+          renderNotificationsModal(window._friendsDirCache);
+        }
+        await fetchFriendsDirectory("");
+        if (window._friendsDirCache) {
+          renderNotificationsModal(window._friendsDirCache);
+        }
+      }
+      window.openNotificationsModal = openNotificationsModal;
+      window.updateBellUnreadDot = updateBellUnreadDot;
 
       function openFriendsHubModal() {
         const hubModal = document.getElementById('modalFriendsHub');
