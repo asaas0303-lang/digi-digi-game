@@ -521,6 +521,105 @@
         #lobbyView.digi-lobby-landscape #modalBonus .h-20 {
           height: 3.5rem !important;
         }
+
+    /* === iPHONE (iOS DARK MODE) DO'STLAR HUBI (#modalFriendsHub) === */
+    #modalFriendsHub {
+      background: rgba(0, 0, 0, 0.56) !important;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", sans-serif;
+    }
+    /* 90° burilgan rejimda Telegramning "✕ Yopish" va "⌄ ⋮" tugmalaridan xavfsiz chekinish! */
+    #lobbyView.digi-lobby-rot90 #modalFriendsHub {
+      padding: 8px 14px 8px max(66px, calc(var(--digi-safe-left, 58px) + 8px)) !important;
+    }
+    #lobbyView.digi-lobby-rot90 #modalFriendsHub > div {
+      height: 96% !important;
+      max-height: 96% !important;
+    }
+    .ios-fh-sheet {
+      background: rgba(24, 24, 27, 0.90);
+      backdrop-filter: blur(26px) saturate(165%);
+      -webkit-backdrop-filter: blur(26px) saturate(165%);
+      border: 1px solid rgba(255, 255, 255, 0.13);
+      border-radius: 22px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.72), inset 0 1px 0 rgba(255, 255, 255, 0.10);
+    }
+    .ios-fh-nav {
+      background: rgba(34, 34, 38, 0.78);
+      border-bottom: 0.5px solid rgba(255, 255, 255, 0.10);
+    }
+    .ios-fh-search {
+      background: rgba(118, 118, 128, 0.24);
+      border: 0.5px solid rgba(255, 255, 255, 0.08);
+      color: #ffffff;
+      border-radius: 9999px;
+      transition: background 150ms ease, border-color 150ms ease;
+    }
+    .ios-fh-search:focus {
+      outline: none;
+      background: rgba(118, 118, 128, 0.34);
+      border-color: rgba(10, 132, 255, 0.75);
+    }
+    .ios-fh-group {
+      background: rgba(38, 38, 42, 0.78);
+      border: 0.5px solid rgba(255, 255, 255, 0.09);
+      border-radius: 16px;
+    }
+    .ios-fh-row {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 7px 10px;
+      transition: background 120ms ease;
+    }
+    .ios-fh-row:not(:last-child)::after {
+      content: "";
+      position: absolute;
+      left: 52px;
+      right: 10px;
+      bottom: 0;
+      height: 0.5px;
+      background: rgba(255, 255, 255, 0.09);
+    }
+    .ios-fh-row:active {
+      background: rgba(255, 255, 255, 0.06);
+    }
+    .ios-btn-blue {
+      background: #0A84FF;
+      color: #ffffff;
+      border-radius: 9999px;
+      font-weight: 600;
+    }
+    .ios-btn-green {
+      background: #30D158;
+      color: #052e16;
+      border-radius: 9999px;
+      font-weight: 700;
+    }
+    .ios-btn-tinted {
+      background: rgba(10, 132, 255, 0.18);
+      color: #409CFF;
+      border-radius: 9999px;
+      font-weight: 600;
+    }
+    .ios-btn-gray {
+      background: rgba(118, 118, 128, 0.28);
+      color: #EBEBF5;
+      border-radius: 9999px;
+      font-weight: 600;
+    }
+    .ios-btn-circle {
+      width: 26px;
+      height: 26px;
+      border-radius: 9999px;
+      background: rgba(118, 118, 128, 0.28);
+      color: rgba(235, 235, 245, 0.85);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
   </style>
 </head>
 <body class="relative w-full h-full flex flex-col justify-between horror-bg select-none">
@@ -782,63 +881,72 @@
     
         </div>
 
-    <!-- ==================== MODAL: BARCHA O'YINCHILAR (TOP) VA DO'STLARIM ==================== -->
-    <div id="modalFriendsHub" class="hidden fixed inset-0 z-50 cs-modal-backdrop backdrop-blur-md flex items-center justify-center p-2">
-      <div class="cs-panel-card rounded-2xl w-full max-w-4xl h-[94%] flex flex-col overflow-hidden shadow-2xl border border-amber-500/35">
+    <!-- ==================== MODAL: iPHONE (iOS) DO'STLAR VA O'YINCHILAR HUBI ==================== -->
+    <div id="modalFriendsHub" class="hidden fixed inset-0 z-50 flex items-center justify-center p-2.5">
+      <div class="ios-fh-sheet w-full max-w-4xl h-[94%] flex flex-col overflow-hidden">
 
-        <!-- Yuqori Tilla-Metallik Sarlavha + Qidiruv -->
-        <div class="cs-gold-header shrink-0 px-3 py-2 flex items-center justify-between gap-2 shadow-lg">
+        <!-- iOS Navigation Bar (Ixcham, toza, ortiqcha bezaklarsiz) -->
+        <div class="ios-fh-nav shrink-0 h-[44px] px-3.5 flex items-center justify-between gap-2.5">
           <div class="flex items-center gap-2 min-w-0">
-            <span class="w-8 h-8 rounded-lg bg-slate-950/85 border border-amber-400/80 flex items-center justify-center text-base shrink-0">👥</span>
-            <div class="min-w-0 leading-tight">
-              <div class="flex items-center gap-1.5">
-                <h2 class="text-xs font-black italic uppercase tracking-wider text-white truncate">O'YINCHILAR VA DO'STLAR</h2>
-                <span id="fhStatsBadge" class="bg-slate-950/80 border border-amber-400/60 text-amber-300 text-[9px] font-mono font-extrabold px-1.5 py-0.5 rounded shrink-0">Jami: 0 • 🟢 0</span>
-              </div>
-              <p class="text-[9px] text-amber-100/80 truncate">Reyting = ELO + O'yinlar + Frag + Headshot</p>
-            </div>
+            <h2 class="text-[15px] font-bold tracking-tight text-white truncate">Do'stlar</h2>
+            <span id="fhStatsBadge" class="inline-flex items-center gap-1 bg-white/[0.08] text-[#AEAEB2] text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0">0 o'yinchi • 0 online</span>
           </div>
 
-          <div class="flex items-center gap-1.5 shrink-0">
-            <input id="fhSearchInput" type="text" placeholder="🔍 Ism / ID qidirish..." class="bg-slate-950/90 border border-slate-600/80 rounded-lg px-2 py-1 text-[10px] text-white placeholder-slate-400 w-[135px] focus:outline-none focus:border-amber-400" />
-            <button id="btnRefreshFriendsHub" type="button" class="menu-btn-dark text-amber-300 text-[10px] font-bold px-2 py-1.5 rounded-lg active:scale-95 transition" title="Yangilash">🔄</button>
-            <button id="btnCloseFriendsHub" type="button" class="menu-btn-dark hover:border-red-500 text-white text-[10px] font-extrabold px-2.5 py-1.5 rounded-lg active:scale-95 transition">✕ Yopish</button>
+          <div class="flex items-center gap-2 shrink-0">
+            <!-- iOS Pill Search Field -->
+            <div class="relative flex items-center">
+              <svg class="w-3.5 h-3.5 text-[#8E8E93] absolute left-2.5 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5" stroke-linecap="round"/></svg>
+              <input id="fhSearchInput" type="text" placeholder="Qidirish" class="ios-fh-search pl-7 pr-3 py-1 text-[11px] w-[142px] placeholder-[#8E8E93]" />
+            </div>
+
+            <!-- iOS Refresh Circle Button -->
+            <button id="btnRefreshFriendsHub" type="button" class="ios-btn-circle active:scale-90 transition" title="Yangilash" aria-label="Yangilash">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+            </button>
+
+            <!-- iOS Close Circle Button -->
+            <button id="btnCloseFriendsHub" type="button" class="ios-btn-circle active:scale-90 transition" title="Yopish" aria-label="Yopish">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
           </div>
         </div>
 
-        <!-- 2 USTUNLI ASOSIY MAYDON (CHAP: BARCHA O'YINCHILAR | O'NG: DO'STLARIM) -->
-        <div class="grid grid-cols-2 gap-2 p-2 flex-1 min-h-0 overflow-hidden bg-slate-950/75">
+        <!-- iOS Split-View Kontent (2 ta toza Inset Grouped ustun) -->
+        <div class="grid grid-cols-2 gap-3 p-3 flex-1 min-h-0 overflow-hidden">
 
-          <!-- CHAP USTUN: BARCHA O'YINCHILAR (ENG ZO'R VA ENG KO'P O'YNAGANLAR TEPADA) -->
-          <div class="flex flex-col min-h-0 overflow-hidden rounded-xl bg-slate-900/80 border border-slate-700/70">
-            <div class="shrink-0 px-2.5 py-1.5 bg-slate-950/90 border-b border-slate-700/70 flex items-center justify-between gap-1">
-              <span class="text-[10px] font-black uppercase tracking-wide text-amber-300 truncate">🏆 BARCHA O'YINCHILAR (TOP)</span>
-              <span id="fhAllCountBadge" class="text-[9px] font-mono text-slate-300 bg-slate-800 px-1.5 py-0.5 rounded shrink-0">0</span>
+          <!-- CHAP USTUN: BARCHA O'YINCHILAR (TOP) -->
+          <div class="flex flex-col min-h-0 overflow-hidden">
+            <div class="shrink-0 px-2 pb-1.5 flex items-center justify-between">
+              <span class="text-[10px] font-semibold uppercase tracking-[0.06em] text-[#8E8E93]">Barcha o'yinchilar</span>
+              <span id="fhAllCountBadge" class="text-[10px] font-medium text-[#8E8E93]">0</span>
             </div>
-            <div id="fhAllPlayersList" class="flex-1 min-h-0 overflow-y-auto p-1.5 space-y-1.5">
-              <div class="py-6 text-center text-[10px] text-slate-400">⏳ O'yinchilar yuklanmoqda...</div>
+            <div id="fhAllPlayersList" class="ios-fh-group flex-1 min-h-0 overflow-y-auto">
+              <div class="py-8 text-center text-[11px] text-[#8E8E93]">Yuklanmoqda...</div>
             </div>
           </div>
 
-          <!-- O'NG USTUN: MENING DO'STLARIM + SO'ROVLAR + TAKLIF -->
-          <div class="flex flex-col min-h-0 overflow-hidden rounded-xl bg-slate-900/80 border border-slate-700/70">
-            <div class="shrink-0 px-2.5 py-1.5 bg-slate-950/90 border-b border-slate-700/70 flex items-center justify-between gap-1">
-              <span class="text-[10px] font-black uppercase tracking-wide text-emerald-300 truncate">🤝 DO'STLARIM</span>
-              <div class="flex items-center gap-1 shrink-0">
-                <span id="fhFriendsCountBadge" class="text-[9px] font-mono text-emerald-300 bg-emerald-950/80 border border-emerald-500/40 px-1.5 py-0.5 rounded">0</span>
-                <button id="btnFhInviteTelegram" type="button" class="bg-sky-600/90 hover:bg-sky-500 text-white text-[9px] font-extrabold px-2 py-0.5 rounded active:scale-95 transition">📤 Taklif</button>
+          <!-- O'NG USTUN: DO'STLARIM + ID QO'SHISH + TAKLIF -->
+          <div class="flex flex-col min-h-0 overflow-hidden">
+            <div class="shrink-0 px-2 pb-1.5 flex items-center justify-between gap-2">
+              <div class="flex items-center gap-1.5 min-w-0">
+                <span class="text-[10px] font-semibold uppercase tracking-[0.06em] text-[#8E8E93]">Do'stlarim</span>
+                <span id="fhFriendsCountBadge" class="text-[10px] font-medium text-[#8E8E93]">0</span>
               </div>
+              <button id="btnFhInviteTelegram" type="button" class="inline-flex items-center gap-1 text-[11px] font-semibold text-[#0A84FF] active:opacity-60 transition shrink-0">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+                <span>Taklif</span>
+              </button>
             </div>
 
-            <!-- Tezkor ID orqali do'st qo'shish satri -->
-            <div class="shrink-0 px-1.5 pt-1.5 pb-1 flex items-center gap-1 border-b border-slate-800/80">
-              <input id="fhAddByIdInput" type="text" placeholder="DOOM-1234 bilan qo'shish..." class="flex-1 min-w-0 bg-slate-950/90 border border-slate-700 rounded-lg px-2 py-1 text-[10px] font-mono text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400" />
-              <button id="btnFhAddById" type="button" class="bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black px-2.5 py-1 rounded-lg active:scale-95 transition shrink-0">+ Qo'sh</button>
+            <!-- iOS ID bilan tez qo'shish qatori -->
+            <div class="shrink-0 mb-2 flex items-center gap-1.5">
+              <input id="fhAddByIdInput" type="text" placeholder="ID orqali qo'shish (DOOM-1234)" class="ios-fh-search flex-1 min-w-0 px-3 py-1.5 text-[11px] placeholder-[#8E8E93]" />
+              <button id="btnFhAddById" type="button" class="ios-btn-blue px-3 py-1.5 text-[11px] active:opacity-75 transition shrink-0">Qo'shish</button>
             </div>
 
-            <!-- Do'stlar, Kelgan va Yuborilgan so'rovlar ro'yxati -->
-            <div id="fhMyFriendsList" class="flex-1 min-h-0 overflow-y-auto p-1.5 space-y-1.5">
-              <div class="py-6 text-center text-[10px] text-slate-400">⏳ Do'stlar yuklanmoqda...</div>
+            <!-- Do'stlar va So'rovlar Inset Grouped ro'yxati -->
+            <div id="fhMyFriendsList" class="ios-fh-group flex-1 min-h-0 overflow-y-auto">
+              <div class="py-8 text-center text-[11px] text-[#8E8E93]">Yuklanmoqda...</div>
             </div>
           </div>
 
@@ -8006,12 +8114,59 @@
         }).join('');
       }
 
+      function buildIosAvatarHtml(name, id, photoUrl, isOnline) {
+        const dotHtml = isOnline
+          ? '<span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-[#30D158] ring-2 ring-[#26262a]" title="Online"></span>'
+          : '';
+
+        if (photoUrl) {
+          const escUrl = escapeFhHtml(photoUrl);
+          return `<div class="relative w-8 h-8 shrink-0">`
+            + `<img src="${escUrl}" class="w-8 h-8 rounded-full object-cover" onerror="this.onerror=null;this.classList.add('hidden');if(this.nextElementSibling)this.nextElementSibling.classList.remove('hidden');" />`
+            + `<div class="hidden w-8 h-8 rounded-full bg-gradient-to-br from-[#0A84FF] to-[#5E5CE6] text-white text-[11px] font-bold flex items-center justify-center select-none">P</div>`
+            + dotHtml
+            + `</div>`;
+        }
+
+        const gradients = [
+          'linear-gradient(135deg, #0A84FF 0%, #5E5CE6 100%)',
+          'linear-gradient(135deg, #30D158 0%, #0D9488 100%)',
+          'linear-gradient(135deg, #FF9F0A 0%, #FF453A 100%)',
+          'linear-gradient(135deg, #BF5AF2 0%, #5E5CE6 100%)',
+          'linear-gradient(135deg, #64D2FF 0%, #0A84FF 100%)',
+          'linear-gradient(135deg, #FF375F 0%, #FF9F0A 100%)'
+        ];
+
+        let hash = 0;
+        const strKey = String(id || name || 'P');
+        for (let i = 0; i < strKey.length; i++) {
+          hash = (hash * 31 + strKey.charCodeAt(i)) & 0xffffffff;
+        }
+        const grad = gradients[Math.abs(hash) % gradients.length];
+
+        const clean = String(name || 'P').replace(/^@/, '').trim();
+        const parts = clean.split(/\s+/).filter(Boolean);
+        let initials = 'P';
+        if (parts.length >= 2) {
+          initials = (parts[0][0] + parts[1][0]).toUpperCase();
+        } else if (clean.length > 0) {
+          initials = clean.substring(0, Math.min(2, clean.length)).toUpperCase();
+        }
+
+        return `<div class="relative w-8 h-8 shrink-0">`
+          + `<div class="w-8 h-8 rounded-full text-white text-[11px] font-bold tracking-tight flex items-center justify-center select-none shadow-inner" style="background: ${grad};">${escapeFhHtml(initials)}</div>`
+          + dotHtml
+          + `</div>`;
+      }
+
       function renderFriendsHubModal(data) {
         if (!data) return;
 
         const statsBadge = document.getElementById('fhStatsBadge');
         if (statsBadge) {
-          statsBadge.textContent = `Jami: ${data.totalPlayers || 0} • 🟢 ${data.onlineCount || 0}`;
+          const tot = Number(data.totalPlayers || 0);
+          const onl = Number(data.onlineCount || 0);
+          statsBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-[#30D158] inline-block"></span><span>${tot} o'yinchi · ${onl} online</span>`;
         }
 
         const allCountBadge = document.getElementById('fhAllCountBadge');
@@ -8024,53 +8179,48 @@
           friendsCountBadge.textContent = String(Array.isArray(data.myFriends) ? data.myFriends.length : 0);
         }
 
-        const defaultAvatarSvg = '<svg class="w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a9 9 0 0 0-9 9c0 3.8 2.4 7 5.8 8.3L8 22h8l-.8-2.7c3.4-1.3 5.8-4.5 5.8-8.3a9 9 0 0 0-9-9zm0 4a3 3 0 1 1 0 6 3 3 0 0 1 0-6z"/></svg>';
-
         // CHAP USTUN: BARCHA O'YINCHILAR
         const allListEl = document.getElementById('fhAllPlayersList');
         if (allListEl) {
           if (!Array.isArray(data.allPlayers) || data.allPlayers.length === 0) {
-            allListEl.innerHTML = '<div class="py-8 text-center text-[10px] text-slate-400 font-medium">O\x27yinchilar topilmadi</div>';
+            allListEl.innerHTML = '<div class="py-10 text-center text-[11px] text-[#8E8E93]">O\x27yinchilar topilmadi</div>';
           } else {
-            allListEl.innerHTML = data.allPlayers.map(p => {
-              let rankBadge = '';
-              if (p.rank === 1) rankBadge = '<span class="text-xs shrink-0" title="1-o\x27rin">🥇</span>';
-              else if (p.rank === 2) rankBadge = '<span class="text-xs shrink-0" title="2-o\x27rin">🥈</span>';
-              else if (p.rank === 3) rankBadge = '<span class="text-xs shrink-0" title="3-o\x27rin">🥉</span>';
-              else rankBadge = `<span class="text-[9px] font-mono font-bold text-slate-400 shrink-0 w-4 text-center">#${p.rank}</span>`;
+            allListEl.innerHTML = data.allPlayers.map((p, idx) => {
+              const rank = p.rank || (idx + 1);
+              let rankColor = 'text-[#8E8E93]';
+              if (rank === 1) rankColor = 'text-[#FFD60A] font-extrabold';
+              else if (rank === 2) rankColor = 'text-[#D1D1D6] font-bold';
+              else if (rank === 3) rankColor = 'text-[#FF9F0A] font-bold';
+
+              const rankHtml = `<span class="w-5 text-center text-[11px] ${rankColor} shrink-0">${rank}</span>`;
+              const avatarHtml = buildIosAvatarHtml(p.name, p.id, p.photoUrl, p.isOnline);
 
               let actionBtn = '';
+              const pid = escapeFhHtml(p.id);
+              const pname = escapeFhHtml(p.name);
               if (p.relation === 'self') {
-                actionBtn = '<span class="text-[9px] font-black text-amber-300 bg-amber-950/80 border border-amber-500/50 px-1.5 py-0.5 rounded shrink-0">⭐ Siz</span>';
+                actionBtn = '<span class="ios-btn-gray px-2.5 py-1 text-[10px]">Siz</span>';
               } else if (p.relation === 'friend') {
-                actionBtn = '<span class="text-[9px] font-bold text-emerald-400 bg-emerald-950/80 border border-emerald-500/40 px-1.5 py-0.5 rounded shrink-0">✓ Do\x27st</span>';
+                actionBtn = '<span class="px-2.5 py-1 text-[10px] font-semibold rounded-full bg-[#30D158]/15 text-[#30D158]">Do\x27st</span>';
               } else if (p.relation === 'outgoing') {
-                actionBtn = '<span class="text-[9px] font-bold text-amber-400 bg-amber-950/60 border border-amber-500/30 px-1.5 py-0.5 rounded shrink-0">⏳ Kutilmoqda</span>';
+                actionBtn = '<span class="ios-btn-gray px-2.5 py-1 text-[10px] text-[#AEAEB2]">Yuborildi</span>';
               } else if (p.relation === 'incoming') {
-                actionBtn = `<button type="button" data-fh-action="accept" data-pid="${escapeFhHtml(p.id)}" data-pname="${escapeFhHtml(p.name)}" class="bg-emerald-600 hover:bg-emerald-500 text-white text-[9px] font-black px-2 py-0.5 rounded active:scale-95 transition shrink-0">✓ Qabul</button>`;
+                actionBtn = `<button type="button" data-fh-action="accept" data-pid="${pid}" data-pname="${pname}" class="ios-btn-green px-2.5 py-1 text-[10px] active:opacity-75 transition">Qabul</button>`;
               } else {
-                actionBtn = `<button type="button" data-fh-action="add" data-pid="${escapeFhHtml(p.id)}" data-pname="${escapeFhHtml(p.name)}" data-pelo="${p.elo}" class="bg-amber-500 hover:bg-amber-400 text-slate-950 text-[9px] font-black px-2 py-0.5 rounded active:scale-95 transition shrink-0">+ Do\x27st</button>`;
+                actionBtn = `<button type="button" data-fh-action="add" data-pid="${pid}" data-pname="${pname}" data-pelo="${p.elo}" class="ios-btn-blue px-2.5 py-1 text-[10px] active:opacity-75 transition">+ Qo\x27shish</button>`;
               }
 
-              const onlineDot = p.isOnline
-                ? '<span class="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400 border border-slate-900" title="Online"></span>'
-                : '<span class="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-slate-500 border border-slate-900" title="Offline"></span>';
-
-              const avatarHtml = p.photoUrl
-                ? `<img src="${escapeFhHtml(p.photoUrl)}" class="w-full h-full object-cover" onerror="this.onerror=null;this.classList.add('hidden');if(this.nextElementSibling)this.nextElementSibling.classList.remove('hidden');" /><span class="hidden flex items-center justify-center w-full h-full">${defaultAvatarSvg}</span>`
-                : defaultAvatarSvg;
-
-              return '<div class="flex items-center justify-between gap-1.5 px-2 py-1.5 rounded-lg bg-slate-950/60 hover:bg-slate-950/90 border border-slate-800/80 transition">'
-                + '<div class="flex items-center gap-1.5 min-w-0">'
-                  + rankBadge
-                  + `<div class="relative w-[30px] h-[30px] rounded-lg overflow-hidden border border-slate-600/60 bg-slate-900 shrink-0 flex items-center justify-center">${avatarHtml}${onlineDot}</div>`
-                  + '<div class="min-w-0 leading-tight">'
-                    + `<div class="flex items-center gap-1"><span class="text-[10px] font-black text-white truncate max-w-[95px]">${escapeFhHtml(p.name)}</span><span class="text-[8.5px] font-bold text-amber-400 shrink-0">LV.${p.level}</span><span class="text-[8px] font-mono text-slate-400 shrink-0 hidden sm:inline">(${escapeFhHtml(p.id)})</span></div>`
-                    + `<div class="text-[8.5px] text-slate-300 truncate">🎮 ${p.totalMatches} o\x27yin • 🎯 ${p.kills} frag • ⚡ ${p.powerScore}</div>`
-                  + '</div>'
-                + '</div>'
-                + actionBtn
-              + '</div>';
+              return `<div class="ios-fh-row">`
+                + `<div class="flex items-center gap-2 min-w-0 flex-1">`
+                  + rankHtml
+                  + avatarHtml
+                  + `<div class="min-w-0 flex-1 leading-tight">`
+                    + `<div class="flex items-center gap-1.5"><span class="text-[12px] font-semibold text-white truncate">${pname}</span><span class="text-[10px] font-medium text-[#8E8E93] shrink-0">Lv.${p.level}</span></div>`
+                    + `<div class="text-[10px] text-[#8E8E93] truncate">${p.totalMatches} o\x27yin · ${p.kills} frag · ${p.powerScore} ball</div>`
+                  + `</div>`
+                + `</div>`
+                + `<div class="shrink-0 flex items-center">${actionBtn}</div>`
+              + `</div>`;
             }).join('');
           }
         }
@@ -8080,75 +8230,86 @@
         if (myFriendsListEl) {
           let rightHtml = '';
 
+          const hasIncoming = Array.isArray(data.incomingRequests) && data.incomingRequests.length > 0;
+          const hasFriends = Array.isArray(data.myFriends) && data.myFriends.length > 0;
+          const hasOutgoing = Array.isArray(data.outgoingRequests) && data.outgoingRequests.length > 0;
+
           // 1) Kelgan so'rovlar
-          if (Array.isArray(data.incomingRequests) && data.incomingRequests.length > 0) {
-            rightHtml += `<div class="text-[9px] font-black uppercase text-amber-300 px-1 pt-0.5 pb-1 flex items-center gap-1 border-b border-amber-500/20"><span>🔔</span> Kelgan so\x27rovlar (${data.incomingRequests.length})</div>`;
+          if (hasIncoming) {
+            rightHtml += `<div class="px-3 pt-2 pb-1 text-[9.5px] font-semibold uppercase tracking-wider text-[#8E8E93]">Kelgan so\x27rovlar (${data.incomingRequests.length})</div>`;
             rightHtml += data.incomingRequests.map(r => {
-              const avatarHtml = r.photoUrl
-                ? `<img src="${escapeFhHtml(r.photoUrl)}" class="w-full h-full object-cover" onerror="this.onerror=null;this.classList.add('hidden');if(this.nextElementSibling)this.nextElementSibling.classList.remove('hidden');" /><span class="hidden flex items-center justify-center w-full h-full">${defaultAvatarSvg}</span>`
-                : defaultAvatarSvg;
-              return '<div class="flex items-center justify-between gap-1.5 px-2 py-1.5 rounded-lg bg-amber-950/20 border border-amber-500/30">'
-                + '<div class="flex items-center gap-1.5 min-w-0">'
-                  + `<div class="w-[28px] h-[28px] rounded-lg overflow-hidden border border-amber-500/40 bg-slate-900 shrink-0 flex items-center justify-center">${avatarHtml}</div>`
-                  + '<div class="min-w-0 leading-tight">'
-                    + `<div class="flex items-center gap-1"><span class="text-[10px] font-black text-white truncate max-w-[85px]">${escapeFhHtml(r.name)}</span><span class="text-[8.5px] font-bold text-amber-400 shrink-0">LV.${r.level}</span></div>`
-                    + `<div class="text-[8px] text-slate-300 truncate">🎮 ${r.totalMatches} o\x27yin • ⚡ ${r.powerScore}</div>`
-                  + '</div>'
-                + '</div>'
-                + '<div class="flex items-center gap-1 shrink-0">'
-                  + `<button type="button" data-fh-action="accept" data-pid="${escapeFhHtml(r.id)}" class="bg-emerald-600 hover:bg-emerald-500 text-white text-[9px] font-black px-2 py-1 rounded active:scale-95 transition">✓ Qabul</button>`
-                  + `<button type="button" data-fh-action="reject" data-pid="${escapeFhHtml(r.id)}" class="bg-red-600/80 hover:bg-red-500 text-white text-[9px] font-black px-1.5 py-1 rounded active:scale-95 transition">✕</button>`
-                + '</div>'
-              + '</div>';
+              const pid = escapeFhHtml(r.id);
+              const pname = escapeFhHtml(r.name);
+              const avatarHtml = buildIosAvatarHtml(r.name, r.id, r.photoUrl, false);
+              return `<div class="ios-fh-row">`
+                + `<div class="flex items-center gap-2 min-w-0 flex-1">`
+                  + avatarHtml
+                  + `<div class="min-w-0 flex-1 leading-tight">`
+                    + `<div class="flex items-center gap-1.5"><span class="text-[12px] font-semibold text-white truncate">${pname}</span><span class="text-[10px] font-medium text-[#8E8E93] shrink-0">Lv.${r.level}</span></div>`
+                    + `<div class="text-[10px] text-[#8E8E93] truncate">Siz bilan do\x27stlashmoqchi</div>`
+                  + `</div>`
+                + `</div>`
+                + `<div class="flex items-center gap-1.5 shrink-0">`
+                  + `<button type="button" data-fh-action="accept" data-pid="${pid}" class="ios-btn-green px-2.5 py-1 text-[10px] active:opacity-75 transition">Qabul</button>`
+                  + `<button type="button" data-fh-action="reject" data-pid="${pid}" class="ios-btn-circle active:opacity-75 transition text-[#FF453A]" title="Rad etish">✕</button>`
+                + `</div>`
+              + `</div>`;
             }).join('');
           }
 
           // 2) Do'stlarim
-          const hasFriends = Array.isArray(data.myFriends) && data.myFriends.length > 0;
-          rightHtml += `<div class="text-[9px] font-black uppercase text-emerald-300 px-1 pt-1 pb-1 flex items-center justify-between border-b border-emerald-500/20"><span>🤝 Do\x27stlarim (${hasFriends ? data.myFriends.length : 0})</span></div>`;
-
           if (hasFriends) {
+            if (hasIncoming || hasOutgoing) {
+              rightHtml += `<div class="px-3 pt-2 pb-1 text-[9.5px] font-semibold uppercase tracking-wider text-[#8E8E93]">Do\x27stlar (${data.myFriends.length})</div>`;
+            }
             rightHtml += data.myFriends.map(f => {
-              const onlineDot = f.isOnline
-                ? '<span class="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400 border border-slate-900" title="Online"></span>'
-                : '<span class="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-slate-500 border border-slate-900" title="Offline"></span>';
-              const avatarHtml = f.photoUrl
-                ? `<img src="${escapeFhHtml(f.photoUrl)}" class="w-full h-full object-cover" onerror="this.onerror=null;this.classList.add('hidden');if(this.nextElementSibling)this.nextElementSibling.classList.remove('hidden');" /><span class="hidden flex items-center justify-center w-full h-full">${defaultAvatarSvg}</span>`
-                : defaultAvatarSvg;
-              const statusText = f.isOnline
-                ? '<span class="text-[8px] font-bold text-emerald-400">🟢 Online</span>'
-                : '<span class="text-[8px] text-slate-400">⚪ Offline</span>';
+              const pid = escapeFhHtml(f.id);
+              const fname = escapeFhHtml(f.name);
+              const avatarHtml = buildIosAvatarHtml(f.name, f.id, f.photoUrl, f.isOnline);
+              const statusLine = f.isOnline
+                ? `<span class="text-[#30D158]">Online</span> · ${f.powerScore} ball`
+                : `<span class="text-[#8E8E93]">Offline · ${f.totalMatches} o\x27yin · ${f.powerScore} ball</span>`;
 
-              return '<div class="flex items-center justify-between gap-1.5 px-2 py-1.5 rounded-lg bg-slate-950/60 hover:bg-slate-950/90 border border-slate-800/80 transition">'
-                + '<div class="flex items-center gap-1.5 min-w-0">'
-                  + `<div class="relative w-[30px] h-[30px] rounded-lg overflow-hidden border border-slate-600/60 bg-slate-900 shrink-0 flex items-center justify-center">${avatarHtml}${onlineDot}</div>`
-                  + '<div class="min-w-0 leading-tight">'
-                    + `<div class="flex items-center gap-1"><span class="text-[10px] font-black text-white truncate max-w-[95px]">${escapeFhHtml(f.name)}</span><span class="text-[8.5px] font-bold text-amber-400 shrink-0">LV.${f.level}</span></div>`
-                    + `<div class="text-[8.5px] text-slate-300 truncate">${statusText} • 🎮 ${f.totalMatches} o\x27yin • ⚡ ${f.powerScore}</div>`
-                  + '</div>'
-                + '</div>'
-                + '<div class="flex items-center gap-1 shrink-0">'
-                  + `<button type="button" data-fh-action="play" data-pid="${escapeFhHtml(f.id)}" class="bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black px-2 py-1 rounded active:scale-95 transition" title="Online lobbi ochish">⚔️</button>`
-                  + `<button type="button" data-fh-action="remove" data-pid="${escapeFhHtml(f.id)}" class="bg-slate-800 hover:bg-red-600 text-slate-300 hover:text-white text-[10px] font-black px-1.5 py-1 rounded active:scale-95 transition" title="Do\x27stlikdan chiqarish">✕</button>`
-                + '</div>'
-              + '</div>';
+              return `<div class="ios-fh-row">`
+                + `<div class="flex items-center gap-2 min-w-0 flex-1">`
+                  + avatarHtml
+                  + `<div class="min-w-0 flex-1 leading-tight">`
+                    + `<div class="flex items-center gap-1.5"><span class="text-[12px] font-semibold text-white truncate">${fname}</span><span class="text-[10px] font-medium text-[#8E8E93] shrink-0">Lv.${f.level}</span></div>`
+                    + `<div class="text-[10px] truncate leading-tight">${statusLine}</div>`
+                  + `</div>`
+                + `</div>`
+                + `<div class="flex items-center gap-1.5 shrink-0">`
+                  + `<button type="button" data-fh-action="play" data-pid="${pid}" class="ios-btn-tinted px-2.5 py-1 text-[10px] active:opacity-75 transition" title="Online lobbi ochish">O\x27ynash</button>`
+                  + `<button type="button" data-fh-action="remove" data-pid="${pid}" class="ios-btn-circle active:opacity-75 transition text-[#FF453A]" title="Do\x27stlikdan chiqarish">✕</button>`
+                + `</div>`
+              + `</div>`;
             }).join('');
-          } else {
-            rightHtml += '<div class="py-4 px-2 text-center text-[10px] text-slate-400 font-medium">Hozircha do\x27stlaringiz yo\x27q.<br/><span class="text-amber-300/90 font-bold">Chapdagi "Barcha O\x27yinchilar" ro\x27yxatidan "+ Do\x27st" tugmasini bosing!</span></div>';
           }
 
           // 3) Yuborilgan so'rovlar
-          if (Array.isArray(data.outgoingRequests) && data.outgoingRequests.length > 0) {
-            rightHtml += `<div class="text-[9px] font-black uppercase text-slate-400 px-1 pt-1 pb-1 flex items-center gap-1 border-b border-slate-700/30"><span>📨</span> Yuborilgan so\x27rovlar (${data.outgoingRequests.length})</div>`;
+          if (hasOutgoing) {
+            rightHtml += `<div class="px-3 pt-2 pb-1 text-[9.5px] font-semibold uppercase tracking-wider text-[#8E8E93]">Kutilmoqda (${data.outgoingRequests.length})</div>`;
             rightHtml += data.outgoingRequests.map(o => {
-              return '<div class="flex items-center justify-between gap-1.5 px-2 py-1 rounded-lg bg-slate-900/50 border border-slate-800/60">'
-                + '<div class="min-w-0 leading-tight">'
-                  + `<div class="flex items-center gap-1"><span class="text-[9.5px] font-bold text-slate-200 truncate max-w-[110px]">${escapeFhHtml(o.name)}</span><span class="text-[8px] text-amber-400 font-bold">LV.${o.level}</span></div>`
-                  + '<div class="text-[8px] text-amber-400/90 font-medium">⏳ Kutilmoqda...</div>'
-                + '</div>'
-                + `<button type="button" data-fh-action="remove" data-pid="${escapeFhHtml(o.id)}" class="bg-slate-800 hover:bg-red-600 text-slate-300 hover:text-white text-[8.5px] font-bold px-1.5 py-0.5 rounded active:scale-95 transition">Bekor</button>`
-              + '</div>';
+              const pid = escapeFhHtml(o.id);
+              const oname = escapeFhHtml(o.name);
+              const avatarHtml = buildIosAvatarHtml(o.name, o.id, o.photoUrl, false);
+              return `<div class="ios-fh-row">`
+                + `<div class="flex items-center gap-2 min-w-0 flex-1">`
+                  + avatarHtml
+                  + `<div class="min-w-0 flex-1 leading-tight">`
+                    + `<div class="flex items-center gap-1.5"><span class="text-[12px] font-semibold text-white truncate">${oname}</span><span class="text-[10px] font-medium text-[#8E8E93] shrink-0">Lv.${o.level}</span></div>`
+                    + `<div class="text-[10px] text-[#8E8E93] truncate">So\x27rov yuborilgan</div>`
+                  + `</div>`
+                + `</div>`
+                + `<div class="shrink-0">`
+                  + `<button type="button" data-fh-action="remove" data-pid="${pid}" class="ios-btn-gray px-2 py-0.5 text-[10px] active:opacity-75 transition">Bekor</button>`
+                + `</div>`
+              + `</div>`;
             }).join('');
+          }
+
+          if (!hasIncoming && !hasFriends && !hasOutgoing) {
+            rightHtml = '<div class="py-10 px-4 text-center text-[11px] text-[#8E8E93] leading-relaxed">Hozircha do\x27stlar yo\x27q.<br/>Chap ro\x27yxatdan <span class="text-[#0A84FF] font-semibold">+ Qo\x27shish</span> ni bosing.</div>';
           }
 
           myFriendsListEl.innerHTML = rightHtml;
