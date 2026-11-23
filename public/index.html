@@ -491,6 +491,7 @@
             /* 90° burilgan rejimda barcha 6 ta modal kesilib qolmasligi va barmoq bilan silliq skroll bo'lishi uchun: */
     #lobbyView.digi-lobby-rot90 [id^="modal"] {
       padding: 8px 12px !important;
+      touch-action: pan-x pan-y !important;
     }
     #lobbyView.digi-lobby-rot90 [id^="modal"] > div {
       max-height: 94% !important;
@@ -508,7 +509,7 @@
       max-height: none !important;
       overflow-y: auto !important;
       -webkit-overflow-scrolling: touch !important;
-      touch-action: pan-y !important;
+      touch-action: pan-x pan-y !important;
       overscroll-behavior: contain !important;
     }
 #lobbyView.digi-lobby-landscape #modalBonus #csCase3DCanvas {
@@ -6328,6 +6329,53 @@
           if (toastBox && toastBox.parentElement === lv) document.body.appendChild(toastBox);
         }
       }
+      (function bindRotatedModalTouchScroll() {
+        const lv = document.getElementById('lobbyView');
+        if (!lv || lv.dataset.rotScrollBound) return;
+        lv.dataset.rotScrollBound = '1';
+        let activeBox = null;
+        let startX = 0;
+        let startScrollTop = 0;
+        let nativeMoved = false;
+
+        lv.addEventListener('touchstart', (e) => {
+          if (!lv.classList.contains('digi-lobby-rot90') || !e.touches || e.touches.length !== 1) {
+            activeBox = null;
+            return;
+          }
+          const t = e.target;
+          if (t && t.closest && t.closest('input[type="range"]')) {
+            activeBox = null;
+            return;
+          }
+          const box = t && t.closest ? t.closest('.overflow-y-auto') : null;
+          if (!box || box.scrollHeight <= box.clientHeight + 2) {
+            activeBox = null;
+            return;
+          }
+          activeBox = box;
+          startX = e.touches[0].clientX;
+          startScrollTop = box.scrollTop;
+          nativeMoved = false;
+        }, { passive: true });
+
+        lv.addEventListener('touchmove', (e) => {
+          if (!activeBox || !e.touches || e.touches.length !== 1) return;
+          if (activeBox.scrollTop !== startScrollTop) {
+            nativeMoved = true;
+          }
+          if (!nativeMoved) {
+            const dx = e.touches[0].clientX - startX;
+            if (Math.abs(dx) > 3) {
+              activeBox.scrollTop = startScrollTop + dx;
+            }
+          }
+        }, { passive: true });
+
+        const clearBox = () => { activeBox = null; };
+        lv.addEventListener('touchend', clearBox, { passive: true });
+        lv.addEventListener('touchcancel', clearBox, { passive: true });
+      })();
       function enterBattleLandscape() {
         syncBattleBannersParent(true);
         applyLandscapeLayout();
