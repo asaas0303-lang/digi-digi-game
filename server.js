@@ -80,6 +80,19 @@ function saveDb() {
 
 loadDb();
 
+function computePlayerPowerScore(player) {
+  const s = (player && player.userStats) || {};
+  const elo = Number(s.elo) || 1000;
+  const totalMatches = (Number(s.matches5v5) || 0) + (Number(s.matchesOnline) || 0);
+  const kills = Number(s.kills) || 0;
+  const headshots = Number(s.headshots) || 0;
+  const botLevel = Number(s.botLevel) || 1;
+  const powerScore = Math.round(elo + (totalMatches * 30) + (kills * 4) + (headshots * 10) + Math.max(0, botLevel - 1) * 15);
+  const level = Math.max(1, Math.floor((elo - 800) / 25) + 1);
+  const isOnline = (Date.now() - Number((player && (player.lastSeenAt || player.updatedAt)) || 0)) < 90000;
+  return { elo, level, totalMatches, kills, headshots, powerScore, isOnline };
+}
+
 // Telegram Native HTTPS Helper
 function tgApiCall(method, payload) {
   return new Promise((resolve, reject) => {
@@ -113,15 +126,55 @@ app.post("/api/tg/sync", (req, res) => {
   }
 
   const pid = String(myProfile.id).trim().toUpperCase();
-  const existing = db.players[pid];
+  let existing = db.players[pid];
 
   if (!existing) {
+    let oldKey = null;
+    if (myProfile.tgId) {
+      oldKey = Object.keys(db.players).find(k => String(db.players[k].tgId) === String(myProfile.tgId));
+    }
+    if (oldKey && db.players[oldKey]) {
+      const oldP = db.players[oldKey];
+      delete db.players[oldKey];
+      db.friendRequests.forEach(r => {
+        if (r.fromId === oldKey) r.fromId = pid;
+        if (r.toId === oldKey) r.toId = pid;
+      });
+      const merged = {
+        id: pid,
+        tgId: myProfile.tgId || oldP.tgId || null,
+        name: myProfile.name || oldP.name || "Player",
+        username: myProfile.username || oldP.username || "",
+        photoUrl: myProfile.photoUrl || oldP.photoUrl || "",
+        userStats: Object.assign({
+          coins: 0,
+          elo: 1000,
+          botLevel: 1,
+          kills: 0,
+          headshots: 0,
+          matches5v5: 0,
+          matchesOnline: 0,
+          ownedSkins: ["classic"],
+          equippedSkinId: "classic"
+        }, oldP.userStats || {}, (userStats && !initLoad) ? userStats : {}),
+        blockedUsersMap: Object.assign({}, oldP.blockedUsersMap || {}, blockedUsersMap || {}),
+        savedFriends: Array.isArray(savedFriends) ? savedFriends : (oldP.savedFriends || []),
+        createdAt: oldP.createdAt || Date.now(),
+        updatedAt: Date.now(),
+        lastSeenAt: Date.now()
+      };
+      db.players[pid] = merged;
+      saveDb();
+      return res.json({ ok: true, player: merged });
+    }
+
     // Yangi o'yinchi: boshlang'ich tangalar: 0!
     const newPlayer = {
       id: pid,
       tgId: myProfile.tgId || null,
       name: myProfile.name || "Player",
       username: myProfile.username || "",
+      photoUrl: myProfile.photoUrl || "",
       userStats: {
         coins: 0,
         elo: 1000,
@@ -136,7 +189,8 @@ app.post("/api/tg/sync", (req, res) => {
       blockedUsersMap: {},
       savedFriends: [],
       createdAt: Date.now(),
-      updatedAt: Date.now()
+      updatedAt: Date.now(),
+      lastSeenAt: Date.now()
     };
     if (userStats && typeof userStats === "object" && !initLoad) {
       newPlayer.userStats = Object.assign({}, newPlayer.userStats, userStats);
@@ -150,6 +204,8 @@ app.post("/api/tg/sync", (req, res) => {
   existing.name = myProfile.name || existing.name;
   existing.tgId = myProfile.tgId || existing.tgId;
   existing.username = myProfile.username || existing.username;
+  if (myProfile.photoUrl) existing.photoUrl = myProfile.photoUrl;
+  existing.lastSeenAt = Date.now();
 
   // Agar initLoad === true bo'lsa, bazadagi saqlangan statistikani 0 bilan ezib yubormaymiz!
   if (!initLoad && userStats && typeof userStats === "object") {
@@ -218,6 +274,40 @@ app.post("/api/tg/friend-request", (req, res) => {
         message: `Siz ushbu o'yinchi tomonidan 1 haftaga bloklangansiz (${remDays} kun qoldi).`
       });
     }
+  }
+
+  // O'zaro avto-qabul tekshiruvi: cleanTo allaqachon cleanFrom ga pending so'rov yuborgan bo'lsa
+  const reversePending = db.friendRequests.find(
+    r => r.fromId === cleanTo && r.toId === cleanFrom && r.status === "pending"
+  );
+  if (reversePending) {
+    reversePending.status = "accept";
+    const fromObj = db.players[cleanFrom] || { id: cleanFrom, name: fromName || cleanFrom, userStats: { elo: fromElo || 1000 } };
+    const toObj = db.players[cleanTo] || { id: cleanTo, name: cleanTo, userStats: { elo: 1000 } };
+
+    if (!db.players[cleanFrom]) db.players[cleanFrom] = fromObj;
+    if (!db.players[cleanTo]) db.players[cleanTo] = toObj;
+
+    if (!Array.isArray(db.players[cleanFrom].savedFriends)) db.players[cleanFrom].savedFriends = [];
+    if (!db.players[cleanFrom].savedFriends.some(f => f.id === cleanTo)) {
+      db.players[cleanFrom].savedFriends.push({
+        id: cleanTo,
+        name: toObj.name || cleanTo,
+        elo: (toObj.userStats && toObj.userStats.elo) || 1000
+      });
+    }
+
+    if (!Array.isArray(db.players[cleanTo].savedFriends)) db.players[cleanTo].savedFriends = [];
+    if (!db.players[cleanTo].savedFriends.some(f => f.id === cleanFrom)) {
+      db.players[cleanTo].savedFriends.push({
+        id: cleanFrom,
+        name: fromObj.name || cleanFrom,
+        elo: (fromObj.userStats && fromObj.userStats.elo) || (fromElo || 1000)
+      });
+    }
+
+    saveDb();
+    return res.json({ ok: true, autoAccepted: true });
   }
 
   const alreadyPending = db.friendRequests.find(
@@ -309,6 +399,187 @@ app.post("/api/tg/friend-respond", (req, res) => {
   return res.json({ ok: true, action });
 });
 
+// 5B) Barcha o'yinchilar va do'stlar katalogi (Directory & Ranking)
+app.get("/api/tg/directory", (req, res) => {
+  const myId = String(req.query.myId || "").trim().toUpperCase();
+  const q = String(req.query.q || "").trim().toLowerCase();
+  const myObj = db.players[myId] || null;
+  const myFriendIds = new Set(((myObj && myObj.savedFriends) || []).map(f => String(f.id || "").toUpperCase()));
+  const blockedMap = (myObj && myObj.blockedUsersMap) ? myObj.blockedUsersMap : {};
+  const now = Date.now();
+
+  const incomingSet = new Set(
+    db.friendRequests
+      .filter(r => r.toId === myId && r.status === "pending" && !(blockedMap[r.fromId] && blockedMap[r.fromId] > now))
+      .map(r => r.fromId)
+  );
+  const outgoingSet = new Set(
+    db.friendRequests
+      .filter(r => r.fromId === myId && r.status === "pending")
+      .map(r => r.toId)
+  );
+
+  const allSorted = Object.values(db.players).map(p => {
+    const score = computePlayerPowerScore(p);
+    return {
+      id: p.id,
+      name: p.name || p.id,
+      username: p.username || "",
+      photoUrl: p.photoUrl || "",
+      elo: score.elo,
+      level: score.level,
+      totalMatches: score.totalMatches,
+      kills: score.kills,
+      headshots: score.headshots,
+      powerScore: score.powerScore,
+      isOnline: score.isOnline,
+      lastSeenAt: p.lastSeenAt || p.updatedAt || p.createdAt || 0
+    };
+  });
+
+  // 1) powerScore kamayish bo'yicha
+  // 2) totalMatches kamayish bo'yicha
+  // 3) elo kamayish bo'yicha
+  // 4) lastSeenAt kamayish bo'yicha
+  allSorted.sort((a, b) => {
+    if (b.powerScore !== a.powerScore) return b.powerScore - a.powerScore;
+    if (b.totalMatches !== a.totalMatches) return b.totalMatches - a.totalMatches;
+    if (b.elo !== a.elo) return b.elo - a.elo;
+    return b.lastSeenAt - a.lastSeenAt;
+  });
+
+  allSorted.forEach((p, idx) => {
+    p.rank = idx + 1;
+    p.relation = (p.id === myId) ? "self" :
+                 (myFriendIds.has(p.id) ? "friend" :
+                 (incomingSet.has(p.id) ? "incoming" :
+                 (outgoingSet.has(p.id) ? "outgoing" : "none")));
+  });
+
+  let filtered = allSorted;
+  if (q) {
+    filtered = allSorted.filter(p =>
+      (p.name && p.name.toLowerCase().includes(q)) ||
+      (p.username && p.username.toLowerCase().includes(q)) ||
+      (p.id && p.id.toLowerCase().includes(q))
+    );
+  }
+
+  // myFriends ro'yxati
+  const myFriends = Array.from(myFriendIds).map(fid => {
+    const p = db.players[fid];
+    if (p) {
+      const score = computePlayerPowerScore(p);
+      return {
+        id: p.id,
+        name: p.name || p.id,
+        username: p.username || "",
+        photoUrl: p.photoUrl || "",
+        elo: score.elo,
+        level: score.level,
+        totalMatches: score.totalMatches,
+        kills: score.kills,
+        headshots: score.headshots,
+        powerScore: score.powerScore,
+        isOnline: score.isOnline,
+        lastSeenAt: p.lastSeenAt || p.updatedAt || 0
+      };
+    }
+    const sf = ((myObj && myObj.savedFriends) || []).find(f => String(f.id).toUpperCase() === fid);
+    return {
+      id: fid,
+      name: (sf && sf.name) || fid,
+      username: "",
+      photoUrl: "",
+      elo: (sf && sf.elo) || 1000,
+      level: 1,
+      totalMatches: 0,
+      kills: 0,
+      headshots: 0,
+      powerScore: (sf && sf.elo) || 1000,
+      isOnline: false,
+      lastSeenAt: 0
+    };
+  });
+
+  myFriends.sort((a, b) => {
+    if (a.isOnline !== b.isOnline) return a.isOnline ? -1 : 1;
+    return b.powerScore - a.powerScore;
+  });
+
+  const incomingRequests = db.friendRequests
+    .filter(r => r.toId === myId && r.status === "pending" && !(blockedMap[r.fromId] && blockedMap[r.fromId] > now))
+    .map(r => {
+      const p = db.players[r.fromId];
+      const score = p ? computePlayerPowerScore(p) : { elo: r.fromElo || 1000, level: 1, totalMatches: 0, kills: 0, powerScore: r.fromElo || 1000 };
+      return {
+        requestId: r.id,
+        id: r.fromId,
+        name: (p && p.name) || r.fromName || r.fromId,
+        photoUrl: (p && p.photoUrl) || "",
+        elo: score.elo,
+        level: score.level,
+        totalMatches: score.totalMatches,
+        powerScore: score.powerScore,
+        createdAt: r.createdAt
+      };
+    });
+
+  const outgoingRequests = db.friendRequests
+    .filter(r => r.fromId === myId && r.status === "pending")
+    .map(r => {
+      const p = db.players[r.toId];
+      const score = p ? computePlayerPowerScore(p) : { elo: 1000, level: 1, totalMatches: 0, kills: 0, powerScore: 1000 };
+      return {
+        requestId: r.id,
+        id: r.toId,
+        name: (p && p.name) || r.toId,
+        photoUrl: (p && p.photoUrl) || "",
+        elo: score.elo,
+        level: score.level,
+        totalMatches: score.totalMatches,
+        powerScore: score.powerScore,
+        createdAt: r.createdAt
+      };
+    });
+
+  return res.json({
+    ok: true,
+    totalPlayers: allSorted.length,
+    onlineCount: allSorted.filter(x => x.isOnline).length,
+    allPlayers: filtered.slice(0, 150),
+    myFriends,
+    incomingRequests,
+    outgoingRequests
+  });
+});
+
+// 5C) Do'stlikni bekor qilish / do'stlar ro'yxatidan o'chirish
+app.post("/api/tg/friend-remove", (req, res) => {
+  const { myId, targetId } = req.body || {};
+  const cleanMy = String(myId || "").trim().toUpperCase();
+  const cleanTarget = String(targetId || "").trim().toUpperCase();
+  if (!cleanMy || !cleanTarget) {
+    return res.status(400).json({ ok: false, error: "MISSING_IDS" });
+  }
+
+  if (db.players[cleanMy] && Array.isArray(db.players[cleanMy].savedFriends)) {
+    db.players[cleanMy].savedFriends = db.players[cleanMy].savedFriends.filter(f => String(f.id).toUpperCase() !== cleanTarget);
+  }
+  if (db.players[cleanTarget] && Array.isArray(db.players[cleanTarget].savedFriends)) {
+    db.players[cleanTarget].savedFriends = db.players[cleanTarget].savedFriends.filter(f => String(f.id).toUpperCase() !== cleanMy);
+  }
+
+  db.friendRequests.forEach(r => {
+    if (((r.fromId === cleanMy && r.toId === cleanTarget) || (r.fromId === cleanTarget && r.toId === cleanMy)) && r.status === "pending") {
+      r.status = "cancelled";
+    }
+  });
+
+  saveDb();
+  return res.json({ ok: true });
+});
+
 // 6) Telegram Bot Webhook (/api/tg/webhook)
 app.post("/api/tg/webhook", async (req, res) => {
   try {
@@ -317,6 +588,36 @@ app.post("/api/tg/webhook", async (req, res) => {
     if (msg && msg.text && msg.text.startsWith("/start")) {
       const chatId = msg.chat.id;
       const firstName = (msg.from && msg.from.first_name) ? msg.from.first_name : "Jangchi";
+
+      if (msg.from && msg.from.id) {
+        const tgId = msg.from.id;
+        const fullName = [msg.from.first_name, msg.from.last_name].filter(Boolean).join(" ").trim() || msg.from.username || ("Jangchi_" + String(tgId).slice(-4));
+        const username = msg.from.username || "";
+        const existingKey = Object.keys(db.players).find(k => String(db.players[k].tgId) === String(tgId));
+        if (existingKey && db.players[existingKey]) {
+          const ex = db.players[existingKey];
+          ex.name = ex.name || fullName;
+          ex.username = username || ex.username;
+          ex.lastSeenAt = Date.now();
+          saveDb();
+        } else {
+          const newId = "TG-" + String(tgId);
+          db.players[newId] = {
+            id: newId,
+            tgId,
+            name: fullName,
+            username,
+            photoUrl: "",
+            userStats: { coins: 0, elo: 1000, botLevel: 1, kills: 0, headshots: 0, matches5v5: 0, matchesOnline: 0, ownedSkins: ["classic"], equippedSkinId: "classic" },
+            blockedUsersMap: {},
+            savedFriends: [],
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+            lastSeenAt: Date.now()
+          };
+          saveDb();
+        }
+      }
       const parts = msg.text.trim().split(/\s+/);
       const rawRef = parts[1] || "";
       let webAppUrl = `${APP_URL}/`;
