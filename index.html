@@ -9697,6 +9697,8 @@
       let caseInnerLight = null;
       let casePrizeGroup = null;
       let caseCoinsParticles = [];
+      let sharedCoinGeo = null;
+      let sharedCoinMat = null;
       let caseAnimFrameId = null;
       let caseState = 'idle'; // 'idle' | 'unlocking' | 'opening' | 'opened'
       let caseStateStart = 0;
@@ -9704,40 +9706,241 @@
       let caseDragging = false;
       let caseLastX = 0;
 
-      function generateCaseMetalTexture() {
-        const c = document.createElement('canvas');
-        c.width = 256; c.height = 256;
-        const ctx = c.getContext('2d');
-        ctx.fillStyle = '#1c2128';
-        ctx.fillRect(0, 0, 256, 256);
-        // Harbiy metall panellar va CS:GO sariq-qora ogohlantirish chiziqlari
-        ctx.strokeStyle = '#2d3642';
-        ctx.lineWidth = 4;
-        ctx.strokeRect(10, 10, 236, 236);
-        for (let x = 24; x < 236; x += 36) {
-          ctx.fillStyle = '#13171c';
-          ctx.fillRect(x, 22, 16, 175);
-        }
-        // Pastki sariq-qora diagonal CS:GO lentalar
-        ctx.save();
-        ctx.beginPath();
-        ctx.rect(12, 204, 232, 36);
-        ctx.clip();
-        ctx.fillStyle = '#f59e0b';
-        ctx.fillRect(12, 204, 232, 36);
-        ctx.fillStyle = '#111827';
-        for (let i = -40; i < 280; i += 28) {
+      function generateCaseStudioEnvMap(renderer) {
+        const envCvs = document.createElement('canvas');
+        envCvs.width = 256;
+        envCvs.height = 128;
+        const ctx = envCvs.getContext('2d');
+
+        // Qorong'u moviy-qora studiya gumbazi (#060b18 → #0d1830 → #04070f)
+        const bgGrad = ctx.createLinearGradient(0, 0, 0, 128);
+        bgGrad.addColorStop(0, '#060b18');
+        bgGrad.addColorStop(0.5, '#0d1830');
+        bgGrad.addColorStop(1, '#04070f');
+        ctx.fillStyle = bgGrad;
+        ctx.fillRect(0, 0, 256, 128);
+
+        // Tepada iliq oq-oltin yumshoq softbox chirog'i (rgba(255, 244, 214, 0.95))
+        const topSoft = ctx.createRadialGradient(128, 20, 0, 128, 20, 60);
+        topSoft.addColorStop(0, 'rgba(255, 244, 214, 0.95)');
+        topSoft.addColorStop(0.4, 'rgba(255, 230, 180, 0.55)');
+        topSoft.addColorStop(1, 'rgba(255, 230, 180, 0)');
+        ctx.fillStyle = topSoft;
+        ctx.fillRect(0, 0, 256, 60);
+
+        // Chapda kuchli elektr-ko'k yon nuri (rgba(56, 189, 248, 0.85))
+        const leftRim = ctx.createRadialGradient(25, 64, 0, 25, 64, 55);
+        leftRim.addColorStop(0, 'rgba(56, 189, 248, 0.85)');
+        leftRim.addColorStop(0.5, 'rgba(14, 165, 233, 0.35)');
+        leftRim.addColorStop(1, 'rgba(14, 165, 233, 0)');
+        ctx.fillStyle = leftRim;
+        ctx.fillRect(0, 15, 80, 98);
+
+        // O'ngda iliq 24K oltin aks-sado chizig'i (rgba(251, 191, 36, 0.85))
+        const rightBounce = ctx.createRadialGradient(230, 64, 0, 230, 64, 55);
+        rightBounce.addColorStop(0, 'rgba(251, 191, 36, 0.85)');
+        rightBounce.addColorStop(0.5, 'rgba(245, 158, 11, 0.35)');
+        rightBounce.addColorStop(1, 'rgba(245, 158, 11, 0)');
+        ctx.fillStyle = rightBounce;
+        ctx.fillRect(176, 15, 80, 98);
+
+        // Bir nechta o'tkir oq refleksiya nuqtalari (metall qirralar yaltirashi uchun)
+        ctx.fillStyle = '#ffffff';
+        [[90, 24, 2.5], [166, 24, 2.5], [128, 14, 3.5], [60, 48, 2], [196, 48, 2]].forEach(([x, y, r]) => {
           ctx.beginPath();
-          ctx.moveTo(i, 204);
-          ctx.lineTo(i + 14, 204);
-          ctx.lineTo(i - 6, 240);
-          ctx.lineTo(i - 20, 240);
-          ctx.closePath();
+          ctx.arc(x, y, r, 0, Math.PI * 2);
           ctx.fill();
+        });
+
+        const tex = new THREE.CanvasTexture(envCvs);
+        tex.mapping = THREE.EquirectangularReflectionMapping;
+
+        if (renderer && typeof THREE.PMREMGenerator === 'function') {
+          try {
+            const pmrem = new THREE.PMREMGenerator(renderer);
+            pmrem.compileEquirectangularShader();
+            const envMap = pmrem.fromEquirectangular(tex).texture;
+            pmrem.dispose();
+            tex.dispose();
+            return envMap;
+          } catch (e) {
+            return tex;
+          }
         }
-        ctx.restore();
-        const tex = new THREE.CanvasTexture(c);
         return tex;
+      }
+
+      let _cachedCasePBR = null;
+      function generateCasePBRTextures() {
+        if (_cachedCasePBR) return _cachedCasePBR;
+
+        // 1) Color Map (512x512)
+        const cMap = document.createElement('canvas');
+        cMap.width = 512; cMap.height = 512;
+        const ctxM = cMap.getContext('2d');
+
+        // Chuqur taralgan qora titan-karbon korpus (#141923 → #1e2636)
+        const gradM = ctxM.createLinearGradient(0, 0, 512, 512);
+        gradM.addColorStop(0, '#141923');
+        gradM.addColorStop(0.5, '#1e2636');
+        gradM.addColorStop(1, '#0e131d');
+        ctxM.fillStyle = gradM;
+        ctxM.fillRect(0, 0, 512, 512);
+
+        // Nozik metall taram-taram chiziqlar (brushed metal)
+        ctxM.strokeStyle = 'rgba(255, 255, 255, 0.025)';
+        ctxM.lineWidth = 1;
+        for (let y = 4; y < 512; y += 4) {
+          ctxM.beginPath();
+          ctxM.moveTo(0, y);
+          ctxM.lineTo(512, y);
+          ctxM.stroke();
+        }
+
+        // Chuqur qovurg'a (rib) panellari
+        ctxM.fillStyle = '#0a0e16';
+        ctxM.strokeStyle = '#2b3648';
+        ctxM.lineWidth = 3;
+        for (let x = 48; x < 470; x += 68) {
+          ctxM.fillRect(x, 40, 36, 340);
+          ctxM.strokeRect(x, 40, 36, 340);
+          // Panel ichidagi yaltiroq markaz chizig'i
+          ctxM.fillStyle = '#182130';
+          ctxM.fillRect(x + 10, 48, 16, 324);
+          ctxM.fillStyle = '#0a0e16';
+        }
+
+        // Qirralardagi yaltiroq chetlar (edge wear)
+        ctxM.strokeStyle = 'rgba(186, 230, 253, 0.28)';
+        ctxM.lineWidth = 3;
+        ctxM.strokeRect(16, 16, 480, 480);
+
+        // Burchaklardagi mix (rivet) nuqtalari
+        ctxM.fillStyle = '#f59e0b';
+        [[28, 28], [484, 28], [28, 484], [484, 484], [256, 28], [256, 484]].forEach(([rx, ry]) => {
+          ctxM.beginPath();
+          ctxM.arc(rx, ry, 5, 0, Math.PI * 2);
+          ctxM.fill();
+        });
+
+        // Markazda taktik shtamp
+        ctxM.fillStyle = 'rgba(56, 189, 248, 0.35)';
+        ctxM.font = 'bold 20px -apple-system, sans-serif';
+        ctxM.textAlign = 'center';
+        ctxM.fillText('DIGI CS-CASE // 24K SPEC-OPS', 256, 220);
+
+        // Pastki qismda o'tkir qora-oltin diagonal CS:GO hazard lentasi
+        ctxM.save();
+        ctxM.beginPath();
+        ctxM.rect(24, 410, 464, 68);
+        ctxM.clip();
+        ctxM.fillStyle = '#f59e0b';
+        ctxM.fillRect(24, 410, 464, 68);
+        ctxM.fillStyle = '#0f172a';
+        for (let i = -60; i < 560; i += 48) {
+          ctxM.beginPath();
+          ctxM.moveTo(i, 410);
+          ctxM.lineTo(i + 24, 410);
+          ctxM.lineTo(i - 8, 478);
+          ctxM.lineTo(i - 32, 478);
+          ctxM.closePath();
+          ctxM.fill();
+        }
+        ctxM.restore();
+
+        // 2) Bump Map (512x512)
+        const cBump = document.createElement('canvas');
+        cBump.width = 512; cBump.height = 512;
+        const ctxB = cBump.getContext('2d');
+        ctxB.fillStyle = '#808080';
+        ctxB.fillRect(0, 0, 512, 512);
+
+        // Bo'rtib chiqqan qovurg'alar va chuqurchalar
+        for (let x = 48; x < 470; x += 68) {
+          ctxB.fillStyle = '#303030';
+          ctxB.fillRect(x - 4, 38, 44, 344);
+          ctxB.fillStyle = '#c0c0c0';
+          ctxB.fillRect(x, 40, 36, 340);
+        }
+        // Dumaloq metall mixlar (oq)
+        ctxB.fillStyle = '#ffffff';
+        [[28, 28], [484, 28], [28, 484], [484, 484], [256, 28], [256, 484]].forEach(([rx, ry]) => {
+          ctxB.beginPath();
+          ctxB.arc(rx, ry, 6, 0, Math.PI * 2);
+          ctxB.fill();
+        });
+
+        // 3) Roughness Map (512x512)
+        const cRough = document.createElement('canvas');
+        cRough.width = 512; cRough.height = 512;
+        const ctxR = cRough.getContext('2d');
+        ctxR.fillStyle = '#707070';
+        ctxR.fillRect(0, 0, 512, 512);
+        for (let x = 48; x < 470; x += 68) {
+          ctxR.fillStyle = '#404040';
+          ctxR.fillRect(x, 40, 36, 340);
+        }
+        ctxR.fillStyle = '#202020';
+        [[28, 28], [484, 28], [28, 484], [484, 484], [256, 28], [256, 484]].forEach(([rx, ry]) => {
+          ctxR.beginPath();
+          ctxR.arc(rx, ry, 6, 0, Math.PI * 2);
+          ctxR.fill();
+        });
+
+        // 4) Gold Bump Map (256x256)
+        const cGoldBump = document.createElement('canvas');
+        cGoldBump.width = 256; cGoldBump.height = 256;
+        const ctxGB = cGoldBump.getContext('2d');
+        ctxGB.fillStyle = '#808080';
+        ctxGB.fillRect(0, 0, 256, 256);
+        ctxGB.strokeStyle = '#a0a0a0';
+        ctxGB.lineWidth = 1;
+        for (let y = 2; y < 256; y += 3) {
+          ctxGB.beginPath();
+          ctxGB.moveTo(0, y);
+          ctxGB.lineTo(256, y);
+          ctxGB.stroke();
+        }
+
+        // 5) Soft Contact Shadow Texture (128x128)
+        const cShad = document.createElement('canvas');
+        cShad.width = 128; cShad.height = 128;
+        const ctxS = cShad.getContext('2d');
+        const sGrad = ctxS.createRadialGradient(64, 64, 0, 64, 64, 64);
+        sGrad.addColorStop(0, 'rgba(0, 0, 0, 0.92)');
+        sGrad.addColorStop(0.35, 'rgba(5, 8, 18, 0.75)');
+        sGrad.addColorStop(0.65, 'rgba(245, 158, 11, 0.12)');
+        sGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctxS.fillStyle = sGrad;
+        ctxS.fillRect(0, 0, 128, 128);
+
+        // 6) Coin Texture (128x128)
+        const cCoin = document.createElement('canvas');
+        cCoin.width = 128; cCoin.height = 128;
+        const ctxC = cCoin.getContext('2d');
+        ctxC.fillStyle = '#f59e0b';
+        ctxC.fillRect(0, 0, 128, 128);
+        ctxC.strokeStyle = '#fbbf24';
+        ctxC.lineWidth = 6;
+        ctxC.strokeRect(6, 6, 116, 116);
+        ctxC.beginPath();
+        ctxC.arc(64, 64, 50, 0, Math.PI * 2);
+        ctxC.stroke();
+        ctxC.fillStyle = '#ffffff';
+        ctxC.font = 'bold 54px -apple-system, sans-serif';
+        ctxC.textAlign = 'center';
+        ctxC.textBaseline = 'middle';
+        ctxC.fillText('$', 64, 66);
+
+        _cachedCasePBR = {
+          map: new THREE.CanvasTexture(cMap),
+          bumpMap: new THREE.CanvasTexture(cBump),
+          roughnessMap: new THREE.CanvasTexture(cRough),
+          goldBumpMap: new THREE.CanvasTexture(cGoldBump),
+          shadowTex: new THREE.CanvasTexture(cShad),
+          coinTex: new THREE.CanvasTexture(cCoin)
+        };
+        return _cachedCasePBR;
       }
 
       function initCase3DEngine() {
@@ -9745,55 +9948,122 @@
         const cvs = document.getElementById('csCase3DCanvas');
         if (!cvs) return;
 
-        caseThreeRenderer = new THREE.WebGLRenderer({ canvas: cvs, antialias: true, alpha: true });
-        // 1-OPTIMIZATSIYA: Smart Retina PixelRatio (1.5x chegara)
+        // 1) Renderer & ToneMapping (60 FPS + Kino sifati)
+        caseThreeRenderer = new THREE.WebGLRenderer({
+          canvas: cvs,
+          antialias: true,
+          alpha: true,
+          stencil: false,
+          powerPreference: 'high-performance'
+        });
         caseThreeRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+        caseThreeRenderer.shadowMap.enabled = false;
+        caseThreeRenderer.toneMapping = THREE.ACESFilmicToneMapping;
+        caseThreeRenderer.toneMappingExposure = 1.18;
+        if (THREE.sRGBEncoding) caseThreeRenderer.outputEncoding = THREE.sRGBEncoding;
+
         caseThreeScene = new THREE.Scene();
+        caseThreeScene.environment = generateCaseStudioEnvMap(caseThreeRenderer);
 
-        caseThreeCamera = new THREE.PerspectiveCamera(42, 2.0, 0.1, 20);
-        caseThreeCamera.position.set(0, 1.25, 3.35);
-        caseThreeCamera.lookAt(0, 0.15, 0);
+        // 2) Kamera (Cho'zilmasdan mukammal kadr)
+        caseThreeCamera = new THREE.PerspectiveCamera(38, 1.35, 0.1, 20);
+        caseThreeCamera.position.set(0, 1.32, 3.65);
+        caseThreeCamera.lookAt(0, 0.08, 0);
 
-        const amb = new THREE.AmbientLight(0xffffff, 0.75);
-        caseThreeScene.add(amb);
+        // 3) 3 Nuqtali Kinematik Studiya Yoritishi (Yengil, 0% lag)
+        const hemiLight = new THREE.HemisphereLight(0xdbeafe, 0x1e140a, 0.65);
+        caseThreeScene.add(hemiLight);
 
-        const dirLight = new THREE.DirectionalLight(0xfff4d6, 1.45);
-        dirLight.position.set(2.5, 4.0, 3.0);
+        const dirLight = new THREE.DirectionalLight(0xfff1d0, 1.65);
+        dirLight.position.set(2.8, 4.5, 3.4);
         caseThreeScene.add(dirLight);
 
-        const rimLight = new THREE.PointLight(0x38bdf8, 1.1, 8);
-        rimLight.position.set(-2.5, 1.5, -2.0);
+        const rimLight = new THREE.DirectionalLight(0x38bdf8, 0.95);
+        rimLight.position.set(-3.2, 1.8, -2.5);
         caseThreeScene.add(rimLight);
+
+        const goldBounce = new THREE.PointLight(0xf59e0b, 0.75, 6);
+        goldBounce.position.set(1.8, -0.4, 2.2);
+        caseThreeScene.add(goldBounce);
 
         caseRootGroup = new THREE.Group();
         caseThreeScene.add(caseRootGroup);
 
-        const caseTex = generateCaseMetalTexture();
-        const bodyMat = new THREE.MeshStandardMaterial({ map: caseTex, roughness: 0.42, metalness: 0.72 });
-        const goldMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.24, metalness: 0.92 });
-        const darkSteelMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.5, metalness: 0.8 });
+        const pbr = generateCasePBRTextures();
 
-        // 1) Sandiq asosiy korpusi (Pastki qism)
-        const baseMesh = new THREE.Mesh(new THREE.BoxGeometry(1.75, 0.78, 1.08), bodyMat);
-        baseMesh.position.y = -0.12;
+        // 4) Ultra-Realistik PBR Materiallar
+        const bodyMat = new THREE.MeshStandardMaterial({
+          map: pbr.map,
+          bumpMap: pbr.bumpMap,
+          bumpScale: 0.025,
+          roughnessMap: pbr.roughnessMap,
+          roughness: 0.36,
+          metalness: 0.78,
+          envMapIntensity: 1.35
+        });
+        const goldMat = new THREE.MeshStandardMaterial({
+          color: 0xffc436,
+          bumpMap: pbr.goldBumpMap,
+          bumpScale: 0.012,
+          roughness: 0.18,
+          metalness: 0.96,
+          envMapIntensity: 1.65
+        });
+        const darkSteelMat = new THREE.MeshStandardMaterial({
+          color: 0x1b2230,
+          roughness: 0.34,
+          metalness: 0.88,
+          envMapIntensity: 1.3
+        });
+        const velvetMat = new THREE.MeshStandardMaterial({
+          color: 0x2b0a0a,
+          roughness: 0.92,
+          metalness: 0.05
+        });
+        const ledMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+
+        // 5) Sandiq ostidagi yumshoq kontakt soya tekisligi (aylanmaydi, to'g'ridan-to'g'ri sahnada)
+        const shadowPlane = new THREE.Mesh(
+          new THREE.PlaneGeometry(2.65, 1.95),
+          new THREE.MeshBasicMaterial({ map: pbr.shadowTex, transparent: true, opacity: 0.82, depthWrite: false })
+        );
+        shadowPlane.rotation.x = -Math.PI / 2;
+        shadowPlane.position.y = -0.54;
+        caseThreeScene.add(shadowPlane);
+
+        // Korpus: Rezina-titan taglik plitasi + Asosiy zirhli korpus + Ichki baxmal qoplama
+        const rubberBase = new THREE.Mesh(new THREE.BoxGeometry(1.80, 0.08, 1.14), darkSteelMat);
+        rubberBase.position.y = -0.47;
+        caseRootGroup.add(rubberBase);
+
+        const baseMesh = new THREE.Mesh(new THREE.BoxGeometry(1.74, 0.72, 1.06), bodyMat);
+        baseMesh.position.y = -0.10;
         caseRootGroup.add(baseMesh);
 
-        // Ichki qorong'u bo'shliq va oltin xazina nuri
-        const innerPit = new THREE.Mesh(
-          new THREE.BoxGeometry(1.58, 0.12, 0.92),
-          new THREE.MeshBasicMaterial({ color: 0x291502 })
-        );
-        innerPit.position.y = 0.23;
-        caseRootGroup.add(innerPit);
+        const innerVelvet = new THREE.Mesh(new THREE.BoxGeometry(1.58, 0.12, 0.92), velvetMat);
+        innerVelvet.position.y = 0.23;
+        caseRootGroup.add(innerVelvet);
+
+        // Yuqori oltin hoshiya (4 ta qirra)
+        [-0.53, 0.53].forEach(z => {
+          const trim = new THREE.Mesh(new THREE.BoxGeometry(1.76, 0.04, 0.05), goldMat);
+          trim.position.set(0, 0.26, z);
+          caseRootGroup.add(trim);
+        });
+        [-0.87, 0.87].forEach(x => {
+          const trim = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.04, 1.06), goldMat);
+          trim.position.set(x, 0.26, 0);
+          caseRootGroup.add(trim);
+        });
 
         caseInnerLight = new THREE.PointLight(0xfbbf24, 0.0, 4.5);
         caseInnerLight.position.set(0, 0.45, 0);
         caseRootGroup.add(caseInnerLight);
 
-        // 8 ta oltin burchak zirhlari (Reinforced Gold Corner Brackets)
+        // 8 ta 24K Oltin burchak zirhlari (Reinforced Corner Brackets)
         const cornerPositions = [
-          [-0.86, -0.46, 0.52], [0.86, -0.46, 0.52], [-0.86, -0.46, -0.52], [0.86, -0.46, -0.52],
-          [-0.86, 0.22, 0.52], [0.86, 0.22, 0.52], [-0.86, 0.22, -0.52], [0.86, 0.22, -0.52]
+          [-0.87, -0.46, 0.53], [0.87, -0.46, 0.53], [-0.87, -0.46, -0.53], [0.87, -0.46, -0.53],
+          [-0.87, 0.20, 0.53], [0.87, 0.20, 0.53], [-0.87, 0.20, -0.53], [0.87, 0.20, -0.53]
         ];
         cornerPositions.forEach(([cx, cy, cz]) => {
           const cBox = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.16, 0.14), goldMat);
@@ -9801,74 +10071,131 @@
           caseRootGroup.add(cBox);
         });
 
-        // Old tarafdagi 2 ta vertikal oltin kamar va markaziy qulf (Lock Clasp)
+        // 2 ta vertikal 24K oltin kamar
         [-0.52, 0.52].forEach(sx => {
           const strap = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.80, 1.12), goldMat);
-          strap.position.set(sx, -0.12, 0);
+          strap.position.set(sx, -0.10, 0);
           caseRootGroup.add(strap);
         });
 
-        caseLockMesh = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.26, 0.14), goldMat);
-        caseLockMesh.position.set(0, 0.18, 0.56);
-        caseRootGroup.add(caseLockMesh);
+        // Ikki yonda harbiy metall tutqichlar (Side Carry Handles)
+        [-0.90, 0.90].forEach(hx => {
+          const bracket = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.12, 0.24), darkSteelMat);
+          bracket.position.set(hx, -0.10, 0);
+          const ring = new THREE.Mesh(new THREE.TorusGeometry(0.08, 0.02, 6, 12), darkSteelMat);
+          ring.rotation.y = Math.PI / 2;
+          ring.position.set(hx + (hx > 0 ? 0.04 : -0.04), -0.10, 0);
+          caseRootGroup.add(bracket, ring);
+        });
 
-        // 2) Ochiladigan 3D Qopqoq (Hinged Lid — orqa qirrada aylanadi: y=0.27, z=-0.54)
+        // Markaziy 3D Qulf (Lock Base + Gold Clasp + Key Hole + LED indikator)
+        const lockBase = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.28, 0.06), darkSteelMat);
+        lockBase.position.set(0, 0.18, 0.56);
+        caseLockMesh = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.22, 0.10), goldMat);
+        caseLockMesh.position.set(0, 0.18, 0.59);
+        const keyHole = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.09, 0.02), darkSteelMat);
+        keyHole.position.set(0, 0.18, 0.65);
+        [-0.10, 0.10].forEach(lx => {
+          const led = new THREE.Mesh(new THREE.SphereGeometry(0.018, 6, 6), ledMat);
+          led.position.set(lx, 0.26, 0.59);
+          caseRootGroup.add(led);
+        });
+        caseRootGroup.add(lockBase, caseLockMesh, keyHole);
+
+        // Ochiladigan 3D Qopqoq (caseLidGroup, pivot y=0.27, z=-0.54)
         caseLidGroup = new THREE.Group();
         caseLidGroup.position.set(0, 0.27, -0.54);
         caseRootGroup.add(caseLidGroup);
 
-        const lidMesh = new THREE.Mesh(new THREE.BoxGeometry(1.77, 0.26, 1.10), bodyMat);
-        lidMesh.position.set(0, 0.13, 0.54);
+        const lidMesh = new THREE.Mesh(new THREE.BoxGeometry(1.78, 0.24, 1.10), bodyMat);
+        lidMesh.position.set(0, 0.12, 0.54);
         caseLidGroup.add(lidMesh);
 
-        const lidTopTrim = new THREE.Mesh(new THREE.BoxGeometry(1.45, 0.06, 0.78), darkSteelMat);
-        lidTopTrim.position.set(0, 0.28, 0.54);
-        caseLidGroup.add(lidTopTrim);
+        const lidTopArmored = new THREE.Mesh(new THREE.BoxGeometry(1.48, 0.08, 0.82), darkSteelMat);
+        lidTopArmored.position.set(0, 0.26, 0.54);
+        caseLidGroup.add(lidTopArmored);
 
         [-0.52, 0.52].forEach(sx => {
-          const lidStrap = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.28, 1.13), goldMat);
-          lidStrap.position.set(sx, 0.13, 0.54);
+          const lidStrap = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.26, 1.13), goldMat);
+          lidStrap.position.set(sx, 0.12, 0.54);
           caseLidGroup.add(lidStrap);
         });
 
-        // 3) 3D Oltin CS:GO Kaliti (Old qulfga kirib buriladi)
+        // Orqa 2 ta po'lat sharnir (hinges)
+        [-0.52, 0.52].forEach(hx => {
+          const hinge = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.16, 8), darkSteelMat);
+          hinge.rotation.z = Math.PI / 2;
+          hinge.position.set(hx, 0, 0);
+          caseLidGroup.add(hinge);
+        });
+
+        // 3D Oltin Kalit (caseKeyGroup)
         caseKeyGroup = new THREE.Group();
-        caseKeyGroup.position.set(0, 0.18, 0.88);
-        const keyShaft = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.28, 10), goldMat);
+        caseKeyGroup.position.set(0, 0.18, 0.92);
+        const keyShaft = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.28, 8), goldMat);
         keyShaft.rotation.x = Math.PI / 2;
-        const keyBow = new THREE.Mesh(new THREE.TorusGeometry(0.08, 0.024, 8, 16), goldMat);
+        const keyBow = new THREE.Mesh(new THREE.TorusGeometry(0.075, 0.022, 8, 16), goldMat);
         keyBow.position.z = 0.16;
-        caseKeyGroup.add(keyShaft, keyBow);
+        const keyTeeth = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.06, 0.04), goldMat);
+        keyTeeth.position.set(0, -0.04, -0.08);
+        caseKeyGroup.add(keyShaft, keyBow, keyTeeth);
         caseRootGroup.add(caseKeyGroup);
 
-        // 4) Sandiq ichidagi Oltin Quyma va Tilla Tangalar uyumchasi (Saturn halqasi o'rniga haqiqiy oltin xazina!)
+        // Bitta umumiy tanga geometriyasi va materiali
+        if (!sharedCoinGeo) {
+          sharedCoinGeo = new THREE.CylinderGeometry(0.072, 0.072, 0.020, 14);
+        }
+        if (!sharedCoinMat) {
+          sharedCoinMat = new THREE.MeshStandardMaterial({
+            map: pbr.coinTex,
+            color: 0xfde047,
+            emissive: 0xb45309,
+            emissiveIntensity: 0.42,
+            roughness: 0.14,
+            metalness: 0.98,
+            envMapIntensity: 1.7
+          });
+        }
+
+        // Sandiq ichidagi Oltin Xazina (casePrizeGroup: 5 ta oltin quyma + 14 ta tilla tanga)
         casePrizeGroup = new THREE.Group();
         casePrizeGroup.position.set(0, 0.22, 0);
         casePrizeGroup.visible = false;
-        const goldBarMat = new THREE.MeshStandardMaterial({ color: 0xfbbf24, emissive: 0xd97706, emissiveIntensity: 0.55, roughness: 0.16, metalness: 0.96 });
-        // 3 ta oltin quyma (Gold Bullion Bars)
-        [[-0.22, 0.04, 0.05, 0.18], [0.22, 0.04, -0.04, -0.15], [0, 0.14, 0.0, 0.05]].forEach(([bx, by, bz, rotY]) => {
-          const bar = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.11, 0.20), goldBarMat);
+        const goldBarMat = new THREE.MeshStandardMaterial({
+          color: 0xffc436,
+          emissive: 0xb45309,
+          emissiveIntensity: 0.45,
+          roughness: 0.16,
+          metalness: 0.96,
+          envMapIntensity: 1.6
+        });
+        [
+          [-0.22, 0.04, 0.06, 0.16],
+          [0.22, 0.04, -0.05, -0.14],
+          [0, 0.04, -0.18, 0.02],
+          [-0.10, 0.14, 0.0, 0.05],
+          [0.10, 0.14, -0.08, -0.08]
+        ].forEach(([bx, by, bz, rotY]) => {
+          const bar = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.09, 0.18), goldBarMat);
           bar.position.set(bx, by, bz);
           bar.rotation.y = rotY;
           casePrizeGroup.add(bar);
         });
-        // Atrofida 12 ta yaltiroq tilla tanga
-        for (let c = 0; c < 12; c++) {
-          const cMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.024, 14), goldBarMat);
-          const ang = (c / 12) * Math.PI * 2;
-          cMesh.position.set(Math.cos(ang) * 0.42, 0.03 + (c % 3) * 0.02, Math.sin(ang) * 0.26);
-          cMesh.rotation.x = (Math.random() - 0.5) * 0.5;
-          cMesh.rotation.z = (Math.random() - 0.5) * 0.5;
+
+        for (let c = 0; c < 14; c++) {
+          const cMesh = new THREE.Mesh(sharedCoinGeo, sharedCoinMat);
+          const ang = (c / 14) * Math.PI * 2;
+          cMesh.position.set(Math.cos(ang) * 0.44, 0.02 + (c % 3) * 0.015, Math.sin(ang) * 0.28);
+          cMesh.rotation.x = (Math.random() - 0.5) * 0.4;
+          cMesh.rotation.z = (Math.random() - 0.5) * 0.4;
           casePrizeGroup.add(cMesh);
         }
         caseRootGroup.add(casePrizeGroup);
 
-        // 5) Sandiq portlab ochilganda otilib chiquvchi 40 ta 3D Oltin Tangalar favvorasi
+        // 40 ta uchar tilla tanga favvorasi (sharedCoinGeo va sharedCoinMat bilan 0 ta ortiqcha yuk)
+        caseCoinsParticles = [];
         for (let i = 0; i < 40; i++) {
-          const coinGeo = new THREE.CylinderGeometry(0.068, 0.068, 0.020, 12);
-          const coinMat = new THREE.MeshStandardMaterial({ color: 0xfde047, emissive: 0xca8a04, emissiveIntensity: 0.48, roughness: 0.15, metalness: 0.98 });
-          const cm = new THREE.Mesh(coinGeo, coinMat);
+          const cm = new THREE.Mesh(sharedCoinGeo, sharedCoinMat);
           cm.visible = false;
           caseRootGroup.add(cm);
           caseCoinsParticles.push({
@@ -9878,17 +10205,23 @@
           });
         }
 
-        // Barmoq yoki sichqoncha bilan 3D sandiqni 360° aylantirish
+        // 90° burilishga mos barmoq / sichqoncha bilan aylantirish
+        const isLobbyRot90 = () => {
+          const lv = document.getElementById('lobbyView');
+          return !!(lv && lv.classList.contains('digi-lobby-rot90'));
+        };
+
         cvs.addEventListener('pointerdown', (e) => {
           caseDragging = true;
-          caseLastX = e.clientX;
+          caseLastX = isLobbyRot90() ? e.clientY : e.clientX;
           try { cvs.setPointerCapture(e.pointerId); } catch (err) {}
         });
         let dragSoundAccum = 0;
         cvs.addEventListener('pointermove', (e) => {
           if (!caseDragging) return;
-          const dx = e.clientX - caseLastX;
-          caseLastX = e.clientX;
+          const currentCoord = isLobbyRot90() ? e.clientY : e.clientX;
+          const dx = currentCoord - caseLastX;
+          caseLastX = currentCoord;
           caseUserYaw += dx * 0.012;
           dragSoundAccum += Math.abs(dx);
           if (dragSoundAccum > 28) {
@@ -9902,30 +10235,35 @@
       }
 
       function triggerCaseCoinsBurst(hexColor) {
+        if (sharedCoinMat) sharedCoinMat.color.setHex(hexColor || 0xfacc15);
         caseCoinsParticles.forEach(p => {
           p.mesh.visible = true;
           p.mesh.position.set((Math.random() - 0.5) * 0.5, 0.25, (Math.random() - 0.5) * 0.35);
-          p.mesh.material.color.setHex(hexColor || 0xfacc15);
           p.vx = (Math.random() - 0.5) * 2.4;
           p.vy = 1.4 + Math.random() * 1.8;
           p.vz = (Math.random() - 0.5) * 2.0;
         });
       }
 
+      let caseLastCanvasW = 0;
+      let caseLastCanvasH = 0;
+
       function renderCase3DLoop() {
         const modal = document.getElementById('modalBonus');
-        // 3-OPTIMIZATSIYA: 3D Oltin Sandiq (#modalBonus) renderini fonda to'xtatish
-        if (!modal || modal.classList.contains('hidden') || getComputedStyle(modal).display === 'none') {
+        // 60 FPS QAT'IY HIMOYASI: Jang paytida yoki Bonus oynasi yopiq bo'lganda 0% CPU/GPU yuki!
+        if (gameRunning || !modal || modal.classList.contains('hidden') || getComputedStyle(modal).display === 'none') {
           caseAnimFrameId = null;
           return;
         }
         initCase3DEngine();
         if (caseThreeRenderer && caseThreeScene && caseThreeCamera) {
           const cvs = caseThreeRenderer.domElement;
-          const rect = cvs.getBoundingClientRect();
-          const w = Math.max(240, Math.floor(rect.width));
-          const h = Math.max(140, Math.floor(rect.height));
-          if (cvs.width !== w || cvs.height !== h) {
+          // 90° burilishda getBoundingClientRect() eni/bo'yini almashtirib yuboradi — faqat clientWidth/clientHeight ishlatiladi!
+          const w = Math.max(160, Math.floor(cvs.clientWidth || (cvs.parentElement ? cvs.parentElement.clientWidth : 300)));
+          const h = Math.max(140, Math.floor(cvs.clientHeight || (cvs.parentElement ? cvs.parentElement.clientHeight : 220)));
+          if (caseLastCanvasW !== w || caseLastCanvasH !== h) {
+            caseLastCanvasW = w;
+            caseLastCanvasH = h;
             caseThreeRenderer.setSize(w, h, false);
             caseThreeCamera.aspect = w / h;
             caseThreeCamera.updateProjectionMatrix();
@@ -10176,13 +10514,55 @@
         }, 5400);
       });
 
-      // 7) YORDAM tugmasi (hozircha bo'sh)
-      document.getElementById('menuBtnHelp').addEventListener('click', () => {
-        document.getElementById('modalHelp').classList.remove('hidden');
-      });
-      document.getElementById('btnCloseHelpModal').addEventListener('click', () => {
-        document.getElementById('modalHelp').classList.add('hidden');
-      });
+      // 7) YORDAM tugmasi -> To'g'ridan-to'g'ri Admin Telegram lichkasiga (ID asosiy, @Abror444 zaxira)
+      function openAdminSupportTelegram() {
+        const ADMIN_TG_ID = '5155194813';
+        const ADMIN_FALLBACK_USER = 'Abror444';
+        const tg = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
+        const deepUrl = 'tg://user?id=' + ADMIN_TG_ID;
+        const fallbackUrl = 'https://t.me/' + ADMIN_FALLBACK_USER;
+
+        let leftPage = false;
+        const onVis = () => { if (document.hidden) leftPage = true; };
+        document.addEventListener('visibilitychange', onVis, { once: true });
+
+        try {
+          const a = document.createElement('a');
+          a.href = deepUrl;
+          a.style.display = 'none';
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(() => { try { a.remove(); } catch (_) {} }, 250);
+        } catch (e) {}
+
+        setTimeout(() => {
+          document.removeEventListener('visibilitychange', onVis);
+          if (!leftPage && !document.hidden) {
+            try {
+              if (tg && typeof tg.openTelegramLink === 'function') {
+                tg.openTelegramLink(fallbackUrl);
+              } else {
+                window.open(fallbackUrl, '_blank', 'noopener');
+              }
+            } catch (e) {
+              window.open(fallbackUrl, '_blank', 'noopener');
+            }
+          }
+        }, 650);
+
+        if (typeof showToast === 'function') {
+          showToast("Admin bilan Telegram chat ochilmoqda...", "💬");
+        }
+      }
+
+      document.getElementById('menuBtnHelp').addEventListener('click', openAdminSupportTelegram);
+      const _btnCloseHelpEl = document.getElementById('btnCloseHelpModal');
+      if (_btnCloseHelpEl) {
+        _btnCloseHelpEl.addEventListener('click', () => {
+          const mh = document.getElementById('modalHelp');
+          if (mh) mh.classList.add('hidden');
+        });
+      }
 
       window.addEventListener('load', () => {
         requestLobbyFullscreen();
