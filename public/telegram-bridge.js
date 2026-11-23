@@ -15,6 +15,10 @@
     myPhoto: '',
     elo: 1000,
     coins: 0, // Yangi o'yinchi har doim 0 tanga bilan boshlaydi!
+    gems: 0,
+    gifts: [],
+    prestige: 0,
+    giftSummary: { prestige: 0, totalCount: 0, uniqueCount: 0, counts: {}, topGifts: [] },
     blockedUsers: {}, // { [playerId]: blockedUntilTimestampMs }
     friends: [],
     handledRequests: {} // { [senderId]: handledAtTimestampMs } — 60 soniya davomida qayta modal chiqmasin
@@ -128,6 +132,27 @@
           if (data.player.userStats) {
             tgState.coins = typeof data.player.userStats.coins === 'number' ? data.player.userStats.coins : tgState.coins;
             tgState.elo = typeof data.player.userStats.elo === 'number' ? data.player.userStats.elo : tgState.elo;
+            tgState.gems = Math.max(0, Math.floor(Number(data.player.userStats.gems) || 0));
+            tgState.gifts = Array.isArray(data.player.userStats.gifts) ? data.player.userStats.gifts : [];
+            tgState.prestige = Number(data.player.userStats.prestige) || 0;
+            if (data.giftSummary) tgState.giftSummary = data.giftSummary;
+
+            if (window.userStats && typeof window.userStats === 'object') {
+              window.userStats.gems = tgState.gems;
+              window.userStats.gifts = tgState.gifts;
+              window.userStats.prestige = tgState.prestige;
+              window.userStats.giftSummary = tgState.giftSummary;
+            }
+
+            const g1 = document.getElementById('userGemsLabel');
+            if (g1) g1.textContent = tgState.gems.toLocaleString('en-US');
+            const g2 = document.getElementById('shopGemsLabel');
+            if (g2) g2.textContent = tgState.gems.toLocaleString('en-US');
+
+            if (typeof window.onDigiGiftsUpdated === 'function') {
+              try { window.onDigiGiftsUpdated(tgState); } catch (e) {}
+            }
+
             // Agar serverdan stats kelsa, o'yin ichidagi ko'rsatkichlarga darhol tatbiq etamiz:
             if (typeof window.applyServerStatsToGame === 'function') {
               window.applyServerStatsToGame(data.player.userStats);
@@ -158,6 +183,8 @@
       syncWithServer(false);
     }, 2500);
   };
+  window.tgBridgeSyncNow = () => syncWithServer(false);
+  window.tgBridgeRefreshFromServer = () => syncWithServer(true);
 
   // Sahifa yopilganda yoki fonda qolganda darhol saqlash
   window.addEventListener('beforeunload', () => {
@@ -428,6 +455,19 @@
         const res = await fetch(`/api/tg/notifications?myId=${encodeURIComponent(tgState.myId)}`);
         if (!res.ok) return;
         const data = await res.json();
+        if (data && Array.isArray(data.giftEvents) && data.giftEvents.length > 0) {
+          data.giftEvents.forEach(ev => {
+            if (typeof showBridgeToast === 'function') {
+              const donorName = ev.fromName || "Do'st";
+              const gIcon = ev.giftIcon || "🎁";
+              const gName = ev.giftName || "Sovg'a";
+              const pVal = ev.prestige || 0;
+              showBridgeToast(`🎁 ${donorName} sizga ${gIcon} ${gName} sovg'a qildi! (+${pVal} Obro')`);
+            }
+          });
+          syncWithServer(true);
+        }
+
         if (data && Array.isArray(data.requests) && data.requests.length > 0) {
           const req = data.requests[0];
 

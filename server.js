@@ -7,6 +7,8 @@ const https = require("https");
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
+const { GEMS_CONFIG, GIFTS_CATALOG, getGiftById, computePrestigeFromGifts, summarizeGifts } = require("./gifts-catalog.js");
+const ADMIN_TG_ID = "5155194813";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -79,6 +81,75 @@ function saveDb() {
 }
 
 loadDb();
+
+if (!db.meta || typeof db.meta !== "object") db.meta = {};
+if (!Array.isArray(db.giftEvents)) db.giftEvents = [];
+
+if (!db.meta.gemsResetV1) {
+  Object.values(db.players || {}).forEach(p => {
+    if (!p.userStats) p.userStats = {};
+    p.userStats.gems = 0;
+    if (!Array.isArray(p.userStats.gifts)) p.userStats.gifts = [];
+    p.userStats.prestige = computePrestigeFromGifts(p.userStats.gifts);
+  });
+  db.meta.gemsResetV1 = true;
+  saveDb();
+  console.log("[MIGRATION] gemsResetV1: Barcha oyinchilar kristali 0 ga tushirildi.");
+}
+
+function ensurePlayerEconomy(p) {
+  if (!p) return;
+  if (!p.userStats || typeof p.userStats !== "object") p.userStats = {};
+  p.userStats.gems = Math.max(0, Math.floor(Number(p.userStats.gems) || 0));
+  if (!Array.isArray(p.userStats.gifts)) p.userStats.gifts = [];
+  if (p.userStats.gifts.length > 500) p.userStats.gifts = p.userStats.gifts.slice(-500);
+  p.userStats.prestige = computePrestigeFromGifts(p.userStats.gifts);
+}
+
+function findPlayerByAnyQuery(rawQuery) {
+  if (!rawQuery) return null;
+  const q = String(rawQuery).trim();
+  if (!q) return null;
+
+  const up = q.toUpperCase();
+  if (db.players[up]) return db.players[up];
+
+  const playersList = Object.values(db.players || {});
+
+  const byTgId = playersList.find(p => String(p.tgId || "") === q);
+  if (byTgId) return byTgId;
+
+  const cleanUser = q.replace(/^@/, "").toLowerCase();
+  if (cleanUser) {
+    const byUser = playersList.find(p => String(p.username || "").replace(/^@/, "").toLowerCase() === cleanUser);
+    if (byUser) return byUser;
+  }
+
+  if (/^\d{4}$/.test(q)) {
+    if (db.players["DOOM-" + q]) return db.players["DOOM-" + q];
+    const byLast4 = playersList.find(p => String(p.id || "").toUpperCase().endsWith("-" + q));
+    if (byLast4) return byLast4;
+  }
+
+  const byId = playersList.find(p => String(p.id || "").toLowerCase() === q.toLowerCase());
+  if (byId) return byId;
+
+  return null;
+}
+
+function makeGiftUid() {
+  return "g_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 7);
+}
+
+function escapeHtml(s) {
+  if (!s) return "";
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
 
 function getTashkentWeekKey(ts = Date.now()) {
   const d = new Date(ts + 5 * 3600 * 1000);
@@ -223,6 +294,15 @@ app.post("/api/tg/sync", (req, res) => {
   const pid = String(myProfile.id).trim().toUpperCase();
   let existing = db.players[pid];
 
+  // SERVER-AUTHORITATIVE KRISTAL VA SOVG'ALAR HIMOYA QALQONI:
+  const safeClientStats = (userStats && typeof userStats === "object") ? Object.assign({}, userStats) : null;
+  if (safeClientStats) {
+    delete safeClientStats.gems;
+    delete safeClientStats.gifts;
+    delete safeClientStats.prestige;
+    delete safeClientStats.giftSummary;
+  }
+
   if (!existing) {
     let oldKey = null;
     if (myProfile.tgId) {
@@ -243,6 +323,9 @@ app.post("/api/tg/sync", (req, res) => {
         photoUrl: myProfile.photoUrl || oldP.photoUrl || "",
         userStats: Object.assign({
           coins: 0,
+          gems: 0,
+          prestige: 0,
+          gifts: [],
           elo: 1000,
           botLevel: 1,
           kills: 0,
@@ -251,19 +334,20 @@ app.post("/api/tg/sync", (req, res) => {
           matchesOnline: 0,
           ownedSkins: ["classic"],
           equippedSkinId: "classic"
-        }, oldP.userStats || {}, (userStats && !initLoad) ? userStats : {}),
+        }, oldP.userStats || {}, (safeClientStats && !initLoad) ? safeClientStats : {}),
         blockedUsersMap: Object.assign({}, oldP.blockedUsersMap || {}, blockedUsersMap || {}),
         savedFriends: Array.isArray(savedFriends) ? savedFriends : (oldP.savedFriends || []),
         createdAt: oldP.createdAt || Date.now(),
         updatedAt: Date.now(),
         lastSeenAt: Date.now()
       };
+      ensurePlayerEconomy(merged);
       db.players[pid] = merged;
       saveDb();
-      return res.json({ ok: true, player: merged });
+      return res.json({ ok: true, player: merged, giftSummary: summarizeGifts(merged.userStats.gifts) });
     }
 
-    // Yangi o'yinchi: boshlang'ich tangalar: 0!
+    // Yangi o'yinchi: boshlang'ich tangalar va kristallar: 0!
     const newPlayer = {
       id: pid,
       tgId: myProfile.tgId || null,
@@ -272,6 +356,9 @@ app.post("/api/tg/sync", (req, res) => {
       photoUrl: myProfile.photoUrl || "",
       userStats: {
         coins: 0,
+        gems: 0,
+        prestige: 0,
+        gifts: [],
         elo: 1000,
         botLevel: 1,
         kills: 0,
@@ -287,12 +374,13 @@ app.post("/api/tg/sync", (req, res) => {
       updatedAt: Date.now(),
       lastSeenAt: Date.now()
     };
-    if (userStats && typeof userStats === "object" && !initLoad) {
-      newPlayer.userStats = Object.assign({}, newPlayer.userStats, userStats);
+    if (safeClientStats && !initLoad) {
+      newPlayer.userStats = Object.assign({}, newPlayer.userStats, safeClientStats);
     }
+    ensurePlayerEconomy(newPlayer);
     db.players[pid] = newPlayer;
     saveDb();
-    return res.json({ ok: true, player: newPlayer });
+    return res.json({ ok: true, player: newPlayer, giftSummary: summarizeGifts(newPlayer.userStats.gifts) });
   }
 
   // Mavjud o'yinchi
@@ -303,9 +391,9 @@ app.post("/api/tg/sync", (req, res) => {
   existing.lastSeenAt = Date.now();
 
   // Agar initLoad === true bo'lsa, bazadagi saqlangan statistikani 0 bilan ezib yubormaymiz!
-  if (!initLoad && userStats && typeof userStats === "object") {
+  if (!initLoad && safeClientStats) {
     const prevNorm = normalizeUserStats(existing.userStats);
-    existing.userStats = Object.assign({}, existing.userStats, userStats);
+    existing.userStats = Object.assign({}, existing.userStats, safeClientStats);
     const nextNorm = normalizeUserStats(existing.userStats);
     existing.userStats.kills = nextNorm.kills;
     existing.userStats.totalKills = nextNorm.kills;
@@ -329,8 +417,9 @@ app.post("/api/tg/sync", (req, res) => {
     existing.savedFriends = Object.values(map);
   }
 
+  ensurePlayerEconomy(existing);
   saveDb();
-  return res.json({ ok: true, player: existing });
+  return res.json({ ok: true, player: existing, giftSummary: summarizeGifts(existing.userStats.gifts) });
 });
 
 // 2) Do'st taklif havolasi orqali kirilganda o'yinchi profilini ko'rsatish
@@ -931,6 +1020,299 @@ app.get('/api/tg/leaderboard', (req, res) => {
     monthlyMvp,
     myEntry,
     list: entries.slice(0, 100)
+  });
+});
+
+
+// ==========================================
+// 5E) 3D SOVG'ALAR VA REAL KRISTAL REST API
+// ==========================================
+
+// a) Sovg'alar katalogi va Kristal narxlari
+app.get("/api/tg/gifts/catalog", (req, res) => {
+  res.json({ ok: true, gemsConfig: GEMS_CONFIG, gifts: GIFTS_CATALOG });
+});
+
+// b) O'yinchining sovg'alar kolleksiyasi (public - gems yashirin)
+app.get("/api/tg/gifts/player/:id", (req, res) => {
+  const p = findPlayerByAnyQuery(req.params.id);
+  if (!p) {
+    return res.status(404).json({ ok: false, error: "PLAYER_NOT_FOUND" });
+  }
+  ensurePlayerEconomy(p);
+  const gSum = summarizeGifts(p.userStats.gifts);
+  res.json({
+    ok: true,
+    player: {
+      id: p.id,
+      name: p.name || p.id,
+      username: p.username || "",
+      photoUrl: p.photoUrl || "",
+      elo: (p.userStats && p.userStats.elo) || 1000,
+      prestige: p.userStats.prestige,
+      giftSummary: gSum,
+      gifts: (p.userStats.gifts || []).slice(-120).reverse()
+    }
+  });
+});
+
+// c) Sovg'a sotib olish (o'ziga yoki boshqa o'yinchiga)
+app.post("/api/tg/gifts/buy", (req, res) => {
+  const { buyerId, giftId, recipientId, note } = req.body || {};
+  const cleanBuyerId = String(buyerId || "").trim().toUpperCase();
+  const buyer = db.players[cleanBuyerId];
+  if (!buyer) {
+    return res.status(404).json({ ok: false, error: "BUYER_NOT_FOUND", message: "Profil topilmadi, sahifani yangilang." });
+  }
+  ensurePlayerEconomy(buyer);
+
+  const gift = getGiftById(giftId);
+  if (!gift) {
+    return res.status(400).json({ ok: false, error: "INVALID_GIFT" });
+  }
+
+  if (gift.category === "bonus" || gift.currency === "bonus") {
+    return res.status(400).json({ ok: false, error: "BONUS_ONLY", message: "Bu sovg'ani sotib olib bo'lmaydi — faqat 3D Oltin Sandiqdan chiqadi!" });
+  }
+
+  const cleanRec = String(recipientId || "").trim().toUpperCase();
+  const isSelf = !cleanRec || cleanRec === buyer.id;
+  const target = isSelf ? buyer : findPlayerByAnyQuery(cleanRec);
+  if (!target) {
+    return res.status(404).json({ ok: false, error: "RECIPIENT_NOT_FOUND", message: "Qabul qiluvchi o'yinchi topilmadi!" });
+  }
+  ensurePlayerEconomy(target);
+
+  if (gift.currency === "coins") {
+    const curCoins = Number(buyer.userStats.coins) || 0;
+    if (curCoins < gift.price) {
+      return res.status(400).json({ ok: false, error: "NOT_ENOUGH_COINS", needed: gift.price, current: curCoins, message: "Tangalar yetarli emas!" });
+    }
+    buyer.userStats.coins = Math.max(0, Math.floor(curCoins - gift.price));
+  } else if (gift.currency === "gems") {
+    const curGems = Number(buyer.userStats.gems) || 0;
+    if (curGems < gift.price) {
+      return res.status(400).json({ ok: false, error: "NOT_ENOUGH_GEMS", needed: gift.price, current: curGems, message: "Kristallar yetarli emas! Admindan kristal sotib oling (1 💎 = 1,000 so'm)." });
+    }
+    buyer.userStats.gems = Math.max(0, Math.floor(curGems - gift.price));
+  }
+
+  const cleanNote = String(note || "").trim().slice(0, 80);
+  const item = {
+    uid: makeGiftUid(),
+    giftId: gift.id,
+    fromId: buyer.id,
+    fromName: buyer.name || buyer.id,
+    note: cleanNote,
+    source: isSelf ? "shop_self" : "gift_received",
+    acquiredAt: Date.now()
+  };
+
+  target.userStats.gifts.push(item);
+  if (target.userStats.gifts.length > 500) target.userStats.gifts = target.userStats.gifts.slice(-500);
+  target.userStats.prestige = computePrestigeFromGifts(target.userStats.gifts);
+  buyer.userStats.prestige = computePrestigeFromGifts(buyer.userStats.gifts);
+  buyer.updatedAt = Date.now();
+  target.updatedAt = Date.now();
+
+  if (!isSelf) {
+    if (!Array.isArray(db.giftEvents)) db.giftEvents = [];
+    db.giftEvents.push({
+      id: item.uid,
+      toId: target.id,
+      fromId: buyer.id,
+      fromName: buyer.name || buyer.id,
+      giftId: gift.id,
+      giftName: gift.name,
+      giftIcon: gift.icon,
+      prestige: gift.prestige,
+      note: cleanNote,
+      createdAt: Date.now(),
+      delivered: false
+    });
+
+    if (target.tgId) {
+      const giftMsg =
+        `🎁 <b>Sizga yangi 3D sovg'a keldi!</b>\n\n` +
+        `👤 Kimdan: <b>${escapeHtml(buyer.name || buyer.id)}</b> (${buyer.id})\n` +
+        `${gift.icon} Sovg'a: <b>${escapeHtml(gift.name)}</b> (+${gift.prestige} Obro')\n` +
+        (cleanNote ? `💬 Tilak: <i>"${escapeHtml(cleanNote)}"</i>\n\n` : '\n') +
+        `👑 O'yinda umumiy Obro'ingiz oshdi! Kolleksiyani ko'rish uchun kiring:`;
+
+      tgApiCall("sendMessage", {
+        chat_id: target.tgId,
+        text: giftMsg,
+        parse_mode: "HTML",
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "🎁 SOVG'ALARNI KO'RISH 🎮", web_app: { url: `${APP_URL}/` } }]
+          ]
+        }
+      }).catch(() => {});
+    }
+  }
+
+  saveDb();
+
+  return res.json({
+    ok: true,
+    mode: isSelf ? "self" : "gift",
+    item,
+    gift,
+    targetName: target.name || target.id,
+    buyerStats: {
+      coins: buyer.userStats.coins,
+      gems: buyer.userStats.gems,
+      prestige: buyer.userStats.prestige,
+      gifts: buyer.userStats.gifts,
+      giftSummary: summarizeGifts(buyer.userStats.gifts)
+    }
+  });
+});
+
+// d) Mavjud sovg'ani boshqa o'yinchiga hadya qilish (transfer)
+app.post("/api/tg/gifts/transfer", (req, res) => {
+  const { fromId, toId, giftUid, note } = req.body || {};
+  const cleanFrom = String(fromId || "").trim().toUpperCase();
+  const fromP = db.players[cleanFrom];
+  const toP = findPlayerByAnyQuery(toId);
+
+  if (!fromP) return res.status(404).json({ ok: false, error: "SENDER_NOT_FOUND" });
+  if (!toP) return res.status(404).json({ ok: false, error: "RECIPIENT_NOT_FOUND", message: "Qabul qiluvchi o'yinchi topilmadi!" });
+  if (fromP.id === toP.id) return res.status(400).json({ ok: false, error: "CANNOT_TRANSFER_SELF", message: "O'zingizga sovg'a o'tkaza olmaysiz." });
+
+  ensurePlayerEconomy(fromP);
+  ensurePlayerEconomy(toP);
+
+  const idx = (fromP.userStats.gifts || []).findIndex(g => g && g.uid === giftUid);
+  if (idx === -1) {
+    return res.status(404).json({ ok: false, error: "GIFT_NOT_OWNED", message: "Bu sovg'a sizning kolleksiyangizda topilmadi." });
+  }
+
+  const [removed] = fromP.userStats.gifts.splice(idx, 1);
+  const gift = getGiftById(removed.giftId);
+
+  const cleanNote = String(note || "").trim().slice(0, 80);
+  const newItem = {
+    uid: makeGiftUid(),
+    giftId: removed.giftId,
+    fromId: fromP.id,
+    fromName: fromP.name || fromP.id,
+    note: cleanNote,
+    source: "transfer_received",
+    acquiredAt: Date.now()
+  };
+
+  toP.userStats.gifts.push(newItem);
+  if (toP.userStats.gifts.length > 500) toP.userStats.gifts = toP.userStats.gifts.slice(-500);
+
+  toP.userStats.prestige = computePrestigeFromGifts(toP.userStats.gifts);
+  fromP.userStats.prestige = computePrestigeFromGifts(fromP.userStats.gifts);
+  fromP.updatedAt = Date.now();
+  toP.updatedAt = Date.now();
+
+  if (!Array.isArray(db.giftEvents)) db.giftEvents = [];
+  db.giftEvents.push({
+    id: newItem.uid,
+    toId: toP.id,
+    fromId: fromP.id,
+    fromName: fromP.name || fromP.id,
+    giftId: gift ? gift.id : removed.giftId,
+    giftName: gift ? gift.name : "Sovg'a",
+    giftIcon: gift ? gift.icon : "🎁",
+    prestige: gift ? gift.prestige : 0,
+    note: cleanNote,
+    createdAt: Date.now(),
+    delivered: false
+  });
+
+  if (toP.tgId) {
+    const giftName = gift ? gift.name : "Sovg'a";
+    const giftIcon = gift ? gift.icon : "🎁";
+    const prestige = gift ? gift.prestige : 0;
+    const transferMsg =
+      `🎁 <b>Sizga yangi 3D sovg'a hadya qilindi!</b>\n\n` +
+      `👤 Kimdan: <b>${escapeHtml(fromP.name || fromP.id)}</b> (${fromP.id})\n` +
+      `${giftIcon} Sovg'a: <b>${escapeHtml(giftName)}</b> (+${prestige} Obro')\n` +
+      (cleanNote ? `💬 Tilak: <i>"${escapeHtml(cleanNote)}"</i>\n\n` : '\n') +
+      `👑 O'yinda umumiy Obro'ingiz oshdi! Kolleksiyani ko'rish uchun kiring:`;
+
+    tgApiCall("sendMessage", {
+      chat_id: toP.tgId,
+      text: transferMsg,
+      parse_mode: "HTML",
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: "🎁 SOVG'ALARNI KO'RISH 🎮", web_app: { url: `${APP_URL}/` } }]
+        ]
+      }
+    }).catch(() => {});
+  }
+
+  saveDb();
+
+  return res.json({
+    ok: true,
+    gift,
+    targetName: toP.name || toP.id,
+    fromStats: {
+      coins: fromP.userStats.coins,
+      gems: fromP.userStats.gems,
+      prestige: fromP.userStats.prestige,
+      gifts: fromP.userStats.gifts,
+      giftSummary: summarizeGifts(fromP.userStats.gifts)
+    }
+  });
+});
+
+// e) Oltin Sandiqdan chiqqan sovg'ani bazaga yozish
+app.post("/api/tg/gifts/claim-bonus", (req, res) => {
+  const { playerId, giftId } = req.body || {};
+  const cleanId = String(playerId || "").trim().toUpperCase();
+  const p = db.players[cleanId];
+  if (!p) return res.status(404).json({ ok: false, error: "PLAYER_NOT_FOUND" });
+
+  const gift = getGiftById(giftId);
+  if (!gift || gift.category !== "bonus") {
+    return res.status(400).json({ ok: false, error: "NOT_BONUS_GIFT" });
+  }
+
+  const now = Date.now();
+  if (p._lastBonusGiftAt && (now - p._lastBonusGiftAt) < 3500) {
+    return res.status(429).json({ ok: false, error: "TOO_FAST" });
+  }
+  p._lastBonusGiftAt = now;
+
+  ensurePlayerEconomy(p);
+
+  const item = {
+    uid: makeGiftUid(),
+    giftId: gift.id,
+    fromId: "BONUS_CASE",
+    fromName: "Oltin Sandiq",
+    note: "3D Oltin Sandiq yutug'i",
+    source: "bonus_case",
+    acquiredAt: now
+  };
+
+  p.userStats.gifts.push(item);
+  if (p.userStats.gifts.length > 500) p.userStats.gifts = p.userStats.gifts.slice(-500);
+  p.userStats.prestige = computePrestigeFromGifts(p.userStats.gifts);
+  p.updatedAt = now;
+
+  saveDb();
+
+  return res.json({
+    ok: true,
+    item,
+    gift,
+    userStats: {
+      coins: p.userStats.coins,
+      gems: p.userStats.gems,
+      prestige: p.userStats.prestige,
+      gifts: p.userStats.gifts,
+      giftSummary: summarizeGifts(p.userStats.gifts)
+    }
   });
 });
 
