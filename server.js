@@ -54,7 +54,10 @@ if (!fs.existsSync(DATA_DIR)) {
 
 let db = {
   players: {},        // { [doomId]: { id, tgId, name, username, coins, elo, userStats, blockedUsersMap, savedFriends, updatedAt } }
-  friendRequests: []  // [ { id, fromId, fromName, fromElo, toId, createdAt, status: 'pending' } ]
+  friendRequests: [], // [ { id, fromId, fromName, fromElo, toId, createdAt, status: 'pending' } ]
+  meta: {},
+  giftEvents: [],
+  monthlyBonusPool: {}
 };
 
 function loadDb() {
@@ -62,8 +65,11 @@ function loadDb() {
     if (fs.existsSync(DB_FILE)) {
       const raw = fs.readFileSync(DB_FILE, "utf8");
       const parsed = JSON.parse(raw);
-      if (parsed.players) db.players = parsed.players;
+      if (parsed.players && typeof parsed.players === "object") db.players = parsed.players;
       if (Array.isArray(parsed.friendRequests)) db.friendRequests = parsed.friendRequests;
+      if (parsed.meta && typeof parsed.meta === "object") db.meta = parsed.meta;
+      if (Array.isArray(parsed.giftEvents)) db.giftEvents = parsed.giftEvents;
+      if (parsed.monthlyBonusPool && typeof parsed.monthlyBonusPool === "object") db.monthlyBonusPool = parsed.monthlyBonusPool;
     }
   } catch (err) {
     console.error("DB Load error:", err.message);
@@ -84,6 +90,52 @@ loadDb();
 
 if (!db.meta || typeof db.meta !== "object") db.meta = {};
 if (!Array.isArray(db.giftEvents)) db.giftEvents = [];
+if (!db.monthlyBonusPool || typeof db.monthlyBonusPool !== "object") db.monthlyBonusPool = {};
+
+// Toshkent vaqti (UTC+5) bo'yicha oylik kalit (YYYY-MM)
+function getTashkentMonthKey(nowMs = Date.now()) {
+  const d = new Date(nowMs + (5 * 60 * 60 * 1000));
+  const year = d.getUTCFullYear();
+  const month = String(d.getUTCMonth() + 1).padStart(2, "0");
+  return `${year}-${month}`;
+}
+
+// Oylik 5-Sovg'a Global Fondi (db.monthlyBonusPool)
+function getMonthlyBonusPool(nowMs = Date.now()) {
+  if (!db.monthlyBonusPool || typeof db.monthlyBonusPool !== "object") {
+    db.monthlyBonusPool = {};
+  }
+  const monthKey = getTashkentMonthKey(nowMs);
+  let pool = db.monthlyBonusPool[monthKey];
+  if (!pool) {
+    const [yearStr, monthStr] = monthKey.split("-");
+    const year = parseInt(yearStr, 10);
+    const monthIdx = parseInt(monthStr, 10) - 1; // 0..11
+    const days = [1, 7, 13, 19, 25];
+    // 5 ta slotReleaseTimes oyning 1-, 7-, 13-, 19-, 25-kunlari (UTC+5 00:00 + 0..6 soat tasodifiy siljish)
+    const slotReleaseTimes = days.map(d => {
+      const baseUtcMs = Date.UTC(year, monthIdx, d, 0, 0, 0) - (5 * 60 * 60 * 1000);
+      const jitterMs = Math.floor(Math.random() * (6 * 60 * 60 * 1000));
+      return baseUtcMs + jitterMs;
+    });
+
+    pool = {
+      monthKey,
+      maxGifts: 5,
+      claimedCount: 0,
+      winners: [], // [{ playerId, name, giftId, uid, wonAt }]
+      totalSpins: 0,
+      slotReleaseTimes
+    };
+    db.monthlyBonusPool[monthKey] = pool;
+    saveDb();
+  }
+  if (!Array.isArray(pool.winners)) pool.winners = [];
+  if (!Array.isArray(pool.slotReleaseTimes)) pool.slotReleaseTimes = [];
+  if (typeof pool.claimedCount !== "number") pool.claimedCount = pool.winners.length;
+  if (typeof pool.totalSpins !== "number") pool.totalSpins = 0;
+  return pool;
+}
 
 if (!db.meta.gemsResetV1) {
   Object.values(db.players || {}).forEach(p => {
@@ -102,6 +154,11 @@ function ensurePlayerEconomy(p) {
   if (!p.userStats || typeof p.userStats !== "object") p.userStats = {};
   p.userStats.gems = Math.max(0, Math.floor(Number(p.userStats.gems) || 0));
   if (!Array.isArray(p.userStats.gifts)) p.userStats.gifts = [];
+  p.userStats.gifts.forEach(g => {
+    if (g && typeof g === "object" && !g.uid) {
+      g.uid = makeGiftUid();
+    }
+  });
   if (p.userStats.gifts.length > 500) p.userStats.gifts = p.userStats.gifts.slice(-500);
   p.userStats.prestige = computePrestigeFromGifts(p.userStats.gifts);
 }
@@ -1056,8 +1113,10 @@ app.get("/api/tg/gifts/player/:id", (req, res) => {
   }
   ensurePlayerEconomy(p);
   const gSum = summarizeGifts(p.userStats.gifts);
+  const giftList = (p.userStats.gifts || []).slice(-120).reverse();
   res.json({
     ok: true,
+    gifts: giftList,
     player: {
       id: p.id,
       name: p.name || p.id,
@@ -1066,7 +1125,7 @@ app.get("/api/tg/gifts/player/:id", (req, res) => {
       elo: (p.userStats && p.userStats.elo) || 1000,
       prestige: p.userStats.prestige,
       giftSummary: gSum,
-      gifts: (p.userStats.gifts || []).slice(-120).reverse()
+      gifts: giftList
     }
   });
 });
@@ -1280,55 +1339,210 @@ app.post("/api/tg/gifts/transfer", (req, res) => {
   });
 });
 
-// e) Oltin Sandiqdan chiqqan sovg'ani bazaga yozish
+// e) Eski claim-bonus xavfsizlik uchun yopilgan (403 USE_BONUS_SPIN)
 app.post("/api/tg/gifts/claim-bonus", (req, res) => {
-  const { playerId, giftId } = req.body || {};
+  return res.status(403).json({
+    ok: false,
+    error: "USE_BONUS_SPIN",
+    message: "Bu endpoint yopilgan. Iltimos /api/tg/bonus/spin dan foydalaning."
+  });
+});
+
+// f) Yangi Oylik 5-Sovg'a Fondi Statusi (/api/tg/bonus/status)
+app.get("/api/tg/bonus/status", (req, res) => {
+  const { playerId } = req.query;
   const cleanId = String(playerId || "").trim().toUpperCase();
-  const p = db.players[cleanId];
-  if (!p) return res.status(404).json({ ok: false, error: "PLAYER_NOT_FOUND" });
-
-  const gift = getGiftById(giftId);
-  if (!gift || gift.category !== "bonus") {
-    return res.status(400).json({ ok: false, error: "NOT_BONUS_GIFT" });
-  }
-
-  const now = Date.now();
-  if (p._lastBonusGiftAt && (now - p._lastBonusGiftAt) < 3500) {
-    return res.status(429).json({ ok: false, error: "TOO_FAST" });
-  }
-  p._lastBonusGiftAt = now;
-
-  ensurePlayerEconomy(p);
-
-  const item = {
-    uid: makeGiftUid(),
-    giftId: gift.id,
-    fromId: "BONUS_CASE",
-    fromName: "Oltin Sandiq",
-    note: "3D Oltin Sandiq yutug'i",
-    source: "bonus_case",
-    acquiredAt: now
-  };
-
-  p.userStats.gifts.push(item);
-  if (p.userStats.gifts.length > 500) p.userStats.gifts = p.userStats.gifts.slice(-500);
-  p.userStats.prestige = computePrestigeFromGifts(p.userStats.gifts);
-  p.updatedAt = now;
-
-  saveDb();
+  const pool = getMonthlyBonusPool();
+  const alreadyWonThisMonth = cleanId
+    ? pool.winners.some(w => String(w.playerId || "").toUpperCase() === cleanId)
+    : false;
 
   return res.json({
     ok: true,
-    item,
-    gift,
-    userStats: {
-      coins: p.userStats.coins,
-      gems: p.userStats.gems,
-      prestige: p.userStats.prestige,
-      gifts: p.userStats.gifts,
-      giftSummary: summarizeGifts(p.userStats.gifts)
-    }
+    monthKey: pool.monthKey,
+    maxGifts: 5,
+    claimedCount: pool.claimedCount,
+    remaining: Math.max(0, 5 - pool.claimedCount),
+    alreadyWonThisMonth
   });
+});
+
+// g) Yangi 100% Server Nazoratidagi Oltin Sandiq Ruletkasi (/api/tg/bonus/spin)
+app.post("/api/tg/bonus/spin", (req, res) => {
+  const { playerId } = req.body || {};
+  const cleanId = String(playerId || "").trim().toUpperCase();
+  const p = db.players[cleanId];
+  if (!p) {
+    return res.status(404).json({ ok: false, error: "PLAYER_NOT_FOUND", message: "Profil topilmadi, sahifani yangilang." });
+  }
+
+  const now = Date.now();
+  // 4.5 soniya anti-spam cooldown (p._lastBonusSpinAt)
+  if (p._lastBonusSpinAt && (now - p._lastBonusSpinAt) < 4500) {
+    return res.status(429).json({ ok: false, error: "TOO_FAST", message: "Iltimos, kuting..." });
+  }
+  p._lastBonusSpinAt = now;
+
+  ensurePlayerEconomy(p);
+
+  const pool = getMonthlyBonusPool(now);
+  pool.totalSpins = (pool.totalSpins || 0) + 1;
+
+  // Sovg'a tushishi shartlari (BARCHASI bajarilsagina):
+  // a) pool.claimedCount < 5
+  // b) pool.winners ichida cleanId yo'q (har oyda 5 ta ALOHIDA odam!)
+  // c) unlockedSlots = pool.slotReleaseTimes.filter(ts => now >= ts).length; availableNow = unlockedSlots - pool.claimedCount > 0.
+  const hasWonThisMonth = pool.winners.some(w => String(w.playerId || "").toUpperCase() === cleanId);
+  const unlockedSlots = pool.slotReleaseTimes.filter(ts => now >= ts).length;
+  const availableNow = unlockedSlots - pool.claimedCount;
+
+  let canWinGift = (pool.claimedCount < 5) && (!hasWonThisMonth) && (availableNow > 0);
+  let isGiftWin = false;
+
+  if (canWinGift) {
+    // Eng eski ochiq slot ochilganidan beri o'tgan soat (ageHours)
+    const oldestSlotTs = pool.slotReleaseTimes[pool.claimedCount] || now;
+    const ageHours = Math.max(0, (now - oldestSlotTs) / (1000 * 60 * 60));
+
+    // Oy tugashiga qolgan vaqt (Toshkent vaqti)
+    const [yearStr, monthStr] = pool.monthKey.split("-");
+    const year = parseInt(yearStr, 10);
+    const monthIdx = parseInt(monthStr, 10) - 1;
+    const nextMonthUtcMs = Date.UTC(year, monthIdx + 1, 1, 0, 0, 0) - (5 * 60 * 60 * 1000);
+    const hoursUntilMonthEnd = (nextMonthUtcMs - now) / (1000 * 60 * 60);
+
+    // Dinamik ehtimol:
+    // baza = 0.015 (1.5%); agar ageHours > 48 -> 0.04; ageHours > 96 -> 0.10; ageHours > 132 -> 0.18; oy tugashiga < 48 soat qolib hali slot bo'lsa -> 0.28.
+    let giftProb = 0.015;
+    if (hoursUntilMonthEnd < 48 && availableNow > 0) {
+      giftProb = 0.28;
+    } else if (ageHours > 132) {
+      giftProb = 0.18;
+    } else if (ageHours > 96) {
+      giftProb = 0.10;
+    } else if (ageHours > 48) {
+      giftProb = 0.04;
+    }
+
+    if (Math.random() < giftProb) {
+      isGiftWin = true;
+    }
+  }
+
+  const monthlyPoolData = {
+    monthKey: pool.monthKey,
+    maxGifts: 5,
+    claimedCount: pool.claimedCount,
+    remaining: Math.max(0, 5 - pool.claimedCount)
+  };
+
+  if (isGiftWin) {
+    // Sovg'a yutilsa:
+    // Og'irlik: tactical_medal (45%), karambit_neon (30%), titan_shield (17%), golden_dragon (8%, oyiga max 1 dona).
+    const dragonWon = pool.winners.some(w => w.giftId === "golden_dragon");
+    let pickedGiftId;
+    const roll = Math.random();
+
+    if (!dragonWon && roll < 0.08) {
+      pickedGiftId = "golden_dragon";
+    } else {
+      const subRoll = Math.random() * 92;
+      if (subRoll < 45) {
+        pickedGiftId = "tactical_medal";
+      } else if (subRoll < (45 + 30)) {
+        pickedGiftId = "karambit_neon";
+      } else {
+        pickedGiftId = "titan_shield";
+      }
+    }
+
+    const gift = getGiftById(pickedGiftId);
+    // 0 tanga qo'shiladi! Haqiqiy uid = makeGiftUid() bilan p.userStats.gifts.push(item)
+    const item = {
+      uid: makeGiftUid(),
+      giftId: gift.id,
+      fromId: "BONUS_CASE",
+      fromName: "Oltin Sandiq",
+      note: "3D Oltin Sandiq yutug'i",
+      source: "bonus_case",
+      acquiredAt: now
+    };
+
+    p.userStats.gifts.push(item);
+    if (p.userStats.gifts.length > 500) p.userStats.gifts = p.userStats.gifts.slice(-500);
+    p.userStats.prestige = computePrestigeFromGifts(p.userStats.gifts);
+    p.updatedAt = now;
+
+    pool.claimedCount++;
+    pool.winners.push({
+      playerId: cleanId,
+      name: p.name || cleanId,
+      giftId: gift.id,
+      uid: item.uid,
+      wonAt: now
+    });
+
+    monthlyPoolData.claimedCount = pool.claimedCount;
+    monthlyPoolData.remaining = Math.max(0, 5 - pool.claimedCount);
+
+    saveDb();
+
+    return res.json({
+      ok: true,
+      outcomeType: "gift",
+      gift,
+      item,
+      reward: 0,
+      userStats: {
+        coins: p.userStats.coins,
+        gems: p.userStats.gems,
+        prestige: p.userStats.prestige,
+        gifts: p.userStats.gifts,
+        giftSummary: summarizeGifts(p.userStats.gifts)
+      },
+      monthlyPool: monthlyPoolData
+    });
+  } else {
+    // Tanga yutilsa:
+    // 5 xil tanga (coin_500: 35%, coin_1500: 30%, coin_3000: 20%, coin_4500: 10%, coin_6000: 5%), p.userStats.coins += reward, saveDb()!
+    const coinRoll = Math.random();
+    let coinItemId, reward;
+    if (coinRoll < 0.35) {
+      coinItemId = "coin_500";
+      reward = 500;
+    } else if (coinRoll < 0.65) {
+      coinItemId = "coin_1500";
+      reward = 1500;
+    } else if (coinRoll < 0.85) {
+      coinItemId = "coin_3000";
+      reward = 3000;
+    } else if (coinRoll < 0.95) {
+      coinItemId = "coin_4500";
+      reward = 4500;
+    } else {
+      coinItemId = "coin_6000";
+      reward = 6000;
+    }
+
+    p.userStats.coins = (Number(p.userStats.coins) || 0) + reward;
+    p.updatedAt = now;
+    saveDb();
+
+    return res.json({
+      ok: true,
+      outcomeType: "coin",
+      coinItemId,
+      reward,
+      userStats: {
+        coins: p.userStats.coins,
+        gems: p.userStats.gems,
+        prestige: p.userStats.prestige,
+        gifts: p.userStats.gifts,
+        giftSummary: summarizeGifts(p.userStats.gifts)
+      },
+      monthlyPool: monthlyPoolData
+    });
+  }
 });
 
 // 5C) Do'stlikni bekor qilish / do'stlar ro'yxatidan o'chirish

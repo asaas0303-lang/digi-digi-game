@@ -1820,6 +1820,7 @@
             <span class="w-7 h-7 rounded-full ios-fh-avatar ios-fh-avatar-gold bg-slate-900/90 flex items-center justify-center text-amber-300 text-xs shrink-0">🧰</span>
             <h2 class="text-[15px] font-bold tracking-tight bg-gradient-to-b from-white via-sky-100 to-amber-200 bg-clip-text text-transparent drop-shadow truncate">Oltin Sandiq</h2>
             <span class="ios-fh-stat-pill text-sky-100 text-[10px] font-semibold px-2.5 py-0.5 rounded-full shrink-0">Kunlik Bonus</span>
+            <span id="bonusMonthlyPoolPill" class="ios-fh-stat-pill text-amber-200 border-amber-400/40 text-[9.5px] font-bold px-2 py-0.5 rounded-full shrink-0">🎁 Oy fondi: 5/5</span>
           </div>
 
           <div class="flex items-center gap-2 shrink-0">
@@ -1840,6 +1841,18 @@
           <div class="ios-bonus-stage relative flex-1 min-h-0 overflow-hidden">
             <canvas id="csCase3DCanvas" class="w-full h-full block cursor-grab active:cursor-grabbing touch-none"></canvas>
             <p id="slotResultText" class="hidden absolute bottom-2.5 left-1/2 -translate-x-1/2 ios-fh-stat-pill border-amber-400/80 text-amber-300 text-[11px] font-extrabold px-3.5 py-1 rounded-full shadow-lg whitespace-nowrap pointer-events-none"></p>
+            <!-- SOVG'A YUTILGANDA CHIQADIGAN 3D SOVG'A OVERLAY QATLAMI -->
+            <div id="bonusWonGiftOverlay" class="hidden absolute inset-0 z-30 bg-slate-950/90 flex flex-col items-center justify-center p-3 text-center select-none">
+              <div class="relative w-28 h-28 flex items-center justify-center">
+                <div id="bonusWonGiftAura" class="absolute inset-0 rounded-full bg-amber-500/20 blur-xl"></div>
+                <img id="bonusWonGiftImg" src="/img/gifts/tactical_medal.webp?v=20261124_6" alt="Yutilgan Sovg'a" class="w-24 h-24 object-contain relative z-10 drop-shadow-[0_0_16px_rgba(251,191,36,0.5)]" />
+              </div>
+              <h3 id="bonusWonGiftTitle" class="text-sm font-black text-amber-300 mt-2 drop-shadow">Oltin Taktik Medalyon</h3>
+              <p id="bonusWonGiftPrestige" class="text-[11px] font-mono font-bold text-sky-200 mt-0.5">👑 +400 Obro'</p>
+              <button id="btnBonusWonOpenCollection" type="button" class="ios-btn-gold px-3.5 py-1.5 text-xs font-bold rounded-xl mt-3 shadow-lg flex items-center gap-1.5 cursor-pointer">
+                <span>🎁 Kolleksiyam / Hadya qilish</span>
+              </button>
+            </div>
           </div>
 
           <!-- O'NG USTUN: CS:GO RULETKA LENTASI + SOVRINLAR + OCHISH TUGMASI -->
@@ -10480,7 +10493,7 @@
           card.className = `w-24 h-20 rounded-xl bg-slate-900/95 border-2 ${item.border || 'border-amber-400'} flex flex-col items-center justify-between py-1 px-1.5 shrink-0 select-none shadow-md`;
 
           const centerContent = isGift
-            ? `<img src="/img/gifts/${item.giftId}.webp?v=20261124_5" alt="${item.title}" class="w-9 h-9 object-contain drop-shadow pointer-events-none" style="-webkit-mask-image:radial-gradient(circle,#000 62%,transparent 98%);mask-image:radial-gradient(circle,#000 62%,transparent 98%);" onerror="this.src='/img/gifts/tactical_medal.webp'" />`
+            ? `<img src="/img/gifts/${item.giftId}.webp?v=20261124_6" alt="${item.title}" class="w-9 h-9 object-contain drop-shadow pointer-events-none" style="-webkit-mask-image:radial-gradient(circle,#000 62%,transparent 98%);mask-image:radial-gradient(circle,#000 62%,transparent 98%);" onerror="this.src='/img/gifts/tactical_medal.webp'" />`
             : `<div class="text-xl leading-none">${(item.reward || 0) >= 4500 ? '👑' : ((item.reward || 0) >= 1500 ? '💰' : '🪙')}</div>`;
 
           const subContent = isGift
@@ -10502,9 +10515,36 @@
 
       let lastRouletteCardIdx = -1;
 
+      function updateBonusMonthlyPoolPill(remaining, maxGifts = 5) {
+        const pill = document.getElementById('bonusMonthlyPoolPill');
+        if (!pill) return;
+        const rem = Number(remaining);
+        if (rem > 0) {
+          pill.textContent = `🎁 Oy fondi: ${rem}/${maxGifts}`;
+          pill.className = "ios-fh-stat-pill text-amber-200 border-amber-400/40 text-[9.5px] font-bold px-2 py-0.5 rounded-full shrink-0";
+        } else {
+          pill.textContent = `🔒 Oy fondi tugadi (0/${maxGifts})`;
+          pill.className = "ios-fh-stat-pill text-slate-400 border-slate-600/40 text-[9.5px] font-bold px-2 py-0.5 rounded-full shrink-0";
+        }
+      }
+
+      function refreshBonusPoolStatus() {
+        const myId = typeof getActiveMyId === 'function' ? getActiveMyId() : '';
+        fetch('/api/tg/bonus/status?playerId=' + encodeURIComponent(myId))
+          .then(r => r.json())
+          .then(d => {
+            if (d && d.ok) {
+              updateBonusMonthlyPoolPill(d.remaining, d.maxGifts || 5);
+            }
+          })
+          .catch(() => {});
+      }
+
       function openBonusModal() {
         const modal = document.getElementById('modalBonus');
         modal.classList.remove('hidden');
+        const wonOverlay = document.getElementById('bonusWonGiftOverlay');
+        if (wonOverlay) wonOverlay.classList.add('hidden');
         const cLbl = document.getElementById('caseModalCoinsLabel');
         if (cLbl) cLbl.textContent = userStats.coins.toLocaleString('en-US');
         const resTxt = document.getElementById('slotResultText');
@@ -10513,6 +10553,7 @@
         caseStateStart = performance.now();
         if (casePrizeGroup) casePrizeGroup.visible = false;
         populateCaseRouletteStrip(CS_CASE_ITEMS[4]);
+        refreshBonusPoolStatus();
         if (!caseAnimFrameId) {
           caseAnimFrameId = requestAnimationFrame(renderCase3DLoop);
         }
@@ -10527,43 +10568,74 @@
         document.getElementById('modalBonus').classList.add('hidden');
       });
 
+      const btnBonusWonCollec = document.getElementById('btnBonusWonOpenCollection');
+      if (btnBonusWonCollec) {
+        btnBonusWonCollec.addEventListener('click', () => {
+          document.getElementById('modalBonus').classList.add('hidden');
+          if (typeof window.openPlayerCollectionModal === 'function') {
+            window.openPlayerCollectionModal();
+          }
+        });
+      }
+
       let spinningSlot = false;
-      document.getElementById('btnSpinSlotMachine').addEventListener('click', () => {
+      document.getElementById('btnSpinSlotMachine').addEventListener('click', async () => {
         if (spinningSlot) return;
-        spinningSlot = true;
 
         const resTxt = document.getElementById('slotResultText');
         const track = document.getElementById('csCaseRouletteTrack');
         const cLbl = document.getElementById('caseModalCoinsLabel');
         const spinBtn = document.getElementById('btnSpinSlotMachine');
+        const wonOverlay = document.getElementById('bonusWonGiftOverlay');
+        if (wonOverlay) wonOverlay.classList.add('hidden');
         if (resTxt) resTxt.classList.add('hidden');
+
+        const myId = typeof getActiveMyId === 'function' ? getActiveMyId() : '';
+        if (spinBtn) {
+          spinBtn.disabled = true;
+          spinBtn.textContent = '⏳ RULETKA TAYYORLANMOQDA...';
+        }
+
+        let spinResult;
+        try {
+          const res = await fetch('/api/tg/bonus/spin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ playerId: myId })
+          });
+          spinResult = await res.json();
+        } catch (err) {
+          console.error('Spin API error:', err);
+          if (spinBtn) {
+            spinBtn.disabled = false;
+            spinBtn.textContent = '🔑 OLTIN SANDIQNI OCHISH (BEPUL)';
+          }
+          if (typeof showToast === 'function') showToast('Server bilan aloqa uzildi. Qaytadan urinib ko\'ring.', '⚠️');
+          return;
+        }
+
+        if (!spinResult || !spinResult.ok) {
+          if (spinBtn) {
+            spinBtn.disabled = false;
+            spinBtn.textContent = '🔑 OLTIN SANDIQNI OCHISH (BEPUL)';
+          }
+          const errMsg = (spinResult && (spinResult.message || spinResult.error)) || 'Xatolik yuz berdi';
+          if (typeof showToast === 'function') showToast(errMsg, '⚠️');
+          return;
+        }
+
+        spinningSlot = true;
         if (spinBtn) spinBtn.textContent = '⏳ RULETKA AYLANMOQDA...';
 
-        // Yuqori ehtimol bilan ★ OLTIN XAZINA (+$6,000) yoki Qizil Elita (+$4,500) chiqishi
-        // 72% Tangalar, 28% Eksklyuziv 3D Sovg'alar
-        const roll = Math.random();
         let winningItem;
-        if (roll < 0.72) {
-          // Tangalar (5 xil)
-          const coinRoll = Math.random();
-          winningItem = coinRoll < 0.35 ? CS_CASE_ITEMS[0] // 500
-            : (coinRoll < 0.65 ? CS_CASE_ITEMS[1] // 1500
-            : (coinRoll < 0.85 ? CS_CASE_ITEMS[2] // 3000
-            : (coinRoll < 0.95 ? CS_CASE_ITEMS[3] // 4500
-            : CS_CASE_ITEMS[4]))); // 6000
+        if (spinResult.outcomeType === 'gift') {
+          const gId = (spinResult.gift && spinResult.gift.id) || (spinResult.item && spinResult.item.giftId);
+          winningItem = CS_CASE_ITEMS.find(it => it.type === 'gift' && (it.giftId === gId || it.id === gId)) || CS_CASE_ITEMS[5];
         } else {
-          // 28% Sovg'alar: 14% medal, 8% karambit, 4.5% qalqon, 1.5% ajdaho
-          const giftRoll = Math.random();
-          if (giftRoll < 0.50) { // 14% / 28% = 50%
-            winningItem = CS_CASE_ITEMS[5]; // tactical_medal
-          } else if (giftRoll < 0.7857) { // 8% / 28% ~= 28.57% -> 78.57%
-            winningItem = CS_CASE_ITEMS[6]; // karambit_neon
-          } else if (giftRoll < 0.9464) { // 4.5% / 28% ~= 16.07% -> 94.64%
-            winningItem = CS_CASE_ITEMS[7]; // titan_shield
-          } else { // 1.5% / 28% ~= 5.36%
-            winningItem = CS_CASE_ITEMS[8]; // golden_dragon
-          }
+          const coinItemId = spinResult.coinItemId;
+          winningItem = CS_CASE_ITEMS.find(it => it.type === 'coin' && it.id === coinItemId) || CS_CASE_ITEMS[0];
         }
+
         const { winIndex } = populateCaseRouletteStrip(winningItem);
 
         // 1-BOSQICH (0.0s -> 4.25s): Sandiq YOPIQ turadi, pastdagi Ruletka sekin va ravon aylanib sovrin ustida to'xtaydi!
@@ -10599,58 +10671,74 @@
           playSound('case_shake_rumble');
         }, 4250);
 
-        // 3-BOSQICH (5.40s): Sandiq BIRDANIGA portlab ochiladi va haqiqiy OLTIN TANGALAR SHIQIRLASHI ('case_coins_shiqirlash') yangraydi!
+        // 3-BOSQICH (5.40s): Sandiq ochiladi
         setTimeout(() => {
           caseState = 'burst_open';
           caseStateStart = performance.now();
-          if (casePrizeGroup) {
-            casePrizeGroup.visible = true;
-            casePrizeGroup.position.y = 0.04;
+
+          // Serverning rasmiy d.userStats (haqiqiy uid bilan!) bilan yangilash:
+          if (spinResult.userStats) {
+            if (typeof spinResult.userStats.coins === 'number') userStats.coins = spinResult.userStats.coins;
+            if (typeof spinResult.userStats.gems === 'number') userStats.gems = spinResult.userStats.gems;
+            if (typeof spinResult.userStats.prestige === 'number') userStats.prestige = spinResult.userStats.prestige;
+            if (Array.isArray(spinResult.userStats.gifts)) userStats.gifts = spinResult.userStats.gifts;
+            if (spinResult.userStats.giftSummary) userStats.giftSummary = spinResult.userStats.giftSummary;
           }
-          triggerCaseCoinsBurst(winningItem.hex || 0xfde047);
+          saveUserData();
+          updateMainMenuWidgets();
+          if (typeof onDigiGiftsUpdated === 'function') onDigiGiftsUpdated();
+          if (spinResult.monthlyPool && typeof spinResult.monthlyPool.remaining === 'number') {
+            updateBonusMonthlyPoolPill(spinResult.monthlyPool.remaining, spinResult.monthlyPool.maxGifts || 5);
+          } else {
+            refreshBonusPoolStatus();
+          }
 
-          if (winningItem.type === 'gift') {
-            const myId = getActiveMyId();
-            fetch('/api/tg/gifts/claim-bonus', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                playerId: myId,
-                giftId: winningItem.giftId,
-                source: 'bonus_case'
-              })
-            }).then(r => r.json()).then(d => {
-              if (d && d.ok) {
-                if (!Array.isArray(userStats.gifts)) userStats.gifts = [];
-                userStats.gifts.push(d.giftRecord || { giftId: winningItem.giftId, claimedAt: new Date().toISOString() });
-                saveUserData();
-                updateMainMenuWidgets();
-                if (typeof showToast === 'function') showToast(`Tabriklaymiz! ${winningItem.title} sovg\'asi kolleksiyangizga qo\'shildi!`, '🎁');
-              }
-            }).catch(e => console.warn('claim-bonus error:', e));
+          if (spinResult.outcomeType === 'gift') {
+            // SOVG'A YUTILDI: $ pul QO'SHMA va $ toast CHIQARMA!
+            if (casePrizeGroup) casePrizeGroup.visible = false;
+            playSound('victory_fanfare');
 
-            playSound('case_coins_shiqirlash');
+            // 3D Sovg'a overlayini ko'rsatish
+            const giftImgEl = document.getElementById('bonusWonGiftImg');
+            const giftTitleEl = document.getElementById('bonusWonGiftTitle');
+            const giftPresEl = document.getElementById('bonusWonGiftPrestige');
+            const giftData = spinResult.gift || winningItem;
+            if (giftImgEl) giftImgEl.src = `/img/gifts/${giftData.id || giftData.giftId}.webp?v=20261124_6`;
+            if (giftTitleEl) giftTitleEl.textContent = giftData.name || giftData.title;
+            if (giftPresEl) giftPresEl.textContent = `👑 +${(giftData.prestige || 0).toLocaleString('en-US')} Obro'`;
+            if (wonOverlay) wonOverlay.classList.remove('hidden');
 
             if (resTxt) {
-              resTxt.textContent = `🎁 ${winningItem.badge} ${winningItem.title}: +${winningItem.prestige} Ball qo\'shildi!`;
+              resTxt.textContent = `🎁 ${winningItem.badge} ${giftData.name || winningItem.title}: +${giftData.prestige || winningItem.prestige} Ball qo'shildi!`;
               resTxt.classList.remove('hidden');
             }
+            if (typeof showToast === 'function') {
+              showToast(`Tabriklaymiz! ${giftData.name || winningItem.title} sovg'asi kolleksiyangizga qo'shildi!`, '🎁');
+            }
           } else {
-            const reward = winningItem.reward;
-            userStats.coins += reward;
-            saveUserData();
-            updateMainMenuWidgets();
+            // TANGA YUTILDI
+            if (casePrizeGroup) {
+              casePrizeGroup.visible = true;
+              casePrizeGroup.position.y = 0.04;
+            }
+            triggerCaseCoinsBurst(winningItem.hex || 0xfde047);
+            playSound('case_coins_shiqirlash');
             if (cLbl) cLbl.textContent = userStats.coins.toLocaleString('en-US');
 
-            playSound('case_coins_shiqirlash');
-
+            const reward = spinResult.reward || winningItem.reward || 500;
             if (resTxt) {
               resTxt.textContent = `${winningItem.badge} ${winningItem.title}: +$${reward.toLocaleString('en-US')}`;
               resTxt.classList.remove('hidden');
             }
+            if (typeof showToast === 'function') {
+              showToast(`Sandiqdan +$${reward.toLocaleString('en-US')} tilla tanga chiqdi!`, '🪙');
+            }
           }
-          if (spinBtn) spinBtn.textContent = '🔑 OLTIN SANDIQNI OCHISH (BEPUL)';
-          showToast(`Sandiqdan +$${reward.toLocaleString('en-US')} tilla tanga chiqdi!`, '🪙');
+
+          if (spinBtn) {
+            spinBtn.disabled = false;
+            spinBtn.textContent = '🔑 OLTIN SANDIQNI OCHISH (BEPUL)';
+          }
           spinningSlot = false;
         }, 5400);
       });
@@ -10888,7 +10976,7 @@
   </script>
   <script src="/gifts-catalog.js?v=20261124_1"></script>
   <script src="/telegram-bridge.js?v=20261108_3"></script>
-  <script src="/gifts-ui.js?v=20261124_5"></script>
+  <script src="/gifts-ui.js?v=20261124_6"></script>
   <script src="/mp-client.js"></script>
   <script src="/sfx-engine.js"></script>
 </body>

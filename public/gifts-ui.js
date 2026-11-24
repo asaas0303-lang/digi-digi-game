@@ -6,7 +6,7 @@
   'use strict';
 
   // 1. STATIK KONSTANTALAR VA VERSİYALASH
-  const GIFT_IMG_VER = '20261124_5';
+  const GIFT_IMG_VER = '20261124_6';
   const GIFT_IMG_EXT = 'webp';
 
   function getGiftImageUrl(giftId) {
@@ -370,6 +370,13 @@
                 </button>
               </div>
 
+              <!-- O'zida bor sovg'ani kolleksiyasidan hadya qilish qutisi -->
+              <div id="giftOwnedTransferBox" class="hidden p-2.5 rounded-xl bg-sky-950/40 border border-sky-500/40 text-center space-y-1.5">
+                <button id="btnTransferFromDetail" type="button" class="ios-btn-blue w-full py-2 px-3 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 shadow-md">
+                  <span id="btnTransferFromDetailText">✈️ Kolleksiyamdan boshqaga hadya qilish (sizda 1 ta)</span>
+                </button>
+              </div>
+
               <!-- Hadya Yuborish Bo'limi -->
               <div id="giftSendPanel" class="hidden space-y-2">
                 <div class="flex items-center justify-between">
@@ -469,6 +476,16 @@
       closeGiftDetailModal();
       openBuyGemsModal();
     });
+
+    const btnTransferFromDetail = document.getElementById('btnTransferFromDetail');
+    if (btnTransferFromDetail) {
+      btnTransferFromDetail.addEventListener('click', () => {
+        closeGiftDetailModal();
+        if (typeof window.openPlayerCollectionModal === 'function') {
+          window.openPlayerCollectionModal();
+        }
+      });
+    }
 
     initGiftDetail3DTilt();
     document.getElementById('btnConfirmGiftAction').addEventListener('click', handleGiftActionSubmit);
@@ -729,6 +746,20 @@
       bonusBox.classList.remove('hidden');
       btnAction.classList.add('hidden');
       gemsHelpBox.classList.add('hidden');
+    }
+
+    const ownedCount = myGiftsMap[gift.id] || 0;
+    const ownedTransferBox = document.getElementById('giftOwnedTransferBox');
+    const btnTransferText = document.getElementById('btnTransferFromDetailText');
+    if (ownedTransferBox) {
+      if (ownedCount > 0) {
+        ownedTransferBox.classList.remove('hidden');
+        if (btnTransferText) {
+          btnTransferText.textContent = `✈️ Kolleksiyamdan boshqaga hadya qilish (sizda ${ownedCount} ta)`;
+        }
+      } else {
+        ownedTransferBox.classList.add('hidden');
+      }
     }
 
     if (preselectRecipient) {
@@ -1283,8 +1314,8 @@ To'lov rekvizitlarini yuborsangiz, chekni tashlayman.`;
   }
 
   function renderPlayerCollectionData(data, isSelf) {
-    const p = data.player || {};
-    const gifts = data.gifts || [];
+    const p = (data && data.player) || {};
+    const gifts = (data && (data.gifts || (data.player && data.player.gifts))) || [];
     const catalog = getGiftsCatalog();
 
     document.getElementById('collecUserName').textContent = p.name || 'O\'yinchi';
