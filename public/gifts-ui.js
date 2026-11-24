@@ -6,7 +6,8 @@
   'use strict';
 
   // 1. STATIK KONSTANTALAR VA VERSİYALASH
-  const GIFT_IMG_VER = '20261124_7';
+  const GIFT_IMG_VER = '20261124_9';
+  let _pendingGiftRecipient = null;
   const GIFT_IMG_EXT = 'webp';
 
   function getGiftImageUrl(giftId) {
@@ -155,6 +156,36 @@
     const container = document.getElementById('giftShopGrid');
     if (!container) return;
 
+    // Do'kon tepasida qabul qiluvchi ko'k banneri
+    const existingBanner = document.getElementById('giftShopRecipientBanner');
+    if (_pendingGiftRecipient) {
+      if (!existingBanner) {
+        const b = document.createElement('div');
+        b.id = 'giftShopRecipientBanner';
+        b.className = 'w-full bg-gradient-to-r from-sky-950/90 to-blue-950/90 border border-sky-400/60 rounded-xl px-3 py-2 flex items-center justify-between text-xs text-sky-200 mb-2 shadow-lg';
+        b.innerHTML = `
+          <div class="flex items-center gap-2 truncate">
+            <span class="text-base">✈️</span>
+            <span class="font-bold text-white truncate">Qabul qiluvchi: <span class="text-sky-300 font-extrabold">${escapeHtml(_pendingGiftRecipient.name || _pendingGiftRecipient.id)}</span></span>
+            <span class="text-[10.5px] text-slate-300 hidden sm:inline">— sovg'ani tanlang</span>
+          </div>
+          <button type="button" id="btnCancelPendingRecipient" class="text-slate-400 hover:text-white px-2 py-0.5 rounded-lg text-xs font-bold shrink-0" title="Bekor qilish">✕</button>
+        `;
+        const tabsBox = document.getElementById('giftShopTabs');
+        if (tabsBox && tabsBox.parentElement) {
+          tabsBox.parentElement.insertBefore(b, tabsBox);
+        }
+        b.querySelector('#btnCancelPendingRecipient')?.addEventListener('click', (e) => {
+          e.stopPropagation();
+          _pendingGiftRecipient = null;
+          b.remove();
+          renderDigiGiftShop();
+        });
+      }
+    } else {
+      if (existingBanner) existingBanner.remove();
+    }
+
     const catalog = getGiftsCatalog();
     const myGiftsMap = getOwnedGiftCounts();
 
@@ -229,7 +260,7 @@
       `;
 
       card.addEventListener('click', () => {
-        openGiftDetailModal(gift.id);
+        openGiftDetailModal(gift.id, _pendingGiftRecipient);
       });
 
       return card;
@@ -282,7 +313,7 @@
 
     const modal = document.createElement('div');
     modal.id = 'modalGiftDetail';
-    modal.className = 'hidden fixed inset-0 z-[55] flex items-center justify-center p-2.5';
+    modal.className = 'hidden fixed inset-0 z-[75] flex items-center justify-center p-2.5';
     modal.innerHTML = `
       <div class="ios-fh-sheet w-full max-w-4xl h-[94%] flex flex-col overflow-hidden">
         
@@ -927,7 +958,7 @@ To'lov rekvizitlarini yuborsangiz, chekni tashlayman.`;
 
     const modal = document.createElement('div');
     modal.id = 'modalBuyGems';
-    modal.className = 'hidden fixed inset-0 z-[60] flex items-center justify-center p-2.5';
+    modal.className = 'hidden fixed inset-0 z-[80] flex items-center justify-center p-2.5';
     modal.innerHTML = `
       <div class="ios-fh-sheet w-full max-w-4xl h-[94%] flex flex-col overflow-hidden">
         
@@ -1167,7 +1198,7 @@ To'lov rekvizitlarini yuborsangiz, chekni tashlayman.`;
 
     const modal = document.createElement('div');
     modal.id = 'modalPlayerCollection';
-    modal.className = 'hidden fixed inset-0 z-[58] flex items-center justify-center p-2.5';
+    modal.className = 'hidden fixed inset-0 z-[70] flex items-center justify-center p-2.5';
     modal.innerHTML = `
       <div class="ios-fh-sheet relative w-full max-w-4xl h-[94%] flex flex-col overflow-hidden">
         
@@ -1224,6 +1255,7 @@ To'lov rekvizitlarini yuborsangiz, chekni tashlayman.`;
             <span class="text-3xl block">🎁</span>
             <div class="text-xs font-bold text-slate-300">Hozircha sovg'alar kolleksiyasi bo'sh</div>
             <p class="text-[10px] text-slate-500">Do'kondan sovg'a oling yoki 3D Oltin Sandiqdan eksklyuziv sovg'alarni yutib oling!</p>
+            <button id="btnCollecEmptySendGift" type="button" class="hidden mt-2 ios-btn-gold px-3 py-1.5 text-xs font-bold rounded-xl shadow-lg cursor-pointer">🎁 Unga Sovg'a Yuborish</button>
           </div>
         </div>
 
@@ -1359,8 +1391,12 @@ To'lov rekvizitlarini yuborsangiz, chekni tashlayman.`;
       subTitleEl.textContent = `${targetId} profilingizdagi sovg'alari`;
       actionBtn.textContent = '🎁 Sovg\'a yuborish';
       actionBtn.onclick = () => {
+        const pName = document.getElementById('collecUserName')?.textContent || targetId;
+        _pendingGiftRecipient = { id: targetId, name: pName };
         modal.classList.add('hidden');
-        openDigiGiftShopModal();
+        const hub = document.getElementById('modalFriendsHub');
+        if (hub) hub.classList.add('hidden');
+        openDigiGiftShopModal(_pendingGiftRecipient);
       };
     }
 
@@ -1404,6 +1440,22 @@ To'lov rekvizitlarini yuborsangiz, chekni tashlayman.`;
     const emptyBox = document.getElementById('playerCollectionEmpty');
     grid.innerHTML = '';
 
+    const emptySendBtn = document.getElementById('btnCollecEmptySendGift');
+    if (emptySendBtn) {
+      if (!isSelf) {
+        emptySendBtn.classList.remove('hidden');
+        emptySendBtn.onclick = () => {
+          const pName = document.getElementById('collecUserName')?.textContent || _activeCollectionPlayerId;
+          _pendingGiftRecipient = { id: _activeCollectionPlayerId, name: pName };
+          modal.classList.add('hidden');
+          const hub = document.getElementById('modalFriendsHub');
+          if (hub) hub.classList.add('hidden');
+          openDigiGiftShopModal(_pendingGiftRecipient);
+        };
+      } else {
+        emptySendBtn.classList.add('hidden');
+      }
+    }
     if (gifts.length === 0) {
       emptyBox.classList.remove('hidden');
       return;
@@ -1704,6 +1756,17 @@ To'lov rekvizitlarini yuborsangiz, chekni tashlayman.`;
       console.error('Transfer error:', err);
       if (typeof window.showToast === 'function') window.showToast('Server bilan aloqa uzildi', '⚠️');
     });
+  }
+
+  function openDigiGiftShopModal(recipient) {
+    if (recipient) _pendingGiftRecipient = recipient;
+    const hub = document.getElementById('modalFriendsHub');
+    if (hub) hub.classList.add('hidden');
+    const shop = document.getElementById('modalShop');
+    if (shop) {
+      shop.classList.remove('hidden');
+      renderDigiGiftShop();
+    }
   }
 
   function onDigiGiftsUpdated() {

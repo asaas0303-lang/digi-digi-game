@@ -149,6 +149,21 @@ if (!db.meta.gemsResetV1) {
   console.log("[MIGRATION] gemsResetV1: Barcha oyinchilar kristali 0 ga tushirildi.");
 }
 
+if (!db.meta.cleanGhostSardorV1) {
+  const ghostP = db.players["DOOM-4886"];
+  const isGhost = !ghostP || !ghostP.tgId;
+  if (isGhost) {
+    Object.values(db.players || {}).forEach(p => {
+      if (Array.isArray(p.savedFriends)) {
+        p.savedFriends = p.savedFriends.filter(f => String(f.id || '').toUpperCase() !== "DOOM-4886");
+      }
+    });
+  }
+  db.meta.cleanGhostSardorV1 = true;
+  saveDb();
+  console.log("[MIGRATION] cleanGhostSardorV1: DOOM-4886 barcha savedFriends dan tozalandi.");
+}
+
 function ensurePlayerEconomy(p) {
   if (!p) return;
   if (!p.userStats || typeof p.userStats !== "object") p.userStats = {};
@@ -442,9 +457,9 @@ app.post("/api/tg/sync", (req, res) => {
 
   // Mavjud o'yinchi
   existing.name = myProfile.name || existing.name;
-  existing.tgId = myProfile.tgId || existing.tgId;
-  existing.username = myProfile.username || existing.username;
-  if (myProfile.photoUrl) existing.photoUrl = myProfile.photoUrl;
+  existing.username = myProfile.username || existing.username || "";
+  existing.tgId = myProfile.tgId || existing.tgId || null;
+  existing.photoUrl = myProfile.photoUrl || existing.photoUrl || "";
   existing.lastSeenAt = Date.now();
 
   // Agar initLoad === true bo'lsa, bazadagi saqlangan statistikani 0 bilan ezib yubormaymiz!
@@ -467,12 +482,7 @@ app.post("/api/tg/sync", (req, res) => {
   if (blockedUsersMap && typeof blockedUsersMap === "object") {
     existing.blockedUsersMap = Object.assign({}, existing.blockedUsersMap, blockedUsersMap);
   }
-  if (Array.isArray(savedFriends)) {
-    const map = {};
-    (existing.savedFriends || []).forEach(f => { if (f && f.id) map[f.id] = f; });
-    savedFriends.forEach(f => { if (f && f.id) map[f.id] = f; });
-    existing.savedFriends = Object.values(map);
-  }
+  // savedFriends 100% server-authoritative — klientdan kelgan savedFriends mavjud o'yinchiga qo'shilmaydi!
 
   ensurePlayerEconomy(existing);
   saveDb();
@@ -700,7 +710,10 @@ app.get("/api/tg/directory", (req, res) => {
   );
 
   const allSorted = Object.values(db.players).map(p => {
+    ensurePlayerEconomy(p);
     const score = computePlayerPowerScore(p);
+    const gList = Array.isArray(p.userStats && p.userStats.gifts) ? p.userStats.gifts : [];
+    const gSum = summarizeGifts(gList);
     return {
       id: p.id,
       name: p.name || p.id,
@@ -713,9 +726,9 @@ app.get("/api/tg/directory", (req, res) => {
       headshots: score.headshots,
       powerScore: score.powerScore,
       isOnline: score.isOnline,
-      prestige: p.prestige || 0,
-      giftTotalCount: (p.giftSummary && p.giftSummary.totalCount) || (Array.isArray(p.gifts) ? p.gifts.length : 0),
-      topGifts: (p.giftSummary && p.giftSummary.topGifts) || [],
+      prestige: Number((p.userStats && p.userStats.prestige) || computePrestigeFromGifts(gList) || 0),
+      giftTotalCount: gSum.totalCount,
+      topGifts: gSum.topGifts,
       lastSeenAt: p.lastSeenAt || p.updatedAt || p.createdAt || 0
     };
   });
@@ -755,7 +768,10 @@ app.get("/api/tg/directory", (req, res) => {
   const myFriends = Array.from(myFriendIds).map(fid => {
     const p = db.players[fid];
     if (p) {
+      ensurePlayerEconomy(p);
       const score = computePlayerPowerScore(p);
+      const gList = Array.isArray(p.userStats && p.userStats.gifts) ? p.userStats.gifts : [];
+      const gSum = summarizeGifts(gList);
       return {
         id: p.id,
         name: p.name || p.id,
@@ -769,9 +785,9 @@ app.get("/api/tg/directory", (req, res) => {
         headshots: score.headshots,
         powerScore: score.powerScore,
         isOnline: score.isOnline,
-        prestige: p.prestige || 0,
-        giftTotalCount: (p.giftSummary && p.giftSummary.totalCount) || (Array.isArray(p.gifts) ? p.gifts.length : 0),
-        topGifts: (p.giftSummary && p.giftSummary.topGifts) || [],
+        prestige: Number((p.userStats && p.userStats.prestige) || computePrestigeFromGifts(gList) || 0),
+        giftTotalCount: gSum.totalCount,
+        topGifts: gSum.topGifts,
         lastSeenAt: p.lastSeenAt || p.updatedAt || 0
       };
     }
@@ -1588,7 +1604,7 @@ app.post("/api/tg/friend-remove", (req, res) => {
   });
 
   saveDb();
-  return res.json({ ok: true });
+  return res.json({ ok: true, savedFriends: (db.players[cleanMy] && db.players[cleanMy].savedFriends) || [] });
 });
 
 // 6) Telegram Bot Webhook (/api/tg/webhook)

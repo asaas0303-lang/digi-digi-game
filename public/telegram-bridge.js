@@ -121,7 +121,6 @@
           },
           userStats: statsPayload,
           blockedUsersMap: tgState.blockedUsers,
-          savedFriends: tgState.friends,
           updatedAt: Date.now()
         })
       });
@@ -129,6 +128,10 @@
       if (res.ok) {
         const data = await res.json();
         if (data && data.player) {
+          if (Array.isArray(data.player.savedFriends)) {
+            tgState.friends = data.player.savedFriends;
+            saveLocalBridgeState();
+          }
           if (data.player.userStats) {
             tgState.coins = typeof data.player.userStats.coins === 'number' ? data.player.userStats.coins : tgState.coins;
             tgState.elo = typeof data.player.userStats.elo === 'number' ? data.player.userStats.elo : tgState.elo;
@@ -680,6 +683,11 @@
   });
 
   window.showBridgeToast = showBridgeToast;
+  window.tgBridgeRemoveLocalFriend = function(targetId) {
+    const cid = String(targetId || '').trim().toUpperCase();
+    tgState.friends = (tgState.friends || []).filter(f => String(f.id || '').toUpperCase() !== cid);
+    saveLocalBridgeState();
+  };
 
   window.digiSendQuickFriendReq = async function(targetId, targetName) {
     const name = targetName || targetId || "O'yinchi";
