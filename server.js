@@ -1607,6 +1607,65 @@ app.post("/api/tg/friend-remove", (req, res) => {
   return res.json({ ok: true, savedFriends: (db.players[cleanMy] && db.players[cleanMy].savedFriends) || [] });
 });
 
+// 5D) Do'stga bot orqali shaxsiy xabar yuborish (@username siz do'stlar uchun)
+app.post("/api/tg/friend-message", async (req, res) => {
+  try {
+    const { fromId, toId, text } = req.body || {};
+    const cleanFrom = String(fromId || "").trim().toUpperCase();
+    const cleanTo = String(toId || "").trim().toUpperCase();
+    const cleanText = String(text || "").trim().slice(0, 250);
+
+    if (!cleanFrom || !cleanTo || !cleanText) {
+      return res.status(400).json({ ok: false, error: "MISSING_DATA", message: "Ma'lumotlar to'liq emas." });
+    }
+
+    const fromP = db.players[cleanFrom];
+    const toP = db.players[cleanTo];
+    if (!fromP || !toP) {
+      return res.status(404).json({ ok: false, error: "PLAYER_NOT_FOUND", message: "O'yinchi topilmadi." });
+    }
+
+    // Do'stlik tekshiruvi: faqat o'zaro do'stlar (savedFriends) bir-biriga yozishi mumkin
+    const isFriends = (Array.isArray(fromP.savedFriends) && fromP.savedFriends.some(f => String(f.id).toUpperCase() === cleanTo))
+      || (Array.isArray(toP.savedFriends) && toP.savedFriends.some(f => String(f.id).toUpperCase() === cleanFrom));
+    if (!isFriends) {
+      return res.status(403).json({ ok: false, error: "NOT_FRIENDS", message: "Faqat o'zaro do'stlar bir-biriga xabar yoza oladi." });
+    }
+
+    // 4 soniyalik anti-spam cooldown
+    const now = Date.now();
+    if (fromP._lastMsgAt && (now - fromP._lastMsgAt < 4000)) {
+      return res.status(429).json({ ok: false, error: "COOLDOWN", message: "Biroz kuting (4 soniya cooldown)." });
+    }
+    fromP._lastMsgAt = now;
+
+    if (!toP.tgId) {
+      return res.status(400).json({ ok: false, error: "NO_TG_ID", message: "Ushbu o'yinchi Telegram botga ulanmagan." });
+    }
+
+    const rows = [];
+    if (fromP.username) {
+      const cleanU = String(fromP.username).replace(/^@+/, "");
+      rows.push([{ text: "💬 Telegramda javob yozish", url: "https://t.me/" + encodeURIComponent(cleanU) }]);
+    }
+    rows.push([{ text: "🎮 O'YINGA KIRISH", web_app: { url: APP_URL + "/" } }]);
+
+    const msgText = `💬 <b>Do'stingizdan yangi xabar!</b>\n\n👤 Kimdan: <b>${escapeHtml(fromP.name || fromP.id)}</b>\n✉️ Xabar: <i>"${escapeHtml(cleanText)}"</i>`;
+
+    await tgApiCall("sendMessage", {
+      chat_id: toP.tgId,
+      parse_mode: "HTML",
+      text: msgText,
+      reply_markup: { inline_keyboard: rows }
+    });
+
+    return res.json({ ok: true, delivered: true });
+  } catch (err) {
+    console.error("friend-message error:", err);
+    return res.status(500).json({ ok: false, error: "SERVER_ERROR", message: "Xabar yuborishda xatolik yuz berdi." });
+  }
+});
+
 // 6) Telegram Bot Webhook (/api/tg/webhook)
 app.post("/api/tg/webhook", async (req, res) => {
   try {

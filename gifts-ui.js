@@ -6,7 +6,7 @@
   'use strict';
 
   // 1. STATIK KONSTANTALAR VA VERSİYALASH
-  const GIFT_IMG_VER = '20261124_9';
+  const GIFT_IMG_VER = '20261124_10';
   let _pendingGiftRecipient = null;
   const GIFT_IMG_EXT = 'webp';
 
@@ -189,7 +189,9 @@
     const catalog = getGiftsCatalog();
     const myGiftsMap = getOwnedGiftCounts();
 
-    // 4 ta filtr tablarini yangilash
+    // 5 ta filtr tablarini yangilash (Barchasi, Tangaga, Sandiqdan, VIP Kristal, O'zimniki)
+    const myGiftsList = (window.userStats && Array.isArray(window.userStats.gifts)) ? window.userStats.gifts : [];
+    const myOwnedTotal = myGiftsList.length;
     const tabsContainer = document.getElementById('giftShopTabs');
     if (tabsContainer) {
       tabsContainer.innerHTML = `
@@ -197,6 +199,7 @@
         <button type="button" data-filter="coins" class="gift-tab-btn px-3 py-1 rounded-full text-[10.5px] font-bold transition whitespace-nowrap ${_activeFilter === 'coins' ? 'active bg-white/15 text-white border border-white/20' : 'text-slate-300 hover:text-white border border-white/10'}">💰 Tangaga (6)</button>
         <button type="button" data-filter="bonus" class="gift-tab-btn px-3 py-1 rounded-full text-[10.5px] font-bold transition whitespace-nowrap ${_activeFilter === 'bonus' ? 'active bg-white/15 text-white border border-white/20' : 'text-slate-300 hover:text-white border border-white/10'}">🧰 Sandiqdan (4)</button>
         <button type="button" data-filter="gems" class="gift-tab-btn px-3 py-1 rounded-full text-[10.5px] font-bold transition whitespace-nowrap ${_activeFilter === 'gems' ? 'active bg-white/15 text-white border border-white/20' : 'text-slate-300 hover:text-white border border-white/10'}">💎 VIP Kristal (5)</button>
+        <button type="button" data-filter="owned" class="gift-tab-btn px-3 py-1 rounded-full text-[10.5px] font-bold transition whitespace-nowrap ${_activeFilter === 'owned' ? 'active bg-sky-500/25 text-sky-200 border border-sky-400/60' : 'text-sky-300 hover:text-white border border-sky-500/30'}">🎒 O'zimniki (${myOwnedTotal})</button>
       `;
       tabsContainer.querySelectorAll('button[data-filter]').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -292,6 +295,66 @@
       h3.innerHTML = '<span>💎 VIP KRISTAL SOVG\'ALARI (5) — 1 💎 = 1,000 so\'m</span>';
       container.appendChild(h3);
       gemsGifts.forEach(g => container.appendChild(createGiftCardElement(g)));
+    } else if (_activeFilter === 'owned') {
+      const uGifts = (window.userStats && Array.isArray(window.userStats.gifts)) ? window.userStats.gifts : [];
+      if (uGifts.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-3 py-12 text-center text-slate-400 space-y-2">
+            <span class="text-3xl block">🎒</span>
+            <div class="text-xs font-bold text-slate-300">Sizda hozircha birorta ham sovg'a yo'q</div>
+            <p class="text-[10px] text-slate-500">Do'kondan yoki 3D Oltin Sandiqdan sovg'a oling va do'stlaringizga hadya qiling!</p>
+          </div>
+        `;
+      } else {
+        uGifts.forEach(item => {
+          const giftObj = catalog.find(g => g.id === item.giftId) || {
+            id: item.giftId,
+            name: item.giftName || "Sovg'a",
+            rarity: item.rarity || 'common',
+            icon: '🎁',
+            glow: '#f59e0b'
+          };
+          const rarity = RARITY_MAP[giftObj.rarity] || RARITY_MAP.common;
+          const imgUrl = getGiftImageUrl(giftObj.id);
+
+          const card = document.createElement('div');
+          card.className = `relative rounded-xl p-2 flex flex-col justify-between gap-1.5 select-none bg-gradient-to-b from-slate-900/90 to-slate-950 border ${rarity.border}`;
+
+          let sourceText = '';
+          if (item.source === 'bonus_case') sourceText = '🧰 Oltin Sandiq';
+          else if (item.fromName) sourceText = `👤 Kimdan: ${item.fromName}`;
+          else sourceText = '🛒 Do\'kondan xarid';
+
+          card.innerHTML = `
+            <div class="flex items-center justify-between gap-1 min-w-0">
+              <span class="text-[10.5px] font-bold text-white truncate" title="${giftObj.name}">${giftObj.name}</span>
+              <span class="text-[7.5px] font-bold px-1.5 py-0.2 rounded-full uppercase shrink-0 ${rarity.badge}">${rarity.name}</span>
+            </div>
+            <div class="h-[74px] w-full flex items-center justify-center relative overflow-hidden rounded-lg bg-[#050914]">
+              <div class="absolute inset-0 pointer-events-none" style="background: radial-gradient(circle at 50% 50%, ${giftObj.glow}2e 0%, transparent 74%);"></div>
+              <img src="${imgUrl}" alt="${giftObj.name}" class="max-h-[70px] max-w-[70px] scale-[1.08] object-contain relative z-10" style="-webkit-mask-image: radial-gradient(circle at 50% 50%, #000 62%, transparent 98%); mask-image: radial-gradient(circle at 50% 50%, #000 62%, transparent 98%);" />
+            </div>
+            <div class="space-y-1 pt-0.5 border-t border-white/5 text-[9px]">
+              <div class="flex items-center justify-between text-amber-300 font-mono font-bold">
+                <span>👑 +${(item.prestige || giftObj.prestige || 0).toLocaleString('en-US')}</span>
+                <span class="text-[8px] text-slate-400 font-sans truncate max-w-[85px]">${sourceText}</span>
+              </div>
+              <button type="button" class="btn-owned-transfer ios-btn-blue w-full py-1 text-[9.5px] font-bold rounded-lg mt-0.5 cursor-pointer">
+                ✈️ ${_pendingGiftRecipient ? `${escapeHtml(_pendingGiftRecipient.name || _pendingGiftRecipient.id)} ga hadya qilish` : 'Hadya qilish'}
+              </button>
+            </div>
+          `;
+          card.querySelector('.btn-owned-transfer').addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (_pendingGiftRecipient) {
+              openTransferGiftPanel(item, giftObj, _pendingGiftRecipient);
+            } else {
+              openTransferGiftPanel(item, giftObj);
+            }
+          });
+          container.appendChild(card);
+        });
+      }
     } else {
       const filtered = catalog.filter(g => g.category === _activeFilter);
       filtered.forEach(gift => {
@@ -1212,6 +1275,9 @@ To'lov rekvizitlarini yuborsangiz, chekni tashlayman.`;
             </div>
           </div>
           <div class="flex items-center gap-2 shrink-0">
+            <button id="btnSendMyOwnedToPlayer" type="button" class="hidden ios-btn-blue px-2.5 py-1 text-[10.5px] font-bold rounded-xl active:scale-95 transition cursor-pointer">
+              🎒 O'z sovg'alarimdan
+            </button>
             <button id="btnCollectionHeaderAction" type="button" class="ios-fh-stat-pill px-3 py-1 rounded-full text-xs font-bold text-amber-300 border border-amber-400/50 hover:bg-white/10 transition">
               🛒 Do'konga o'tish
             </button>
@@ -1251,10 +1317,14 @@ To'lov rekvizitlarini yuborsangiz, chekni tashlayman.`;
         <!-- Kolleksiya Vitrinasi (Grid) -->
         <div class="flex-1 min-h-0 overflow-y-auto p-3">
           <div id="playerCollectionGrid" class="grid grid-cols-3 gap-2.5"></div>
-          <div id="playerCollectionEmpty" class="hidden py-16 text-center text-slate-400 space-y-2">
+          <div id="playerCollectionEmpty" class="hidden py-14 text-center text-slate-400 space-y-2">
             <span class="text-3xl block">🎁</span>
-            <div class="text-xs font-bold text-slate-300">Hozircha sovg'alar kolleksiyasi bo'sh</div>
-            <p class="text-[10px] text-slate-500">Do'kondan sovg'a oling yoki 3D Oltin Sandiqdan eksklyuziv sovg'alarni yutib oling!</p>
+            <div id="collecEmptyTitle" class="text-xs font-bold text-slate-300">Hozircha sovg'alar kolleksiyasi bo'sh</div>
+            <p id="collecEmptyDesc" class="text-[10px] text-slate-500">Do'kondan sovg'a oling yoki 3D Oltin Sandiqdan eksklyuziv sovg'alarni yutib oling!</p>
+            <div id="collecEmptyActionRow" class="hidden flex items-center justify-center gap-2 pt-2">
+              <button id="btnCollecEmptySendOwned" type="button" class="ios-btn-blue px-3 py-1.5 text-xs font-bold rounded-xl shadow-lg cursor-pointer">🎒 O'z sovg'alarimdan yuborish</button>
+              <button id="btnCollecEmptySendShop" type="button" class="ios-btn-gold px-3 py-1.5 text-xs font-bold rounded-xl shadow-lg cursor-pointer">🛒 Do'kondan yangi sovg'a</button>
+            </div>
             <button id="btnCollecEmptySendGift" type="button" class="hidden mt-2 ios-btn-gold px-3 py-1.5 text-xs font-bold rounded-xl shadow-lg cursor-pointer">🎁 Unga Sovg'a Yuborish</button>
           </div>
         </div>
@@ -1378,6 +1448,7 @@ To'lov rekvizitlarini yuborsangiz, chekni tashlayman.`;
     const subTitleEl = document.getElementById('collectionModalSubtitle');
     const actionBtn = document.getElementById('btnCollectionHeaderAction');
 
+    const btnSendMyOwned = document.getElementById('btnSendMyOwnedToPlayer');
     if (isSelf) {
       titleEl.textContent = 'Mening Sovg\'alar Kolleksiyam';
       subTitleEl.textContent = 'Siz egalik qilayotgan barcha 3D sovg\'alar';
@@ -1386,10 +1457,11 @@ To'lov rekvizitlarini yuborsangiz, chekni tashlayman.`;
         modal.classList.add('hidden');
         openDigiGiftShopModal();
       };
+      if (btnSendMyOwned) btnSendMyOwned.classList.add('hidden');
     } else {
       titleEl.textContent = 'O\'yinchi Kolleksiyasi';
       subTitleEl.textContent = `${targetId} profilingizdagi sovg'alari`;
-      actionBtn.textContent = '🎁 Sovg\'a yuborish';
+      actionBtn.textContent = '🛒 Yangi sovg\'a olish';
       actionBtn.onclick = () => {
         const pName = document.getElementById('collecUserName')?.textContent || targetId;
         _pendingGiftRecipient = { id: targetId, name: pName };
@@ -1398,6 +1470,13 @@ To'lov rekvizitlarini yuborsangiz, chekni tashlayman.`;
         if (hub) hub.classList.add('hidden');
         openDigiGiftShopModal(_pendingGiftRecipient);
       };
+      if (btnSendMyOwned) {
+        btnSendMyOwned.classList.remove('hidden');
+        btnSendMyOwned.onclick = () => {
+          const pName = document.getElementById('collecUserName')?.textContent || targetId;
+          openSendMyGiftToRecipientModal({ id: targetId, name: pName });
+        };
+      }
     }
 
     // Serverdan o'yinchi kolleksiyasini yuklash
@@ -1441,21 +1520,35 @@ To'lov rekvizitlarini yuborsangiz, chekni tashlayman.`;
     grid.innerHTML = '';
 
     const emptySendBtn = document.getElementById('btnCollecEmptySendGift');
-    if (emptySendBtn) {
-      if (!isSelf) {
-        emptySendBtn.classList.remove('hidden');
-        emptySendBtn.onclick = () => {
+    const emptyActionRow = document.getElementById('collecEmptyActionRow');
+    const emptySendOwnedBtn = document.getElementById('btnCollecEmptySendOwned');
+    const emptySendShopBtn = document.getElementById('btnCollecEmptySendShop');
+
+    if (!isSelf) {
+      if (emptyActionRow) emptyActionRow.classList.remove('hidden');
+      if (emptySendBtn) emptySendBtn.classList.add('hidden');
+      if (emptySendOwnedBtn) {
+        emptySendOwnedBtn.onclick = () => {
+          const pName = document.getElementById('collecUserName')?.textContent || _activeCollectionPlayerId;
+          openSendMyGiftToRecipientModal({ id: _activeCollectionPlayerId, name: pName });
+        };
+      }
+      if (emptySendShopBtn) {
+        emptySendShopBtn.onclick = () => {
           const pName = document.getElementById('collecUserName')?.textContent || _activeCollectionPlayerId;
           _pendingGiftRecipient = { id: _activeCollectionPlayerId, name: pName };
-          modal.classList.add('hidden');
+          const collecModal = document.getElementById('modalPlayerCollection');
+          if (collecModal) collecModal.classList.add('hidden');
           const hub = document.getElementById('modalFriendsHub');
           if (hub) hub.classList.add('hidden');
           openDigiGiftShopModal(_pendingGiftRecipient);
         };
-      } else {
-        emptySendBtn.classList.add('hidden');
       }
+    } else {
+      if (emptyActionRow) emptyActionRow.classList.add('hidden');
+      if (emptySendBtn) emptySendBtn.classList.add('hidden');
     }
+
     if (gifts.length === 0) {
       emptyBox.classList.remove('hidden');
       return;
@@ -1626,10 +1719,16 @@ To'lov rekvizitlarini yuborsangiz, chekni tashlayman.`;
     }
   }
 
-  function openTransferGiftPanel(item, giftObj) {
+  function openTransferGiftPanel(item, giftObj, preselectRecipient) {
     _activeTransferItem = item;
-    _transferTargetFriend = null;
+    _transferTargetFriend = preselectRecipient || null;
     _transferActiveSubTab = 'friends';
+
+    // Kolleksiya modalini ochish (agar yopiq bo'lsa)
+    const collecModal = document.getElementById('modalPlayerCollection');
+    if (collecModal && collecModal.classList.contains('hidden')) {
+      collecModal.classList.remove('hidden');
+    }
 
     const panel = document.getElementById('collecTransferPanel');
     const nameLabel = document.getElementById('transferGiftNameLabel');
@@ -1758,6 +1857,25 @@ To'lov rekvizitlarini yuborsangiz, chekni tashlayman.`;
     });
   }
 
+  function openSendMyGiftToRecipientModal(recipient) {
+    const uStatsObj = window.userStats || (window.DIGI_TG_PROFILE && window.DIGI_TG_PROFILE.userStats) || { gifts: [] };
+    const myGiftsList = Array.isArray(uStatsObj.gifts) ? uStatsObj.gifts : [];
+    if (myGiftsList.length === 0) {
+      if (typeof window.showToast === 'function') {
+        window.showToast("Sizda hadya qilish uchun sovg'a yo'q. Avval Do'kondan oling!", 'ℹ️');
+      }
+      openDigiGiftShopModal(recipient);
+      return;
+    }
+    _pendingGiftRecipient = recipient;
+    _activeFilter = 'owned';
+    const collecModal = document.getElementById('modalPlayerCollection');
+    if (collecModal) collecModal.classList.add('hidden');
+    const hub = document.getElementById('modalFriendsHub');
+    if (hub) hub.classList.add('hidden');
+    openDigiGiftShopModal(recipient);
+  }
+
   function openDigiGiftShopModal(recipient) {
     if (recipient) _pendingGiftRecipient = recipient;
     const hub = document.getElementById('modalFriendsHub');
@@ -1779,6 +1897,8 @@ To'lov rekvizitlarini yuborsangiz, chekni tashlayman.`;
   // 9. GLOBAL EXPORTS
   window.renderDigiGiftShop = renderDigiGiftShop;
   window.openDigiGiftShopModal = openDigiGiftShopModal;
+  window.openSendMyGiftToRecipientModal = openSendMyGiftToRecipientModal;
+  window.openTransferGiftPanel = openTransferGiftPanel;
   window.openGiftDetailModal = openGiftDetailModal;
   window.openBuyGemsModal = openBuyGemsModal;
   window.openPlayerCollectionModal = openPlayerCollectionModal;

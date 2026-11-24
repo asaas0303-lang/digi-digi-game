@@ -526,6 +526,9 @@
     #lobbyView.digi-lobby-rot90 #modalFriendsHub {
       padding: 8px 14px 8px max(66px, calc(var(--digi-safe-left, 58px) + 8px)) !important;
     }
+    #lobbyView.digi-lobby-rot90 #modalFriendMsg {
+      padding: 8px 14px 8px max(66px, calc(var(--digi-safe-left, 58px) + 8px)) !important;
+    }
     #lobbyView.digi-lobby-rot90 #modalFriendsHub > div {
       height: 96% !important;
       max-height: 96% !important;
@@ -1427,6 +1430,28 @@
           </div>
 
         </div>
+      </div>
+    </div>
+
+    <!-- ==================== MODAL: TEZKOR DO'ST XABARI (#modalFriendMsg) ==================== -->
+    <div id="modalFriendMsg" class="hidden fixed inset-0 z-[85] flex items-center justify-center p-3 bg-slate-950/75 select-none">
+      <div class="ios-fh-sheet w-full max-w-sm p-4 flex flex-col gap-3 relative border border-sky-400/40 shadow-2xl">
+        <div class="flex items-center justify-between border-b border-white/10 pb-2.5">
+          <div class="flex items-center gap-1.5 min-w-0">
+            <span class="text-base">💬</span>
+            <h3 class="text-xs font-black text-white truncate">Xabar: <span id="fmsgTargetName" class="text-sky-300 font-extrabold">Do'st</span></h3>
+          </div>
+          <button id="btnCloseFriendMsgModal" type="button" class="w-6 h-6 rounded-full bg-white/10 hover:bg-white/20 text-slate-300 text-[11px] font-bold flex items-center justify-center cursor-pointer" title="Yopish">✕</button>
+        </div>
+        <p class="text-[10px] text-slate-300/90 leading-snug">Bu do'stda Telegram @username yo'q — xabaringiz uning Telegramiga bot orqali darhol yetkaziladi!</p>
+        <textarea id="fmsgInput" rows="3" maxlength="250" class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl p-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-400 resize-none" placeholder="Xabaringizni yozing..."></textarea>
+        <div class="flex items-center justify-between text-[9px] text-slate-500 font-mono px-0.5">
+          <span>Max 250 belgi</span>
+          <span id="fmsgCharCount">0/250</span>
+        </div>
+        <button id="btnSendFriendMsg" type="button" class="ios-btn-blue w-full py-2 text-xs font-extrabold rounded-xl flex items-center justify-center gap-1.5 active:scale-95 transition cursor-pointer">
+          <span>✈️ Telegramiga yuborish</span>
+        </button>
       </div>
     </div>
 
@@ -3183,6 +3208,60 @@
         incomingModal.classList.add('hidden');
         showToast('Taklif rad etildi.', '✕');
       });
+
+      // modalFriendMsg hodisalarini bog'lash
+      const btnSendFriendMsg = document.getElementById('btnSendFriendMsg');
+      if (btnSendFriendMsg) {
+        btnSendFriendMsg.addEventListener('click', async () => {
+          const inputEl = document.getElementById('fmsgInput');
+          const text = inputEl ? inputEl.value.trim() : '';
+          if (!text) {
+            if (typeof showToast === 'function') showToast("Xabar matnini kiriting!", '⚠️');
+            return;
+          }
+          const myId = getActiveMyId();
+          if (!_activeFriendMsgTargetPid) return;
+          btnSendFriendMsg.disabled = true;
+          try {
+            const res = await fetch('/api/tg/friend-message', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                fromId: myId,
+                toId: _activeFriendMsgTargetPid,
+                text: text
+              })
+            });
+            const data = await res.json();
+            if (data && data.ok) {
+              const modal = document.getElementById('modalFriendMsg');
+              if (modal) modal.classList.add('hidden');
+              if (typeof showToast === 'function') showToast("Xabar Telegramiga yetkazildi!", "✈️");
+            } else {
+              const msg = (data && (data.message || data.error)) || "Xabar yuborib bo'lmadi.";
+              if (typeof showToast === 'function') showToast(msg, '⚠️');
+            }
+          } catch (err) {
+            if (typeof showToast === 'function') showToast("Tarmoq xatosi: " + err.message, '⚠️');
+          } finally {
+            btnSendFriendMsg.disabled = false;
+          }
+        });
+      }
+      const btnCloseFriendMsgModal = document.getElementById('btnCloseFriendMsgModal');
+      if (btnCloseFriendMsgModal) {
+        btnCloseFriendMsgModal.addEventListener('click', () => {
+          const modal = document.getElementById('modalFriendMsg');
+          if (modal) modal.classList.add('hidden');
+        });
+      }
+      const fmsgInput = document.getElementById('fmsgInput');
+      if (fmsgInput) {
+        fmsgInput.addEventListener('input', () => {
+          const charCountEl = document.getElementById('fmsgCharCount');
+          if (charCountEl) charCountEl.textContent = `${fmsgInput.value.length}/250`;
+        });
+      }
 
       const btnNotifBell = document.getElementById('btnSimulateIncomingInvite');
       if (btnNotifBell) {
@@ -8910,7 +8989,21 @@
         return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
       }
 
-      function openFriendTelegramChat(username, tgId, displayName) {
+      let _activeFriendMsgTargetPid = null;
+      function openFriendMsgModal(targetPid, displayName) {
+        _activeFriendMsgTargetPid = targetPid;
+        const modal = document.getElementById('modalFriendMsg');
+        const targetNameEl = document.getElementById('fmsgTargetName');
+        const inputEl = document.getElementById('fmsgInput');
+        const charCountEl = document.getElementById('fmsgCharCount');
+        if (targetNameEl) targetNameEl.textContent = displayName || targetPid;
+        if (inputEl) inputEl.value = '';
+        if (charCountEl) charCountEl.textContent = '0/250';
+        if (modal) modal.classList.remove('hidden');
+      }
+      window.openFriendMsgModal = openFriendMsgModal;
+
+      function openFriendTelegramChat(username, tgId, displayName, targetPid) {
         const label = displayName || "Do'stingiz";
         let cleanUser = String(username || '').trim().replace(/^@+/, '');
         if (!cleanUser && /^@[a-zA-Z0-9_]{3,32}$/.test(String(displayName || '').trim())) {
@@ -8934,28 +9027,8 @@
           return;
         }
 
-        if (cleanTgId) {
-          let left = false;
-          const onV = () => { if (document.hidden) left = true; };
-          document.addEventListener('visibilitychange', onV, { once: true });
-          const deepUrl = 'tg://user?id=' + cleanTgId;
-          try {
-            window.location.href = deepUrl;
-          } catch (_) {}
-          try {
-            const a = document.createElement('a');
-            a.href = deepUrl;
-            a.style.display = 'none';
-            document.body.appendChild(a);
-            a.click();
-            setTimeout(() => { try { a.remove(); } catch (_) {} }, 250);
-          } catch (_) {}
-
-          setTimeout(() => {
-            if (!left && !document.hidden && typeof showToast === 'function') {
-              showToast(`${label} da @username yo'q (Telegram maxfiylik cheklovi). Unga 🎁 sovg'a yuborishingiz mumkin!`, '💬');
-            }
-          }, 700);
+        if (cleanTgId && targetPid) {
+          openFriendMsgModal(targetPid, displayName);
           return;
         }
 
@@ -9293,7 +9366,7 @@
               }
               return;
             } else if (action === 'chat') {
-              openFriendTelegramChat(btn.getAttribute('data-tg-user') || btn.dataset.tgUser || '', btn.getAttribute('data-tg-id') || btn.dataset.tgId || '', btn.getAttribute('data-pname') || btn.dataset.pname || '');
+              openFriendTelegramChat(btn.getAttribute('data-tg-user') || btn.dataset.tgUser || '', btn.getAttribute('data-tg-id') || btn.dataset.tgId || '', btn.getAttribute('data-pname') || btn.dataset.pname || '', pid);
               return;
             } else if (action === 'add') {
               try {
@@ -11018,7 +11091,7 @@
   </script>
   <script src="/gifts-catalog.js?v=20261124_1"></script>
   <script src="/telegram-bridge.js?v=20261124_9"></script>
-  <script src="/gifts-ui.js?v=20261124_9"></script>
+  <script src="/gifts-ui.js?v=20261124_10"></script>
   <script src="/mp-client.js"></script>
   <script src="/sfx-engine.js"></script>
 </body>
