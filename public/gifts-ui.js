@@ -1,12 +1,12 @@
 // ==============================================================================
 // DIGI DIGI — ULTRA 3D SOVG'ALAR DO'KONI VA KRISTAL OYNASI (GIFTS-UI.JS)
-// 2B-BOSQICH: Ultra-3D Renders, Telegram Star Gifts 3D Tilt, Safe-Area & 60 FPS
+// 3-BOSQICH: O'yinchi Kolleksiyasi, Hadya Qilish (Transfer), Rasmiy Kristal Do'koni
 // ==============================================================================
 (function () {
   'use strict';
 
   // 1. STATIK KONSTANTALAR VA VERSİYALASH
-  const GIFT_IMG_VER = '20261124_2';
+  const GIFT_IMG_VER = '20261124_3';
   const GIFT_IMG_EXT = 'webp';
 
   function getGiftImageUrl(giftId) {
@@ -14,78 +14,106 @@
   }
   window.getDigiGiftThumb = getGiftImageUrl;
 
-  // Telegram Admin Lichkasi (Kristal sotib olish)
-  const TELEGRAM_ADMIN_DEEP_LINK = 'tg://user?id=5155194813';
-  const TELEGRAM_ADMIN_FALLBACK_URL = 'https://t.me/Abror444';
-
-  // 5 ta Rasmiy Kristal Paketi
-  const GEMS_PACKAGES = [
-    { id: 'gems_50', gems: 50, priceUzs: 50000, bonus: '', badge: 'Boshlang\'ich' },
-    { id: 'gems_120', gems: 120, priceUzs: 100000, bonus: '+20% BONUS', badge: 'Ommabop' },
-    { id: 'gems_300', gems: 300, priceUzs: 250000, bonus: '+25% BONUS', badge: 'Tejamkor' },
-    { id: 'gems_650', gems: 650, priceUzs: 50000, bonus: '+30% BONUS', badge: 'Yulduz' },
-    { id: 'gems_1500', gems: 1500, priceUzs: 1000000, bonus: '+50% VIP BONUS', badge: '👑 VIP Elita' }
-  ];
+  // Rasmiy 5 ta Kristal Paketi (1 💎 = 1,000 so'm, 0% soxta bonus!)
+  function getGemsPackages() {
+    if (window.DIGI_GEMS_CONFIG && Array.isArray(window.DIGI_GEMS_CONFIG.packages) && window.DIGI_GEMS_CONFIG.packages.length > 0) {
+      return window.DIGI_GEMS_CONFIG.packages.map(p => ({
+        id: 'gems_' + p.gems,
+        gems: p.gems,
+        uzs: p.uzs || p.gems * 1000,
+        badge: p.badge || '',
+        title: p.label || (p.gems + ' Kristal')
+      }));
+    }
+    return [
+      { id: 'gems_15', gems: 15, uzs: 15000, badge: '', title: 'Start Paket' },
+      { id: 'gems_35', gems: 35, uzs: 35000, badge: '🔥 OMMABOP', title: 'Mashhur' },
+      { id: 'gems_75', gems: 75, uzs: 75000, badge: '👑 VIP', title: 'VIP Paket' },
+      { id: 'gems_150', gems: 150, uzs: 150000, badge: '⚡ ELITA', title: 'Elita Paket' },
+      { id: 'gems_300', gems: 300, uzs: 300000, badge: '💎 MAX', title: 'Imperator' }
+    ];
+  }
 
   // Nodirlik Ranglari va Nomlari
   const RARITY_MAP = {
     common: { name: 'Oddiy', color: '#94a3b8', border: 'border-slate-700/60', badge: 'bg-slate-800 text-slate-300' },
+    uncommon: { name: 'Maxsus', color: '#34d399', border: 'border-emerald-500/50', badge: 'bg-emerald-950/85 text-emerald-300' },
     rare: { name: 'Nodir', color: '#38bdf8', border: 'border-sky-500/50', badge: 'bg-sky-950/80 text-sky-300' },
     epic: { name: 'Epik', color: '#c084fc', border: 'border-purple-500/50', badge: 'bg-purple-950/80 text-purple-300' },
     legendary: { name: 'Afsonaviy', color: '#f59e0b', border: 'border-amber-500/60 shadow-[0_0_12px_rgba(245,158,11,0.25)]', badge: 'bg-amber-950/80 text-amber-300' },
     mythic: { name: 'Mifik', color: '#f43f5e', border: 'border-rose-500/70 shadow-[0_0_16px_rgba(244,63,94,0.35)]', badge: 'bg-rose-950/80 text-rose-300' }
   };
 
-  // 2. SOVG'ALAR KATALOGINI ANIQLASH (gifts-catalog.js dan yoki zaxira)
+  // 2. HAQIQIY O'YINCHI PROFILINI ANIQ OLISH FUNKSIYASI
+  function getCurrentPlayerIdentity() {
+    const tgU = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) || null;
+    const prof = window.DIGI_TG_PROFILE || {};
+    const doomEl = document.getElementById('myDoomId');
+    const nameEl = document.getElementById('myNameInput');
+
+    const id = String(prof.myId || (doomEl && doomEl.textContent) || (tgU && tgU.id ? 'TG-' + tgU.id : '') || '').trim().toUpperCase();
+    const tgId = String(prof.myTgId || (tgU && tgU.id) || '').trim();
+    const username = String(prof.myUsername || (tgU && tgU.username) || '').replace(/^@/, '').trim();
+    const tgFullName = tgU ? [tgU.first_name, tgU.last_name].filter(Boolean).join(' ').trim() : '';
+    const name = String((nameEl && nameEl.value) || prof.myName || tgFullName || username || id || "O'yinchi").trim();
+    const photoUrl = String(prof.myPhoto || (tgU && tgU.photo_url) || '').trim();
+
+    return { id, tgId, username, name, photoUrl };
+  }
+
+  // 3. SOVG'ALAR KATALOGINI ANIQLASH (gifts-catalog.js dan yoki zaxira)
   function getGiftsCatalog() {
     if (Array.isArray(window.DIGI_GIFTS_CATALOG) && window.DIGI_GIFTS_CATALOG.length > 0) {
       return window.DIGI_GIFTS_CATALOG;
     }
     return [
-      { id: 'rose_red', name: 'Qizil Atirgul', icon: '🌹', category: 'coins', price: 1500, rarity: 'common', prestige: 5, desc: 'Muhabbat va ehtirom ramzi bo\'lgan baxmal bargli qizil atirgul.', glow: '#ef4444' },
-      { id: 'teddy_bear', name: 'Teddi Ayiqcha', icon: '🧸', category: 'coins', price: 3500, rarity: 'common', prestige: 12, desc: 'Yumshoq va do\'stona ayiqcha, oltin bantikli.', glow: '#f59e0b' },
-      { id: 'royal_bouquet', name: 'Qirollik Guldastasi', icon: '💐', category: 'coins', price: 7000, rarity: 'rare', prestige: 25, desc: 'Eng sara qizil va oltin gullardan yasalgan hashamatli guldasta.', glow: '#ec4899' },
-      { id: 'party_cake', name: 'Bayram Torti', icon: '🎂', category: 'coins', price: 12000, rarity: 'rare', prestige: 45, desc: '3 qavatli qulupnayli shirin bayram torti.', glow: '#fb7185' },
-      { id: 'gold_champagne', name: 'Oltin Shampan', icon: '🍾', category: 'coins', price: 20000, rarity: 'epic', prestige: 75, desc: 'Muzli oltin chelakda taqdim etiladigan elita shampan vinosi.', glow: '#facc15' },
-      { id: 'diamond_ring', name: 'Olmos Uzuk', icon: '💍', category: 'coins', price: 35000, rarity: 'epic', prestige: 140, desc: 'Toza olmos bilan bezatilgan 18K oq oltin uzuk.', glow: '#38bdf8' },
-      { id: 'tactical_medal', name: 'Oltin Taktik Medalyon', icon: '🎖️', category: 'bonus', price: 0, rarity: 'rare', prestige: 50, desc: 'Jang maydonidagi jasorat uchun beriladigan qanotli yulduzli medal.', glow: '#f59e0b' },
-      { id: 'karambit_neon', name: 'Karambit Neon', icon: '🗡️', category: 'bonus', price: 0, rarity: 'epic', prestige: 100, desc: 'Kiberpank neon moviy jiloli taktik karambit pichog\'i.', glow: '#06b6d4' },
-      { id: 'titan_shield', name: 'Titan Qalqon', icon: '🛡️', category: 'bonus', price: 0, rarity: 'legendary', prestige: 200, desc: 'Oltin burgutli, singmas titan va moviy neon himoyasi.', glow: '#38bdf8' },
-      { id: 'golden_dragon', name: 'Oltin Ajdar', icon: '🐉', category: 'bonus', price: 0, rarity: 'mythic', prestige: 500, desc: 'Qizil yoqut ko\'zli, 24K toza oltindan quyilgan ulug\'vor ajdar.', glow: '#eab308' },
-      { id: 'gold_watch', name: 'Oltin Soat', icon: '⌚', category: 'gems', price: 35, uzsPrice: 35000, rarity: 'epic', prestige: 150, desc: 'Skelet siferblatli, mukammal mexanizmga ega 24K oltin soat.', glow: '#f59e0b' },
-      { id: 'blue_brilliant', name: 'Moviy Brilliant', icon: '💎', category: 'gems', price: 80, uzsPrice: 80000, rarity: 'legendary', prestige: 350, desc: 'Noyob 57 qirrali nur taratuvchi moviy olmos marvaridi.', glow: '#00f2fe' },
-      { id: 'emperor_crown', name: 'Imperator Toji', icon: '👑', category: 'gems', price: 150, uzsPrice: 150000, rarity: 'legendary', prestige: 700, desc: 'Qizil baxmalli, yoqut-zumradli imperatorlik toji.', glow: '#fbbf24' },
-      { id: 'gold_hypercar', name: 'Oltin Giperkar', icon: '🏎️', category: 'gems', price: 300, uzsPrice: 300000, rarity: 'mythic', prestige: 1500, desc: 'Aerodinamik karbon-oltin korpusli 1500 ot kuchli superkar.', glow: '#f59e0b' },
-      { id: 'private_jet', name: 'Shaxsiy Biznes-Jet', icon: '✈️', category: 'gems', price: 600, uzsPrice: 60000, rarity: 'mythic', prestige: 3000, desc: 'Platina va oltin qanotli hashamatli shaxsiy samolyot.', glow: '#e2e8f0' }
+      { id: 'rose_red', name: 'Qizil Atirgul', icon: '🌹', category: 'coins', price: 49000, rarity: 'common', prestige: 50, desc: 'Baxmal qizil gulbargli 3D atirgul — ehtirom va samimiy sovg\'a.', glow: '#ef4444' },
+      { id: 'teddy_bear', name: 'Teddi Ayiqcha', icon: '🧸', category: 'coins', price: 89000, rarity: 'common', prestige: 100, desc: 'Yumshoq va do\'stona ayiqcha, oltin bantikli.', glow: '#f59e0b' },
+      { id: 'royal_bouquet', name: 'Qirollik Guldastasi', icon: '💐', category: 'coins', price: 149000, rarity: 'uncommon', prestige: 180, desc: 'Qizil va oltin atirgullar guldastasi.', glow: '#ec4899' },
+      { id: 'party_cake', name: 'Bayram Torti', icon: '🎂', category: 'coins', price: 220000, rarity: 'uncommon', prestige: 280, desc: '3 qavatli qulupnayli shirin bayram torti.', glow: '#fb7185' },
+      { id: 'gold_champagne', name: 'Oltin Shampan', icon: '🍾', category: 'coins', price: 350000, rarity: 'rare', prestige: 450, desc: 'Oltin chelakda taqdim etiladigan elita shampan.', glow: '#facc15' },
+      { id: 'diamond_ring', name: 'Olmos Uzuk', icon: '💍', category: 'coins', price: 550000, rarity: 'rare', prestige: 750, desc: 'Toza olmos bilan bezatilgan 18K oq oltin uzuk.', glow: '#38bdf8' },
+      { id: 'tactical_medal', name: 'Taktik Medalyon', icon: '🎖️', category: 'bonus', price: 0, rarity: 'rare', prestige: 400, desc: 'Jang maydonidagi jasorat uchun beriladigan qanotli yulduzli medal.', glow: '#f59e0b' },
+      { id: 'karambit_neon', name: 'Karambit Neon', icon: '🗡️', category: 'bonus', price: 0, rarity: 'epic', prestige: 900, desc: 'Kiberpank neon moviy jiloli taktik karambit pichog\'i.', glow: '#06b6d4' },
+      { id: 'titan_shield', name: 'Titan Qalqon', icon: '🛡️', category: 'bonus', price: 0, rarity: 'epic', prestige: 1500, desc: 'Oltin burgutli, singmas titan va moviy neon himoyasi.', glow: '#38bdf8' },
+      { id: 'golden_dragon', name: 'Oltin Ajdar', icon: '🐉', category: 'bonus', price: 0, rarity: 'mythic', prestige: 3000, desc: 'Qizil yoqut ko\'zli, 24K toza oltindan quyilgan ulug\'vor ajdar.', glow: '#eab308' },
+      { id: 'gold_watch', name: 'Oltin Soat', icon: '⌚', category: 'gems', price: 15, uzsPrice: 15000, rarity: 'epic', prestige: 1200, desc: 'Skelet siferblatli 24K oltin xronograf soat.', glow: '#f59e0b' },
+      { id: 'blue_brilliant', name: 'Moviy Brilliant', icon: '💎', category: 'gems', price: 35, uzsPrice: 35000, rarity: 'legendary', prestige: 3000, desc: 'Noyob 57 qirrali nur taratuvchi moviy olmos marvaridi.', glow: '#00f2fe' },
+      { id: 'emperor_crown', name: 'Imperator Toji', icon: '👑', category: 'gems', price: 75, uzsPrice: 75000, rarity: 'legendary', prestige: 7000, desc: 'Qizil baxmalli, yoqut-zumradli imperatorlik toji.', glow: '#fbbf24' },
+      { id: 'gold_hypercar', name: 'Oltin Giperkar', icon: '🏎️', category: 'gems', price: 150, uzsPrice: 150000, rarity: 'mythic', prestige: 15000, desc: 'Aerodinamik karbon-oltin korpusli 1500 ot kuchli superkar.', glow: '#f59e0b' },
+      { id: 'private_jet', name: 'Shaxsiy Biznes-Jet', icon: '✈️', category: 'gems', price: 300, uzsPrice: 300000, rarity: 'mythic', prestige: 30000, desc: 'Platina va oltin qanotli hashamatli shaxsiy samolyot.', glow: '#e2e8f0' }
     ];
   }
 
-  // 3. MAXSUS CSS STILLARNI SAHNAGA JOYLASHTIRISH (SAFE-AREA VA 3D TILT UCHUN)
+  function getOwnedGiftCounts() {
+    const counts = {};
+    const gifts = (window.userStats && Array.isArray(window.userStats.gifts)) ? window.userStats.gifts : [];
+    gifts.forEach(g => {
+      const gid = typeof g === 'string' ? g : (g.giftId || g.id);
+      if (gid) counts[gid] = (counts[gid] || 0) + (g.count || 1);
+    });
+    return counts;
+  }
+
+  // 4. MAXSUS CSS STILLARNI SAHNAGA JOYLASHTIRISH
   function ensureGiftsCustomStyles() {
     if (document.getElementById('digi-gifts-custom-css')) return;
     const style = document.createElement('style');
     style.id = 'digi-gifts-custom-css';
     style.textContent = `
-      /* Telegram Star Gifts Uslubidagi Silliq 3D Suzish */
       @keyframes digiGiftIdleFloat {
-        0%, 100% {
-          transform: rotateY(-5deg) rotateX(3deg) translateY(0px);
-        }
-        50% {
-          transform: rotateY(5deg) rotateX(-3deg) translateY(-5px);
-        }
+        0%, 100% { transform: rotateY(-5deg) rotateX(3deg) translateY(0px); }
+        50% { transform: rotateY(5deg) rotateX(-3deg) translateY(-5px); }
       }
       .digi-gift-card-idle {
         animation: digiGiftIdleFloat 4.2s ease-in-out infinite;
       }
 
-      /* Golografik Yorug'lik Chizig'i */
       .digi-gift-sheen {
         pointer-events: none;
         transition: opacity 0.2s ease-out, transform 0.1s ease-out;
       }
 
-      /* Uchqunlar */
       @keyframes digiSparkTwinkle {
         0%, 100% { opacity: 0.2; transform: scale(0.7); }
         50% { opacity: 1; transform: scale(1.2); }
@@ -101,15 +129,17 @@
         text-shadow: 0 0 6px rgba(253, 224, 71, 0.8);
       }
 
-      /* 90° Yonbosh rejimda Telegram Safe-Area Himoyasi (#modalGiftDetail, #modalBuyGems, #modalShop) */
+      /* 90° Yonbosh rejimda Telegram Safe-Area Himoyasi */
       #lobbyView.digi-lobby-rot90 #modalGiftDetail,
       #lobbyView.digi-lobby-rot90 #modalBuyGems,
-      #lobbyView.digi-lobby-rot90 #modalShop {
+      #lobbyView.digi-lobby-rot90 #modalShop,
+      #lobbyView.digi-lobby-rot90 #modalPlayerCollection {
         padding: 8px 14px 8px max(66px, calc(var(--digi-safe-left, 58px) + 8px)) !important;
       }
       #lobbyView.digi-lobby-rot90 #modalGiftDetail > div,
       #lobbyView.digi-lobby-rot90 #modalBuyGems > div,
-      #lobbyView.digi-lobby-rot90 #modalShop > div {
+      #lobbyView.digi-lobby-rot90 #modalShop > div,
+      #lobbyView.digi-lobby-rot90 #modalPlayerCollection > div {
         height: 95% !important;
         max-height: 95% !important;
       }
@@ -117,7 +147,7 @@
     document.head.appendChild(style);
   }
 
-  // 4. DO'KON VITRINASI (#modalShop -> #giftShopGrid)
+  // 5. DO'KON VITRINASI (#modalShop -> #giftShopGrid)
   let _activeFilter = 'all';
 
   function renderDigiGiftShop() {
@@ -126,28 +156,20 @@
     if (!container) return;
 
     const catalog = getGiftsCatalog();
-    const uStats = window.userStats || { coins: 0, gems: 0, gifts: [] };
-    const myGiftsMap = {};
-    if (Array.isArray(uStats.gifts)) {
-      uStats.gifts.forEach(g => {
-        const gid = typeof g === 'string' ? g : g.id;
-        myGiftsMap[gid] = (myGiftsMap[gid] || 0) + (g.count || 1);
-      });
-    }
+    const myGiftsMap = getOwnedGiftCounts();
 
-    // Filtr tablari listenerlarini o'rnatish
+    // 4 ta filtr tablarini yangilash
     const tabsContainer = document.getElementById('giftShopTabs');
-    if (tabsContainer && !tabsContainer._bound) {
-      tabsContainer._bound = true;
+    if (tabsContainer) {
+      tabsContainer.innerHTML = `
+        <button type="button" data-filter="all" class="gift-tab-btn px-3 py-1 rounded-full text-[10.5px] font-bold transition whitespace-nowrap ${_activeFilter === 'all' ? 'active bg-white/15 text-white border border-white/20' : 'text-slate-300 hover:text-white border border-white/10'}">🎁 Barchasi (15)</button>
+        <button type="button" data-filter="coins" class="gift-tab-btn px-3 py-1 rounded-full text-[10.5px] font-bold transition whitespace-nowrap ${_activeFilter === 'coins' ? 'active bg-white/15 text-white border border-white/20' : 'text-slate-300 hover:text-white border border-white/10'}">💰 Tangaga (6)</button>
+        <button type="button" data-filter="bonus" class="gift-tab-btn px-3 py-1 rounded-full text-[10.5px] font-bold transition whitespace-nowrap ${_activeFilter === 'bonus' ? 'active bg-white/15 text-white border border-white/20' : 'text-slate-300 hover:text-white border border-white/10'}">🧰 Sandiqdan (4)</button>
+        <button type="button" data-filter="gems" class="gift-tab-btn px-3 py-1 rounded-full text-[10.5px] font-bold transition whitespace-nowrap ${_activeFilter === 'gems' ? 'active bg-white/15 text-white border border-white/20' : 'text-slate-300 hover:text-white border border-white/10'}">💎 VIP Kristal (5)</button>
+      `;
       tabsContainer.querySelectorAll('button[data-filter]').forEach(btn => {
         btn.addEventListener('click', () => {
           _activeFilter = btn.getAttribute('data-filter') || 'all';
-          tabsContainer.querySelectorAll('button[data-filter]').forEach(b => {
-            b.classList.remove('active', 'bg-white/15', 'text-white', 'border-white/20');
-            b.classList.add('text-slate-300', 'border-white/10');
-          });
-          btn.classList.add('active', 'bg-white/15', 'text-white', 'border-white/20');
-          btn.classList.remove('text-slate-300', 'border-white/10');
           renderDigiGiftShop();
         });
       });
@@ -155,21 +177,7 @@
 
     container.innerHTML = '';
 
-    const filtered = catalog.filter(g => {
-      if (_activeFilter === 'all') return true;
-      return g.category === _activeFilter;
-    });
-
-    if (filtered.length === 0) {
-      container.innerHTML = `
-        <div class="col-span-3 py-10 text-center text-slate-400 text-xs">
-          Bu bo'limda hozircha sovg'alar mavjud emas
-        </div>
-      `;
-      return;
-    }
-
-    filtered.forEach(gift => {
+    function createGiftCardElement(gift) {
       const rarity = RARITY_MAP[gift.rarity] || RARITY_MAP.common;
       const ownedCount = myGiftsMap[gift.id] || 0;
       const imgUrl = getGiftImageUrl(gift.id);
@@ -178,35 +186,33 @@
       if (gift.category === 'coins') {
         priceHtml = `<span class="text-amber-300 font-mono font-extrabold text-[10px]">$${gift.price.toLocaleString('en-US')}</span>`;
       } else if (gift.category === 'bonus') {
-        priceHtml = `<span class="text-amber-400 font-bold text-[9px] flex items-center gap-0.5">🎰 Sandiq</span>`;
+        priceHtml = `<span class="text-amber-400 font-bold text-[9px] flex items-center gap-0.5">🔒 Faqat Sandiq</span>`;
       } else if (gift.category === 'gems') {
         priceHtml = `<span class="text-cyan-300 font-mono font-extrabold text-[10px] flex items-center gap-0.5">💎 ${gift.price}</span>`;
       }
 
       const card = document.createElement('div');
-      card.className = `relative rounded-xl p-2 flex flex-col justify-between gap-1.5 cursor-pointer active:scale-95 transition-all duration-150 select-none bg-gradient-to-b from-slate-900/90 to-slate-950 border ${rarity.border} hover:border-sky-400/70`;
+      card.className = `relative rounded-xl p-1.5 flex flex-col justify-between gap-1 cursor-pointer active:scale-95 transition-all duration-150 select-none bg-gradient-to-b from-slate-900/90 to-slate-950 border ${rarity.border} hover:border-sky-400/70`;
 
       card.innerHTML = `
         <!-- Tepada: Nomi va Nodirlik belgisi -->
         <div class="flex items-center justify-between gap-1 min-w-0">
-          <span class="text-[11px] font-bold text-white truncate" title="${gift.name}">${gift.name}</span>
-          <span class="text-[8px] font-bold px-1.5 py-0.2 rounded-full uppercase shrink-0 ${rarity.badge}">${rarity.name}</span>
+          <span class="text-[10.5px] font-bold text-white truncate" title="${gift.name}">${gift.name}</span>
+          <span class="text-[7.5px] font-bold px-1.5 py-0.2 rounded-full uppercase shrink-0 ${rarity.badge}">${rarity.name}</span>
         </div>
 
-        <!-- O'rtada: Seamless Ultra-3D Rasm Sahna (Radial Niqob va Aura bilan) -->
-        <div class="h-[92px] w-full flex items-center justify-center relative overflow-hidden rounded-lg bg-[#050914]" style="box-shadow: inset 0 2px 10px rgba(0,0,0,0.85);">
-          <!-- Radial Aura -->
+        <!-- O'rtada: Ixcham Seamless 3D Rasm Sahna (74px) -->
+        <div class="h-[74px] w-full flex items-center justify-center relative overflow-hidden rounded-lg bg-[#050914]" style="box-shadow: inset 0 2px 10px rgba(0,0,0,0.85);">
           <div class="absolute inset-0 pointer-events-none" style="background: radial-gradient(circle at 50% 50%, ${gift.glow}2e 0%, transparent 74%);"></div>
           
-          <!-- Ultra-3D Rasm -->
           <img src="${imgUrl}" 
                alt="${gift.name}" 
-               class="max-h-[82px] max-w-[82px] object-contain relative z-10 transition-transform duration-200 group-hover:scale-105"
+               class="max-h-[70px] max-w-[70px] scale-[1.08] object-contain relative z-10 transition-transform duration-200"
                style="-webkit-mask-image: radial-gradient(circle at 50% 50%, #000 62%, transparent 98%); mask-image: radial-gradient(circle at 50% 50%, #000 62%, transparent 98%);"
                loading="lazy" 
                decoding="async" 
                draggable="false"
-               onerror="this.onerror=null; this.parentElement.innerHTML='<span class=\\'text-3xl select-none\\'>${gift.icon}</span>';" />
+               onerror="this.onerror=null; this.parentElement.innerHTML='<span class=\\'text-2xl select-none\\'>${gift.icon}</span>';" />
 
           ${ownedCount > 0 ? `
             <span class="absolute bottom-1 right-1 z-20 text-[8.5px] font-mono font-bold bg-emerald-950/90 text-emerald-300 border border-emerald-500/50 px-1.5 py-0.2 rounded-full shadow">
@@ -216,9 +222,9 @@
         </div>
 
         <!-- Pastda: Narx va Obro' -->
-        <div class="flex items-center justify-between gap-1 pt-0.5 border-t border-white/5 text-[9.5px]">
+        <div class="flex items-center justify-between gap-1 pt-0.5 border-t border-white/5 text-[9px]">
           <div class="min-w-0 truncate">${priceHtml}</div>
-          <span class="text-amber-400/90 font-mono font-bold shrink-0 text-[8.5px]">+${gift.prestige} ⭐</span>
+          <span class="text-amber-400 font-mono font-bold shrink-0 text-[8.5px]">👑 +${(gift.prestige || 0).toLocaleString('en-US')}</span>
         </div>
       `;
 
@@ -226,19 +232,52 @@
         openGiftDetailModal(gift.id);
       });
 
-      container.appendChild(card);
-    });
+      return card;
+    }
+
+    if (_activeFilter === 'all') {
+      // 3 ta aniq bo'lim sarlavhasi bilan chiqarish
+      const coinsGifts = catalog.filter(g => g.category === 'coins');
+      const bonusGifts = catalog.filter(g => g.category === 'bonus');
+      const gemsGifts = catalog.filter(g => g.category === 'gems');
+
+      // Bo'lim 1: Tangali
+      const h1 = document.createElement('div');
+      h1.className = 'col-span-3 text-[10px] font-black uppercase tracking-wider text-amber-300 pt-1 pb-0.5 flex items-center gap-1.5 border-b border-amber-500/20';
+      h1.innerHTML = '<span>💰 O\'YIN TANGALARIGA SOVG\'ALAR (6)</span>';
+      container.appendChild(h1);
+      coinsGifts.forEach(g => container.appendChild(createGiftCardElement(g)));
+
+      // Bo'lim 2: Oltin Sandiqdan
+      const h2 = document.createElement('div');
+      h2.className = 'col-span-3 text-[10px] font-black uppercase tracking-wider text-purple-300 pt-2 pb-0.5 flex items-center gap-1.5 border-b border-purple-500/20';
+      h2.innerHTML = '<span>🧰 FAQAT 3D OLTIN SANDIQDAN (4) — sotib olib bo\'lmaydi</span>';
+      container.appendChild(h2);
+      bonusGifts.forEach(g => container.appendChild(createGiftCardElement(g)));
+
+      // Bo'lim 3: VIP Kristallar
+      const h3 = document.createElement('div');
+      h3.className = 'col-span-3 text-[10px] font-black uppercase tracking-wider text-cyan-300 pt-2 pb-0.5 flex items-center gap-1.5 border-b border-cyan-500/20';
+      h3.innerHTML = '<span>💎 VIP KRISTAL SOVG\'ALARI (5) — 1 💎 = 1,000 so\'m</span>';
+      container.appendChild(h3);
+      gemsGifts.forEach(g => container.appendChild(createGiftCardElement(g)));
+    } else {
+      const filtered = catalog.filter(g => g.category === _activeFilter);
+      filtered.forEach(gift => {
+        container.appendChild(createGiftCardElement(gift));
+      });
+    }
   }
 
-  // 5. 360° INTERAKTIV 3D DETAIL VA SOVG'A YUBORISH MODALI (#modalGiftDetail)
+  // 6. 360° INTERAKTIV 3D DETAIL VA SOVG'A YUBORISH MODALI (#modalGiftDetail)
   let _currentGiftId = null;
-  let _detailMode = 'buy'; // 'buy' yoki 'send'
+  let _detailMode = 'buy';
   let _selectedFriend = null;
+  let _activeSubTab = 'friends';
 
   function ensureGiftDetailModalDOM() {
     if (document.getElementById('modalGiftDetail')) return;
 
-    // #modalShop bilan aynan bir xil ota-elementga inject qilish (90° rotatsiya va Safe-Area to'g'ri ishlashi uchun)
     const parent = document.getElementById('modalShop')?.parentElement || document.getElementById('lobbyView') || document.body;
 
     const modal = document.createElement('div');
@@ -247,7 +286,7 @@
     modal.innerHTML = `
       <div class="ios-fh-sheet w-full max-w-4xl h-[94%] flex flex-col overflow-hidden">
         
-        <!-- Yuqori Sarlavha (Safe-Area chekinish bilan pl-4) -->
+        <!-- Yuqori Sarlavha (Safe-Area pl-4) -->
         <div class="ios-fh-nav shrink-0 h-[48px] px-4 flex items-center justify-between gap-2 border-b border-white/10">
           <div class="flex items-center gap-2.5 min-w-0">
             <span id="giftDetailIcon" class="text-xl shrink-0">🎁</span>
@@ -261,35 +300,29 @@
           </button>
         </div>
 
-        <!-- 2 Ustunli Asosiy Tarkib: Chap — 3D Tilt Sahnasi | O'ng — Xarid / Yuborish -->
+        <!-- 2 Ustunli Tarkib -->
         <div class="grid grid-cols-2 gap-3 p-3 flex-1 min-h-0 overflow-hidden">
           
-          <!-- CHAP USTUN: Telegram Star Gifts Uslubidagi 3D Tilt + Parallax Sahna -->
+          <!-- CHAP: Telegram Star Gifts 3D Tilt Sahnasi -->
           <div class="ios-bonus-stage relative flex-1 min-h-0 overflow-hidden flex flex-col justify-between items-center p-2.5 rounded-2xl bg-gradient-to-b from-[#070c18] to-[#03060d] border border-white/10 min-w-0">
             
-            <!-- Yuqori qism: 3D Tilt Sahnasi -->
             <div id="giftDetailStage" class="flex-1 min-h-0 w-full flex items-center justify-center relative select-none" style="perspective: 850px; touch-action: none;">
               <div id="giftDetail3DCard" class="digi-gift-card-idle relative flex items-center justify-center" style="transform-style: preserve-3d; transition: transform 0.12s ease-out; will-change: transform;">
-                <!-- 1) Orqa neon aura -->
                 <div id="giftDetailAura" class="absolute w-[210px] h-[210px] rounded-full pointer-events-none" style="filter: blur(28px); opacity: 0.45; transform: translateZ(-20px);"></div>
                 
-                <!-- 2) Ultra-3D Sovg'a Rasmi (175x175 + radial niqob) -->
                 <img id="giftDetailImg" 
                      src="" 
                      alt="Gift" 
-                     class="w-[175px] h-[175px] object-contain pointer-events-none select-none relative z-10" 
+                     class="w-[170px] h-[170px] object-contain pointer-events-none select-none relative z-10" 
                      style="-webkit-mask-image: radial-gradient(circle at 50% 50%, #000 64%, transparent 98%); mask-image: radial-gradient(circle at 50% 50%, #000 64%, transparent 98%); transform: translateZ(26px);" 
                      draggable="false" />
                 
-                <!-- 3) Dinamik golografik jilo -->
                 <div id="giftDetailSheen" class="digi-gift-sheen absolute inset-0 rounded-2xl pointer-events-none z-20" style="mix-blend-mode: screen; opacity: 0.28; background: linear-gradient(135deg, transparent 20%, rgba(255,255,255,0.7) 48%, rgba(255,215,0,0.6) 52%, transparent 75%); transform: translateZ(32px);"></div>
-                
-                <!-- 4) Uchqunlar (Sparks) -->
                 <div id="giftDetailSparks" class="absolute inset-0 pointer-events-none z-20"></div>
               </div>
             </div>
 
-            <!-- Pastki qism: Izoh + To'liq Tavsif (kesilmaydi!) + Obro' -->
+            <!-- Pastki qism: Izoh + To'liq Tavsif + Obro' -->
             <div class="shrink-0 w-full px-2 pt-1 pb-0.5 text-center space-y-1">
               <p class="text-[9px] text-cyan-300 font-semibold tracking-wide">👆 Barmoq bilan 3D harakatlantiring</p>
               <p id="giftDetailDesc" class="text-[10.5px] leading-snug text-slate-300/95 whitespace-normal break-words max-w-full">Tavsif</p>
@@ -302,7 +335,7 @@
 
           </div>
 
-          <!-- O'NG USTUN: Xarid va Boshqa O'yinchiga Yuborish Paneli -->
+          <!-- O'NG: Xarid va Yuborish Paneli -->
           <div class="ios-fh-group p-3 flex flex-col justify-between gap-2.5 min-h-0 overflow-y-auto">
             <div class="space-y-2.5">
               
@@ -328,7 +361,7 @@
                 </div>
               </div>
 
-              <!-- Faqat 3D Oltin Sandiqdan chiqadigan sovg'alar uchun ogohlantirish -->
+              <!-- Faqat Sandiq sovg'alari uchun ogohlantirish -->
               <div id="giftBonusOnlyBox" class="hidden p-3 rounded-xl bg-amber-950/30 border border-amber-500/40 text-center space-y-1">
                 <div class="text-xs font-bold text-amber-300">🎰 Maxsus Sandiq Sovg'asi!</div>
                 <p class="text-[10px] text-slate-300">Bu sovg'ani to'g'ridan-to'g'ri sotib olib bo'lmaydi. Uni <b>Bosh menyu -> BONUS</b> bo'limidagi 3D Oltin Sandiqni ochib yutib olishingiz mumkin!</p>
@@ -337,14 +370,14 @@
                 </button>
               </div>
 
-              <!-- Hadya Yuborish Bo'limi (send rejimida ko'rinadi) -->
+              <!-- Hadya Yuborish Bo'limi -->
               <div id="giftSendPanel" class="hidden space-y-2">
                 <div class="flex items-center justify-between">
                   <label class="text-[10px] font-bold text-slate-300 uppercase tracking-wider">Kimga yuborasiz?</label>
                   <span id="selectedFriendNameLabel" class="text-[10px] text-sky-400 font-semibold truncate max-w-[140px]">Tanlanmagan</span>
                 </div>
 
-                <!-- O'yinchilar qidirish / tanlash tablari -->
+                <!-- 3 ta subtab -->
                 <div class="flex gap-1 text-[10px]">
                   <button id="subTabFriends" type="button" class="px-2.5 py-1 rounded-md bg-white/10 text-white font-bold">Do'stlar</button>
                   <button id="subTabOnline" type="button" class="px-2.5 py-1 rounded-md text-slate-400 hover:text-white">Barchasi</button>
@@ -356,16 +389,23 @@
                   <div class="py-3 text-center text-slate-500">O'yinchilar ro'yxati yuklanmoqda...</div>
                 </div>
 
-                <!-- Telegram ID qo'lda kiritish -->
+                <!-- Telegram ID / DOOM-ID kiritish -->
                 <div id="giftCustomIdBox" class="hidden">
-                  <input id="inputGiftTargetId" type="text" placeholder="Telegram ID yoki @username" class="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-400" />
+                  <input id="inputGiftTargetId" type="text" placeholder="DOOM-XXXX yoki Telegram ID" class="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-400 font-mono" />
                 </div>
 
-                <!-- Sovg'a tilagi (ixtiyoriy) -->
+                <!-- Tilak xabari -->
                 <div>
                   <label class="text-[9.5px] text-slate-400 block mb-1">Tilak yoki xabar (ixtiyoriy):</label>
-                  <input id="inputGiftMessage" type="text" maxlength="60" placeholder="Tabriklayman! 🎉" class="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-400" />
+                  <input id="inputGiftMessage" type="text" maxlength="80" placeholder="Tabriklayman! 🎉" class="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-400" />
                 </div>
+              </div>
+
+              <!-- Kristal yetmayaptimi yordam havolasi -->
+              <div id="giftGemsHelpLinkBox" class="hidden text-center pt-1">
+                <button id="btnOpenGemsFromGiftDetail" type="button" class="text-[10px] text-cyan-400 hover:text-cyan-300 font-semibold underline underline-offset-2 transition">
+                  💎 Kristal yetmayaptimi? Admindan olish (1 💎 = 1,000 so'm) ›
+                </button>
               </div>
 
             </div>
@@ -388,7 +428,6 @@
 
     parent.appendChild(modal);
 
-    // Event listenerlar
     document.getElementById('btnCloseGiftDetailModal').addEventListener('click', closeGiftDetailModal);
     modal.addEventListener('click', (e) => {
       if (e.target === modal) closeGiftDetailModal();
@@ -404,6 +443,21 @@
       loadGiftRecipients();
     });
 
+    document.getElementById('subTabFriends').addEventListener('click', () => {
+      _activeSubTab = 'friends';
+      updateSubTabsUI();
+      loadGiftRecipients();
+    });
+    document.getElementById('subTabOnline').addEventListener('click', () => {
+      _activeSubTab = 'online';
+      updateSubTabsUI();
+      loadGiftRecipients();
+    });
+    document.getElementById('subTabId').addEventListener('click', () => {
+      _activeSubTab = 'id';
+      updateSubTabsUI();
+    });
+
     document.getElementById('btnGoToBonusCase').addEventListener('click', () => {
       closeGiftDetailModal();
       document.getElementById('modalShop').classList.add('hidden');
@@ -411,14 +465,41 @@
       if (bonusBtn) bonusBtn.click();
     });
 
-    // 3D Tilt Gesture Handler o'rnatish
-    initGiftDetail3DTilt();
+    document.getElementById('btnOpenGemsFromGiftDetail').addEventListener('click', () => {
+      closeGiftDetailModal();
+      openBuyGemsModal();
+    });
 
-    // Harakat tugmasi (Sotib olish / Yuborish)
+    initGiftDetail3DTilt();
     document.getElementById('btnConfirmGiftAction').addEventListener('click', handleGiftActionSubmit);
   }
 
-  // 6. 3D TILT VA PARALLAX GESTURE HANDLER
+  function updateSubTabsUI() {
+    const b1 = document.getElementById('subTabFriends');
+    const b2 = document.getElementById('subTabOnline');
+    const b3 = document.getElementById('subTabId');
+    const list = document.getElementById('giftFriendsList');
+    const customBox = document.getElementById('giftCustomIdBox');
+
+    [b1, b2, b3].forEach(b => {
+      b.className = 'px-2.5 py-1 rounded-md text-slate-400 hover:text-white font-medium';
+    });
+
+    if (_activeSubTab === 'friends') {
+      b1.className = 'px-2.5 py-1 rounded-md bg-white/10 text-white font-bold';
+      list.classList.remove('hidden');
+      customBox.classList.add('hidden');
+    } else if (_activeSubTab === 'online') {
+      b2.className = 'px-2.5 py-1 rounded-md bg-white/10 text-white font-bold';
+      list.classList.remove('hidden');
+      customBox.classList.add('hidden');
+    } else {
+      b3.className = 'px-2.5 py-1 rounded-md bg-white/10 text-white font-bold';
+      list.classList.add('hidden');
+      customBox.classList.remove('hidden');
+    }
+  }
+
   function initGiftDetail3DTilt() {
     const stage = document.getElementById('giftDetailStage');
     const card = document.getElementById('giftDetail3DCard');
@@ -448,7 +529,6 @@
 
       let nx = 0, ny = 0;
       if (isRot90) {
-        // 90° soat strelkasi bo'yicha burilgan ekranda o'qlar almashinadi
         nx = ((clientY - (rect.top + rect.height * 0.5)) / (rect.height * 0.5));
         ny = -((clientX - (rect.left + rect.width * 0.5)) / (rect.width * 0.5));
       } else {
@@ -517,32 +597,46 @@
 
     list.innerHTML = '<div class="py-2 text-center text-slate-400 text-[10px]">O\'yinchilar qidirilmoqda...</div>';
 
-    fetch('/api/tg/directory?limit=25')
+    const me = getCurrentPlayerIdentity();
+    fetch('/api/tg/directory?myId=' + encodeURIComponent(me.id))
       .then(res => res.json())
       .then(data => {
-        const players = (data && data.players) || [];
-        if (players.length === 0) {
-          list.innerHTML = '<div class="py-2 text-center text-slate-500 text-[10px]">Hozircha o\'yinchilar topilmadi</div>';
-          return;
+        let players = [];
+        if (_activeSubTab === 'friends') {
+          players = (data && data.myFriends) || [];
+        } else {
+          players = (data && data.allPlayers) || [];
         }
 
-        const myId = String((window.telegramUser && window.telegramUser.id) || '');
-        const otherPlayers = players.filter(p => String(p.id) !== myId);
+        const myIdUpper = me.id.toUpperCase();
+        const otherPlayers = players.filter(p => String(p.id || '').toUpperCase() !== myIdUpper);
+
+        if (otherPlayers.length === 0) {
+          list.innerHTML = `<div class="py-2 text-center text-slate-500 text-[10px]">${_activeSubTab === 'friends' ? 'Do\'stlar topilmadi. "Barchasi" yoki "ID orqali" ni tanlang.' : 'O\'yinchilar topilmadi.'}</div>`;
+          return;
+        }
 
         list.innerHTML = '';
         otherPlayers.forEach(p => {
           const item = document.createElement('div');
           const isSel = _selectedFriend && String(_selectedFriend.id) === String(p.id);
+          const prestigeFormatted = (p.prestige || 0).toLocaleString('en-US');
           item.className = `p-1.5 rounded-lg flex items-center justify-between cursor-pointer transition ${isSel ? 'bg-sky-950/80 border border-sky-400/60' : 'bg-slate-900/60 hover:bg-slate-800/80 border border-transparent'}`;
           item.innerHTML = `
             <div class="flex items-center gap-1.5 min-w-0">
               <span class="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center text-[10px]">👤</span>
-              <span class="font-bold text-white truncate max-w-[110px]">${p.firstName || p.username || 'O\'yinchi'}</span>
+              <div class="min-w-0 leading-tight">
+                <span class="font-bold text-white truncate block max-w-[120px]">${p.name || p.username || p.id}</span>
+                <span class="text-[8px] text-slate-400 font-mono">${p.id} • Lv.${p.level || 1}</span>
+              </div>
             </div>
-            <span class="text-[9px] font-mono text-amber-300">${p.elo || 1000} ELO</span>
+            <div class="text-right shrink-0">
+              <span class="text-[9px] font-mono text-amber-300 block">👑 ${prestigeFormatted}</span>
+              <span class="text-[8px] text-sky-400 font-mono">${p.elo || 1000} ELO</span>
+            </div>
           `;
           item.addEventListener('click', () => {
-            _selectedFriend = { id: p.id, name: p.firstName || p.username || 'O\'yinchi' };
+            _selectedFriend = { id: p.id, name: p.name || p.username || p.id };
             document.getElementById('selectedFriendNameLabel').textContent = _selectedFriend.name;
             updateDetailModeUI();
             loadGiftRecipients();
@@ -551,23 +645,25 @@
         });
       })
       .catch(() => {
-        list.innerHTML = '<div class="py-2 text-center text-slate-500 text-[10px]">Do\'stlar ro\'yxatini yuklab bo\'lmadi</div>';
+        list.innerHTML = '<div class="py-2 text-center text-slate-500 text-[10px]">O\'yinchilar ro\'yxatini yuklab bo\'lmadi</div>';
       });
   }
 
-  function openGiftDetailModal(giftId) {
+  function openGiftDetailModal(giftId, preselectRecipient) {
     ensureGiftDetailModalDOM();
     const catalog = getGiftsCatalog();
     const gift = catalog.find(g => g.id === giftId);
     if (!gift) return;
 
     _currentGiftId = giftId;
-    _detailMode = 'buy';
-    _selectedFriend = null;
+    _detailMode = preselectRecipient ? 'send' : 'buy';
+    _selectedFriend = preselectRecipient || null;
+    _activeSubTab = 'friends';
 
     const modal = document.getElementById('modalGiftDetail');
     const rarity = RARITY_MAP[gift.rarity] || RARITY_MAP.common;
     const uStats = window.userStats || { coins: 0, gems: 0, gifts: [] };
+    const myGiftsMap = getOwnedGiftCounts();
 
     document.getElementById('giftDetailIcon').textContent = gift.icon;
     document.getElementById('giftDetailTitle').textContent = gift.name;
@@ -575,19 +671,14 @@
     rBadge.textContent = rarity.name;
     rBadge.className = `text-[9px] font-bold uppercase tracking-wider ${rarity.badge}`;
 
-    // 3D Sahnaga rasmni yuklash
     const imgEl = document.getElementById('giftDetailImg');
-    if (imgEl) {
-      imgEl.src = getGiftImageUrl(gift.id);
-    }
+    if (imgEl) imgEl.src = getGiftImageUrl(gift.id);
 
-    // Aura rangini sovg'aga moslash
     const aura = document.getElementById('giftDetailAura');
     if (aura) {
       aura.style.background = `radial-gradient(circle, ${gift.glow}80 0%, ${gift.glow}15 65%, transparent 75%)`;
     }
 
-    // Uchqunlar (Nodir/Epik/Afsonaviy/Mifik uchun)
     const sparksContainer = document.getElementById('giftDetailSparks');
     if (sparksContainer) {
       sparksContainer.innerHTML = '';
@@ -610,43 +701,44 @@
       }
     }
 
-    // Tavsif va Obro'
     document.getElementById('giftDetailDesc').textContent = gift.desc || '';
-    document.getElementById('giftDetailPrestige').textContent = `👑 +${gift.prestige} Obro'`;
+    document.getElementById('giftDetailPrestige').textContent = `👑 +${(gift.prestige || 0).toLocaleString('en-US')} Obro'`;
+    document.getElementById('giftDetailOwnedBadge').textContent = `Sizda bor: ${myGiftsMap[gift.id] || 0} ta`;
 
-    let ownedCount = 0;
-    if (Array.isArray(uStats.gifts)) {
-      uStats.gifts.forEach(g => {
-        const gid = typeof g === 'string' ? g : g.id;
-        if (gid === gift.id) ownedCount += (g.count || 1);
-      });
-    }
-    document.getElementById('giftDetailOwnedBadge').textContent = `Sizda bor: ${ownedCount} ta`;
-
-    // Narx va Balans
     const priceLbl = document.getElementById('giftDetailPriceLabel');
     const balLbl = document.getElementById('giftDetailBalanceLabel');
     const bonusBox = document.getElementById('giftBonusOnlyBox');
     const btnAction = document.getElementById('btnConfirmGiftAction');
+    const gemsHelpBox = document.getElementById('giftGemsHelpLinkBox');
 
     if (gift.category === 'coins') {
       priceLbl.textContent = `$${gift.price.toLocaleString('en-US')}`;
       balLbl.textContent = `$${(uStats.coins || 0).toLocaleString('en-US')}`;
       bonusBox.classList.add('hidden');
       btnAction.classList.remove('hidden');
+      gemsHelpBox.classList.add('hidden');
     } else if (gift.category === 'gems') {
       priceLbl.textContent = `💎 ${gift.price} Kristal`;
       balLbl.textContent = `💎 ${(uStats.gems || 0).toLocaleString('en-US')}`;
       bonusBox.classList.add('hidden');
       btnAction.classList.remove('hidden');
+      gemsHelpBox.classList.remove('hidden');
     } else if (gift.category === 'bonus') {
-      priceLbl.textContent = '🎰 Faqat Sandiqdan';
+      priceLbl.textContent = '🔒 Faqat Sandiqdan';
       balLbl.textContent = 'Oltin Sandiq';
       bonusBox.classList.remove('hidden');
       btnAction.classList.add('hidden');
+      gemsHelpBox.classList.add('hidden');
+    }
+
+    if (preselectRecipient) {
+      document.getElementById('selectedFriendNameLabel').textContent = preselectRecipient.name;
+    } else {
+      document.getElementById('selectedFriendNameLabel').textContent = 'Tanlanmagan';
     }
 
     updateDetailModeUI();
+    updateSubTabsUI();
     modal.classList.remove('hidden');
   }
 
@@ -656,80 +748,80 @@
     _currentGiftId = null;
   }
 
-  // Sotib olish yoki Yuborish API chaqiruvi
+  // Sotib olish yoki Yuborish API chaqiruvi (POST /api/tg/gifts/buy)
   function handleGiftActionSubmit() {
     const catalog = getGiftsCatalog();
     const gift = catalog.find(g => g.id === _currentGiftId);
     if (!gift) return;
 
-    const uStats = window.userStats || { coins: 0, gems: 0, gifts: [] };
-    const btn = document.getElementById('btnConfirmGiftAction');
+    const me = getCurrentPlayerIdentity();
+    if (!me.id) {
+      if (typeof window.showToast === 'function') window.showToast('O\'yinchi ID aniqlanmadi!', '⚠️');
+      return;
+    }
 
-    // Valyuta tekshiruvi
-    if (gift.category === 'coins') {
-      if ((uStats.coins || 0) < gift.price) {
-        if (typeof window.showToast === 'function') {
-          window.showToast('Tangalar yetarli emas! 777 Ruletkani aylantiring.', '⚠️');
-        }
-        return;
+    let targetId = me.id;
+    if (_detailMode === 'send') {
+      if (_activeSubTab === 'id') {
+        const inp = document.getElementById('inputGiftTargetId');
+        targetId = (inp && inp.value.trim().toUpperCase()) || '';
+      } else {
+        targetId = (_selectedFriend && _selectedFriend.id) || '';
       }
-    } else if (gift.category === 'gems') {
-      if ((uStats.gems || 0) < gift.price) {
-        if (typeof window.showToast === 'function') {
-          window.showToast('Kristallar yetarli emas! Kristal do\'konidan xarid qiling.', '💎');
-        }
-        openBuyGemsModal();
+
+      if (!targetId) {
+        if (typeof window.showToast === 'function') window.showToast('Iltimos, sovg\'a yuboriladigan o\'yinchini tanlang!', '⚠️');
         return;
       }
     }
 
-    if (_detailMode === 'send' && !_selectedFriend) {
-      if (typeof window.showToast === 'function') {
-        window.showToast('Iltimos, sovg\'a yuboriladigan o\'yinchini tanlang!', '⚠️');
+    const uStats = window.userStats || { coins: 0, gems: 0, gifts: [] };
+    const btn = document.getElementById('btnConfirmGiftAction');
+
+    // Valyuta yetarliligini oldindan tekshirish
+    if (gift.category === 'coins') {
+      if ((uStats.coins || 0) < gift.price) {
+        if (typeof window.showToast === 'function') window.showToast('Tangalar yetarli emas! 777 Ruletkani aylantiring.', '⚠️');
+        return;
       }
-      return;
+    } else if (gift.category === 'gems') {
+      if ((uStats.gems || 0) < gift.price) {
+        if (typeof window.showToast === 'function') window.showToast('Kristallar yetarli emas! Kristal do\'konidan xarid qiling.', '💎');
+        openBuyGemsModal();
+        return;
+      }
     }
 
     btn.disabled = true;
     const oldText = btn.innerHTML;
     btn.innerHTML = '⏳ Bajarilmoqda...';
 
-    const endpoint = _detailMode === 'buy' ? '/api/gifts/buy' : '/api/gifts/send';
-    const tgEndpoint = _detailMode === 'buy' ? '/api/tg/gifts/buy' : '/api/tg/gifts/send';
+    const note = (document.getElementById('inputGiftMessage')?.value || '').trim().slice(0, 80);
 
     const payload = {
+      buyerId: me.id,
       giftId: gift.id,
-      recipientId: _selectedFriend ? _selectedFriend.id : null,
-      message: (document.getElementById('inputGiftMessage')?.value || '').trim()
+      recipientId: targetId,
+      note: note
     };
 
-    fetch(endpoint, {
+    fetch('/api/tg/gifts/buy', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
-    })
-    .catch(() => {
-      // Telegram endpointiga zaxira urinish
-      return fetch(tgEndpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
     })
     .then(res => res.json())
     .then(data => {
       btn.disabled = false;
       btn.innerHTML = oldText;
 
-      if (data && data.success) {
-        if (_detailMode === 'buy') {
-          if (gift.category === 'coins') uStats.coins -= gift.price;
-          else if (gift.category === 'gems') uStats.gems -= gift.price;
-          if (!Array.isArray(uStats.gifts)) uStats.gifts = [];
-          uStats.gifts.push({ id: gift.id, count: 1 });
-        } else {
-          if (gift.category === 'coins') uStats.coins -= gift.price;
-          else if (gift.category === 'gems') uStats.gems -= gift.price;
+      if (data && data.ok) {
+        if (data.buyerStats) {
+          if (typeof data.buyerStats.coins === 'number') uStats.coins = data.buyerStats.coins;
+          if (typeof data.buyerStats.gems === 'number') uStats.gems = data.buyerStats.gems;
+          if (typeof data.buyerStats.prestige === 'number') uStats.prestige = data.buyerStats.prestige;
+          if (Array.isArray(data.buyerStats.gifts)) uStats.gifts = data.buyerStats.gifts;
+          if (data.buyerStats.giftSummary) uStats.giftSummary = data.buyerStats.giftSummary;
         }
 
         if (typeof window.saveUserData === 'function') window.saveUserData();
@@ -741,35 +833,38 @@
           if (_detailMode === 'buy') {
             window.showToast(`🎉 ${gift.name} kolleksiyangizga qo'shildi!`, '🎁');
           } else {
-            window.showToast(`🎉 ${gift.name} ${_selectedFriend.name} ga yuborildi!`, '✈️');
+            window.showToast(`🎉 ${gift.name} ${data.targetName || targetId} ga yuborildi!`, '✈️');
           }
         }
         closeGiftDetailModal();
       } else {
-        const errMsg = (data && data.error) || 'Xaridni amalga oshirib bo\'lmadi';
-        if (typeof window.showToast === 'function') window.showToast(errMsg, '⚠️');
+        if (data && data.error === 'NOT_ENOUGH_GEMS') {
+          if (typeof window.showToast === 'function') window.showToast('Kristallar yetarli emas! Kristal do\'konini oching.', '💎');
+          openBuyGemsModal();
+        } else {
+          const errMsg = (data && (data.message || data.error)) || 'Xaridni amalga oshirib bo\'lmadi';
+          if (typeof window.showToast === 'function') window.showToast(errMsg, '⚠️');
+        }
       }
     })
     .catch(err => {
       btn.disabled = false;
       btn.innerHTML = oldText;
-      console.error('Gift action error:', err);
-      // Agar oflayn rejimda bo'lsa lokal sinov uchun
-      if (gift.category === 'coins') {
-        uStats.coins -= gift.price;
-        if (!Array.isArray(uStats.gifts)) uStats.gifts = [];
-        uStats.gifts.push({ id: gift.id, count: 1 });
-        if (typeof window.saveUserData === 'function') window.saveUserData();
-        if (typeof window.updateMainMenuWidgets === 'function') window.updateMainMenuWidgets();
-        renderDigiGiftShop();
-        if (typeof window.showToast === 'function') window.showToast(`🎉 ${gift.name} qabul qilindi!`, '🎁');
-        closeGiftDetailModal();
-      }
+      console.error('Gift buy error:', err);
+      if (typeof window.showToast === 'function') window.showToast('Server bilan aloqa uzildi', '⚠️');
     });
   }
 
   // 7. 💎 KRISTAL SOTIB OLISH MODALI (#modalBuyGems)
-  let _selectedGemsPackage = GEMS_PACKAGES[0];
+  let _selectedGemsPackage = getGemsPackages()[1] || getGemsPackages()[0];
+
+  function buildGemsOrderText(pkg, me) {
+    return `Assalomu alaykum! DIGI DIGI Kristal buyurtmasi:
+💎 Paket: ${pkg.gems} Kristal (${pkg.uzs.toLocaleString('en-US')} so'm)
+👤 O'yinchi: ${me.name}
+🆔 O'yin ID: ${me.id || 'Aniqlanmadi'}${me.username ? '\n📱 Username: @' + me.username : ''}${me.tgId ? '\n🔢 Telegram ID: ' + me.tgId : ''}
+To'lov rekvizitlarini yuborsangiz, chekni tashlayman.`;
+  }
 
   function ensureBuyGemsModalDOM() {
     if (document.getElementById('modalBuyGems')) return;
@@ -792,6 +887,10 @@
             </div>
           </div>
           <div class="flex items-center gap-2 shrink-0">
+            <button id="btnRefreshGemsBalance" type="button" class="ios-fh-stat-pill px-2.5 py-1 rounded-full flex items-center gap-1 text-[10px] font-bold text-slate-300 hover:text-white transition" title="Balansni yangilash">
+              <span>🔄</span>
+              <span class="hidden sm:inline">Yangilash</span>
+            </button>
             <div class="ios-fh-stat-pill px-3 py-1 rounded-full flex items-center gap-1.5 text-[11px] font-mono font-extrabold text-cyan-300 border border-cyan-400/50">
               <span>💎</span>
               <span id="buyGemsModalBalance">0</span>
@@ -802,20 +901,20 @@
           </div>
         </div>
 
-        <!-- 2 Ustunli Tarkib: Chap — Paketlar | O'ng — Buyurtma va Telegram Admin Lichkasi -->
+        <!-- 2 Ustunli Tarkib -->
         <div class="grid grid-cols-2 gap-3 p-3 flex-1 min-h-0 overflow-hidden">
           
           <!-- CHAP: 5 ta Tayyor Paket Ro'yxati -->
           <div class="ios-fh-group p-3 flex flex-col justify-between gap-2 min-h-0 overflow-y-auto">
             <div>
               <div class="flex items-center justify-between px-1 mb-2">
-                <span class="text-[10px] font-bold uppercase tracking-wider text-amber-300">Kristal Paketlari</span>
-                <span class="text-[9.5px] text-slate-400">Kerakli paketni tanlang:</span>
+                <span class="text-[10px] font-bold uppercase tracking-wider text-amber-300">Rasmiy Kristal Paketlari</span>
+                <span class="text-[9.5px] text-slate-400">1 💎 = 1,000 so'm</span>
               </div>
               <div id="gemsPackagesList" class="space-y-2"></div>
             </div>
             <div class="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 text-[9.5px] text-slate-400 leading-relaxed">
-              ℹ️ <b>Eslatma:</b> Kristallar faqat admin orqali rasmiy ravishda hisobingizga qo'shiladi. O'yin ichida to'lov cheki yuborilgach, 1 daqiqa ichida hisobingiz to'ldiriladi!
+              ℹ️ <b>Eslatma:</b> Kristallar xavfsiz va rasmiy admin orqali to'ldiriladi. To'lov cheki yuborilgach, hisobingizga darhol o'tkaziladi.
             </div>
           </div>
 
@@ -826,14 +925,14 @@
               <!-- Tanlangan Paket Xulosasi -->
               <div class="p-3 rounded-2xl bg-gradient-to-b from-sky-950/60 to-slate-950 border border-sky-400/40 text-center relative overflow-hidden">
                 <span class="text-[10px] font-bold text-sky-300 uppercase tracking-wider">Tanlangan Paket</span>
-                <div id="summaryGemsAmount" class="text-3xl font-black font-mono text-cyan-200 mt-1">💎 50</div>
-                <div id="summaryGemsPrice" class="text-sm font-extrabold text-amber-300 font-mono mt-0.5">50,000 so'm</div>
+                <div id="summaryGemsAmount" class="text-3xl font-black font-mono text-cyan-200 mt-1">💎 35</div>
+                <div id="summaryGemsPrice" class="text-sm font-extrabold text-amber-300 font-mono mt-0.5">35,000 so'm</div>
               </div>
 
               <!-- Foydalanuvchi ID si va Nusxalash -->
               <div class="p-2.5 rounded-xl bg-slate-950/90 border border-slate-800 flex items-center justify-between gap-2">
                 <div class="min-w-0">
-                  <span class="text-[9.5px] text-slate-400 block">Sizning O'yin ID:</span>
+                  <span class="text-[9.5px] text-slate-400 block">Sizning Profilingiz:</span>
                   <span id="buyGemsUserIdLabel" class="text-xs font-mono font-bold text-white truncate block">--</span>
                 </div>
                 <button id="btnCopyOrderId" type="button" class="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[10px] font-bold shrink-0 transition">
@@ -844,7 +943,7 @@
               <!-- Adminga yuboriladigan tayyor matn -->
               <div class="p-2.5 rounded-xl bg-slate-950/90 border border-slate-800 space-y-1">
                 <span class="text-[9.5px] text-slate-400 block">Adminga yuboriladigan buyurtma:</span>
-                <div id="buyGemsOrderTextPreview" class="text-[10.5px] font-mono text-cyan-100 bg-slate-900/90 p-2 rounded-lg border border-slate-800 whitespace-pre-wrap leading-tight">
+                <div id="buyGemsOrderTextPreview" class="text-[10px] font-mono text-cyan-100 bg-slate-900/90 p-2 rounded-lg border border-slate-800 whitespace-pre-wrap leading-tight">
                   Yuklanmoqda...
                 </div>
               </div>
@@ -876,6 +975,19 @@
       if (e.target === modal) modal.classList.add('hidden');
     });
 
+    document.getElementById('btnRefreshGemsBalance').addEventListener('click', () => {
+      if (typeof window.tgBridgeRefreshFromServer === 'function') {
+        window.tgBridgeRefreshFromServer();
+        if (typeof window.showToast === 'function') window.showToast("Balans yangilanmoqda...", "🔄");
+      } else if (typeof window.updateMainMenuWidgets === 'function') {
+        window.updateMainMenuWidgets();
+      }
+      setTimeout(() => {
+        const balEl = document.getElementById('buyGemsModalBalance');
+        if (balEl && window.userStats) balEl.textContent = (window.userStats.gems || 0).toLocaleString('en-US');
+      }, 500);
+    });
+
     document.getElementById('btnCopyOrderId').addEventListener('click', () => {
       const txt = document.getElementById('buyGemsOrderTextPreview').textContent;
       if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -885,23 +997,27 @@
     });
 
     document.getElementById('btnOpenTelegramAdmin').addEventListener('click', () => {
-      const orderTxt = document.getElementById('buyGemsOrderTextPreview').textContent;
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(orderTxt);
-      }
-      if (typeof window.showToast === 'function') {
-        window.showToast('Buyurtma nusxalandi, Telegram ochilmoqda...', '✈️');
-      }
+      const me = getCurrentPlayerIdentity();
+      const orderTxt = buildGemsOrderText(_selectedGemsPackage, me);
 
-      // Telegram chuqur havolasi
       try {
-        window.location.href = TELEGRAM_ADMIN_DEEP_LINK;
-      } catch (e) {
-        window.open(TELEGRAM_ADMIN_FALLBACK_URL, '_blank');
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(orderTxt);
+        }
+      } catch (e) {}
+
+      const adminUser = (window.DIGI_GEMS_CONFIG && window.DIGI_GEMS_CONFIG.adminUsername) || 'Abror444';
+      const tgChatWithTextUrl = 'https://t.me/' + adminUser + '?text=' + encodeURIComponent(orderTxt);
+
+      const tg = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
+      if (tg && typeof tg.openTelegramLink === 'function') {
+        tg.openTelegramLink(tgChatWithTextUrl);
+      } else if (tg && typeof tg.openLink === 'function') {
+        tg.openLink(tgChatWithTextUrl);
+      } else {
+        const w = window.open(tgChatWithTextUrl, '_blank');
+        if (!w) window.location.href = tgChatWithTextUrl;
       }
-      setTimeout(() => {
-        window.open(TELEGRAM_ADMIN_FALLBACK_URL, '_blank');
-      }, 500);
     });
   }
 
@@ -909,9 +1025,10 @@
     const list = document.getElementById('gemsPackagesList');
     if (!list) return;
 
+    const packages = getGemsPackages();
     list.innerHTML = '';
-    GEMS_PACKAGES.forEach(pkg => {
-      const isSel = _selectedGemsPackage && _selectedGemsPackage.id === pkg.id;
+    packages.forEach(pkg => {
+      const isSel = _selectedGemsPackage && _selectedGemsPackage.gems === pkg.gems;
       const card = document.createElement('div');
       card.className = `p-2 rounded-xl flex items-center justify-between cursor-pointer transition select-none ${isSel ? 'bg-cyan-950/70 border border-cyan-400/80 shadow-[0_0_12px_rgba(6,182,212,0.25)]' : 'bg-slate-900/60 hover:bg-slate-850 border border-slate-800'}`;
 
@@ -921,14 +1038,14 @@
           <div>
             <div class="flex items-center gap-1.5">
               <span class="text-xs font-mono font-black text-white">${pkg.gems} Kristal</span>
-              ${pkg.bonus ? `<span class="text-[8px] font-bold px-1.5 py-0.2 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-500/50">${pkg.bonus}</span>` : ''}
+              ${pkg.badge ? `<span class="text-[8px] font-bold px-1.5 py-0.2 rounded-full bg-amber-950 text-amber-300 border border-amber-500/50">${pkg.badge}</span>` : ''}
             </div>
-            <span class="text-[9px] text-slate-400">${pkg.badge}</span>
+            <span class="text-[9px] text-slate-400">${pkg.title}</span>
           </div>
         </div>
         <div class="text-right shrink-0">
-          <div class="text-xs font-mono font-extrabold text-amber-300">${pkg.priceUzs.toLocaleString('en-US')} so'm</div>
-          <span class="text-[8.5px] text-cyan-300">${(pkg.priceUzs / pkg.gems).toFixed(0)} so'm/💎</span>
+          <div class="text-xs font-mono font-extrabold text-amber-300">${pkg.uzs.toLocaleString('en-US')} so'm</div>
+          <span class="text-[8.5px] text-cyan-300 font-mono">${(pkg.uzs / pkg.gems).toFixed(0)} so'm/💎</span>
         </div>
       `;
 
@@ -952,19 +1069,15 @@
     const orderPreview = document.getElementById('buyGemsOrderTextPreview');
 
     if (summaryGems) summaryGems.textContent = `💎 ${_selectedGemsPackage.gems}`;
-    if (summaryPrice) summaryPrice.textContent = `${_selectedGemsPackage.priceUzs.toLocaleString('en-US')} so'm`;
+    if (summaryPrice) summaryPrice.textContent = `${_selectedGemsPackage.uzs.toLocaleString('en-US')} so'm`;
 
-    const uId = (window.telegramUser && window.telegramUser.id) || (window.userStats && window.userStats.id) || 'Noma\'lum';
-    const uName = (window.telegramUser && (window.telegramUser.username || window.telegramUser.first_name)) || 'O\'yinchi';
-    if (userLabel) userLabel.textContent = `${uName} (ID: ${uId})`;
+    const me = getCurrentPlayerIdentity();
+    if (userLabel) {
+      userLabel.textContent = `${me.name} • ${me.id || 'ID yuklanmoqda'}${me.tgId ? ' (TG: ' + me.tgId + ')' : ''}`;
+    }
 
     if (orderPreview) {
-      orderPreview.textContent = 
-`Assalomu alaykum, DIGI DIGI Kristal buyurtmasi:
-💎 Paket: ${_selectedGemsPackage.gems} Kristal (${_selectedGemsPackage.priceUzs.toLocaleString('en-US')} so'm)
-👤 O'yinchi: ${uName}
-🆔 Telegram ID: ${uId}
-To'lov rekvizitlarini yuborsangiz.`;
+      orderPreview.textContent = buildGemsOrderText(_selectedGemsPackage, me);
     }
   }
 
@@ -977,8 +1090,407 @@ To'lov rekvizitlarini yuborsangiz.`;
     const balEl = document.getElementById('buyGemsModalBalance');
     if (balEl) balEl.textContent = (uStats.gems || 0).toLocaleString('en-US');
 
+    const packages = getGemsPackages();
+    if (!_selectedGemsPackage || !packages.some(p => p.gems === _selectedGemsPackage.gems)) {
+      _selectedGemsPackage = packages[1] || packages[0];
+    }
+
     renderGemsPackages();
     modal.classList.remove('hidden');
+  }
+
+  // 8. O'YINCHI PROFIL KOLLEKSIYASI VA HADYA QILISH MODALI (#modalPlayerCollection)
+  let _activeCollectionPlayerId = null;
+  let _activeTransferItem = null;
+
+  function ensurePlayerCollectionModalDOM() {
+    if (document.getElementById('modalPlayerCollection')) return;
+
+    const parent = document.getElementById('modalShop')?.parentElement || document.getElementById('lobbyView') || document.body;
+
+    const modal = document.createElement('div');
+    modal.id = 'modalPlayerCollection';
+    modal.className = 'hidden fixed inset-0 z-[58] flex items-center justify-center p-2.5';
+    modal.innerHTML = `
+      <div class="ios-fh-sheet w-full max-w-4xl h-[94%] flex flex-col overflow-hidden">
+        
+        <!-- Yuqori Sarlavha -->
+        <div class="ios-fh-nav shrink-0 h-[48px] px-4 flex items-center justify-between gap-2 border-b border-white/10">
+          <div class="flex items-center gap-2.5 min-w-0">
+            <span class="text-xl shrink-0">👑</span>
+            <div class="min-w-0 leading-tight">
+              <h2 id="collectionModalTitle" class="text-[14px] font-black tracking-tight text-white drop-shadow truncate">Sovg'alar Kolleksiyasi</h2>
+              <span id="collectionModalSubtitle" class="text-[9px] text-amber-300 font-semibold truncate block">Profil ma'lumotlari</span>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <button id="btnCollectionHeaderAction" type="button" class="ios-fh-stat-pill px-3 py-1 rounded-full text-xs font-bold text-amber-300 border border-amber-400/50 hover:bg-white/10 transition">
+              🛒 Do'konga o'tish
+            </button>
+            <button id="btnClosePlayerCollectionModal" type="button" class="ios-btn-circle" title="Yopish" aria-label="Yopish">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Profil Qutisi (Avatar, Ism, ELO, Obro', Jami Sovg'alar) -->
+        <div class="shrink-0 p-3 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-b border-white/10 flex items-center justify-between gap-3">
+          <div class="flex items-center gap-2.5 min-w-0">
+            <div id="collecUserAvatarBox" class="w-11 h-11 rounded-xl bg-slate-800 border border-amber-400/40 flex items-center justify-center text-xl shadow-lg shrink-0 overflow-hidden">
+              👤
+            </div>
+            <div class="min-w-0">
+              <div class="flex items-center gap-2">
+                <span id="collecUserName" class="text-sm font-black text-white truncate max-w-[180px]">O'yinchi</span>
+                <span id="collecUserElo" class="text-[10px] font-mono font-bold text-sky-400 bg-sky-950/80 px-2 py-0.5 rounded-full border border-sky-400/40 shrink-0">1,000 ELO</span>
+              </div>
+              <span id="collecUserId" class="text-[9.5px] font-mono text-slate-400 block mt-0.5">DOOM-XXXX</span>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 shrink-0">
+            <div class="px-3 py-1.5 rounded-xl bg-amber-950/70 border border-amber-400/50 text-center">
+              <span class="text-[8px] font-bold text-amber-300/80 uppercase tracking-wider block">Jami Obro'</span>
+              <span id="collecUserPrestige" class="text-sm font-black font-mono text-amber-300">👑 0</span>
+            </div>
+            <div class="px-3 py-1.5 rounded-xl bg-slate-950/80 border border-slate-700 text-center">
+              <span class="text-[8px] font-bold text-slate-400 uppercase tracking-wider block">Sovg'alar</span>
+              <span id="collecUserCount" class="text-sm font-black font-mono text-white">🎁 0 ta</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Kolleksiya Vitrinasi (Grid) -->
+        <div class="flex-1 min-h-0 overflow-y-auto p-3 relative">
+          <div id="playerCollectionGrid" class="grid grid-cols-3 gap-2.5"></div>
+          <div id="playerCollectionEmpty" class="hidden py-16 text-center text-slate-400 space-y-2">
+            <span class="text-3xl block">🎁</span>
+            <div class="text-xs font-bold text-slate-300">Hozircha sovg'alar kolleksiyasi bo'sh</div>
+            <p class="text-[10px] text-slate-500">Do'kondan sovg'a oling yoki 3D Oltin Sandiqdan eksklyuziv sovg'alarni yutib oling!</p>
+          </div>
+
+          <!-- Ichki Slayd/Transfer Paneli -->
+          <div id="collecTransferPanel" class="hidden absolute inset-0 z-30 bg-slate-950/95 backdrop-blur-sm p-4 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between border-b border-white/10 pb-2">
+                <div class="flex items-center gap-2">
+                  <span class="text-xl">✈️</span>
+                  <div>
+                    <h3 class="text-xs font-black text-white">Sovg'ani Hadya Qilish</h3>
+                    <span id="transferGiftNameLabel" class="text-[9px] text-amber-300 font-bold block">Sovg'a nomi</span>
+                  </div>
+                </div>
+                <button id="btnCancelTransfer" type="button" class="ios-btn-circle text-xs" title="Bekor qilish">✕</button>
+              </div>
+
+              <div class="space-y-2.5 mt-3">
+                <label class="text-[10px] font-bold text-slate-300 uppercase tracking-wider block">Kimga hadya qilasiz?</label>
+                <div id="transferFriendsList" class="max-h-36 overflow-y-auto space-y-1 p-1 rounded-xl bg-slate-900/90 border border-slate-800 text-[10px]">
+                  <div class="py-2 text-center text-slate-500">Do'stlar ro'yxati...</div>
+                </div>
+
+                <div>
+                  <label class="text-[9.5px] text-slate-400 block mb-1">Tilak yoki xabar:</label>
+                  <input id="inputTransferNote" type="text" maxlength="80" placeholder="Sizga chin dildan! 🌟" class="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-400" />
+                </div>
+              </div>
+            </div>
+
+            <div class="pt-2 border-t border-slate-800">
+              <button id="btnConfirmTransfer" type="button" class="ios-btn-blue w-full py-2.5 text-xs font-black flex items-center justify-center gap-1.5">
+                <span>✈️</span>
+                <span>Hadya qilishni tasdiqlash</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+    `;
+
+    parent.appendChild(modal);
+
+    document.getElementById('btnClosePlayerCollectionModal').addEventListener('click', () => {
+      modal.classList.add('hidden');
+    });
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) modal.classList.add('hidden');
+    });
+
+    document.getElementById('btnCancelTransfer').addEventListener('click', () => {
+      document.getElementById('collecTransferPanel').classList.add('hidden');
+      _activeTransferItem = null;
+    });
+
+    document.getElementById('btnConfirmTransfer').addEventListener('click', executeGiftTransfer);
+  }
+
+  function openPlayerCollectionModal(playerId) {
+    ensurePlayerCollectionModalDOM();
+    const modal = document.getElementById('modalPlayerCollection');
+    if (!modal) return;
+
+    const me = getCurrentPlayerIdentity();
+    const targetId = String(playerId || me.id).trim().toUpperCase();
+    _activeCollectionPlayerId = targetId;
+
+    const isSelf = (targetId === me.id.toUpperCase());
+
+    // Sarlavha va tugma moslashuvi
+    const titleEl = document.getElementById('collectionModalTitle');
+    const subTitleEl = document.getElementById('collectionModalSubtitle');
+    const actionBtn = document.getElementById('btnCollectionHeaderAction');
+
+    if (isSelf) {
+      titleEl.textContent = 'Mening Sovg\'alar Kolleksiyam';
+      subTitleEl.textContent = 'Siz egalik qilayotgan barcha 3D sovg\'alar';
+      actionBtn.textContent = '🛒 Do\'konga o\'tish';
+      actionBtn.onclick = () => {
+        modal.classList.add('hidden');
+        openDigiGiftShopModal();
+      };
+    } else {
+      titleEl.textContent = 'O\'yinchi Kolleksiyasi';
+      subTitleEl.textContent = `${targetId} profilingizdagi sovg'alari`;
+      actionBtn.textContent = '🎁 Sovg\'a yuborish';
+      actionBtn.onclick = () => {
+        modal.classList.add('hidden');
+        openDigiGiftShopModal();
+      };
+    }
+
+    // Serverdan o'yinchi kolleksiyasini yuklash
+    fetch('/api/tg/gifts/player/' + encodeURIComponent(targetId))
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.ok) {
+          renderPlayerCollectionData(data, isSelf);
+        } else {
+          // Fallback lokal
+          renderPlayerCollectionFallback(targetId, isSelf);
+        }
+      })
+      .catch(() => {
+        renderPlayerCollectionFallback(targetId, isSelf);
+      });
+
+    modal.classList.remove('hidden');
+  }
+
+  function renderPlayerCollectionData(data, isSelf) {
+    const p = data.player || {};
+    const gifts = data.gifts || [];
+    const catalog = getGiftsCatalog();
+
+    document.getElementById('collecUserName').textContent = p.name || 'O\'yinchi';
+    document.getElementById('collecUserElo').textContent = `${p.elo || 1000} ELO`;
+    document.getElementById('collecUserId').textContent = p.id || 'DOOM-XXXX';
+    document.getElementById('collecUserPrestige').textContent = `👑 ${(p.prestige || 0).toLocaleString('en-US')}`;
+    document.getElementById('collecUserCount').textContent = `🎁 ${gifts.length} ta`;
+
+    const avatarBox = document.getElementById('collecUserAvatarBox');
+    if (p.photoUrl) {
+      avatarBox.innerHTML = `<img src="${p.photoUrl}" alt="Avatar" class="w-full h-full object-cover" />`;
+    } else {
+      avatarBox.textContent = (p.name || 'U').charAt(0).toUpperCase();
+    }
+
+    const grid = document.getElementById('playerCollectionGrid');
+    const emptyBox = document.getElementById('playerCollectionEmpty');
+    grid.innerHTML = '';
+
+    if (gifts.length === 0) {
+      emptyBox.classList.remove('hidden');
+      return;
+    }
+    emptyBox.classList.add('hidden');
+
+    gifts.forEach(item => {
+      const giftObj = catalog.find(g => g.id === item.giftId) || {
+        id: item.giftId,
+        name: item.giftName || 'Sovg\'a',
+        rarity: item.rarity || 'common',
+        icon: '🎁',
+        glow: '#f59e0b'
+      };
+      const rarity = RARITY_MAP[giftObj.rarity] || RARITY_MAP.common;
+      const imgUrl = getGiftImageUrl(giftObj.id);
+
+      const card = document.createElement('div');
+      card.className = `relative rounded-xl p-2 flex flex-col justify-between gap-1.5 select-none bg-gradient-to-b from-slate-900/90 to-slate-950 border ${rarity.border}`;
+
+      let sourceText = '';
+      if (item.source === 'bonus_case') {
+        sourceText = '🧰 Oltin Sandiqdan';
+      } else if (item.fromName) {
+        sourceText = `👤 Kimdan: ${item.fromName}`;
+      } else {
+        sourceText = '🛒 Do\'kondan xarid';
+      }
+
+      card.innerHTML = `
+        <div class="flex items-center justify-between gap-1 min-w-0">
+          <span class="text-[10.5px] font-bold text-white truncate" title="${giftObj.name}">${giftObj.name}</span>
+          <span class="text-[7.5px] font-bold px-1.5 py-0.2 rounded-full uppercase shrink-0 ${rarity.badge}">${rarity.name}</span>
+        </div>
+
+        <div class="h-[74px] w-full flex items-center justify-center relative overflow-hidden rounded-lg bg-[#050914]">
+          <div class="absolute inset-0 pointer-events-none" style="background: radial-gradient(circle at 50% 50%, ${giftObj.glow}2e 0%, transparent 74%);"></div>
+          <img src="${imgUrl}" alt="${giftObj.name}" class="max-h-[70px] max-w-[70px] scale-[1.08] object-contain relative z-10" style="-webkit-mask-image: radial-gradient(circle at 50% 50%, #000 62%, transparent 98%); mask-image: radial-gradient(circle at 50% 50%, #000 62%, transparent 98%);" />
+        </div>
+
+        <div class="space-y-1 pt-0.5 border-t border-white/5 text-[9px]">
+          <div class="flex items-center justify-between text-amber-300 font-mono font-bold">
+            <span>👑 +${(item.prestige || giftObj.prestige || 0).toLocaleString('en-US')}</span>
+            <span class="text-[8px] text-slate-400 font-sans truncate max-w-[90px]">${sourceText}</span>
+          </div>
+          ${item.note ? `<p class="text-[8.5px] text-sky-200 italic truncate" title="${item.note}">"${item.note}"</p>` : ''}
+          ${isSelf ? `
+            <button type="button" class="btn-transfer-gift ios-btn-blue w-full py-1 text-[9px] font-bold rounded-lg mt-0.5">
+              ✈️ Hadya qilish
+            </button>
+          ` : ''}
+        </div>
+      `;
+
+      if (isSelf) {
+        const trBtn = card.querySelector('.btn-transfer-gift');
+        if (trBtn) {
+          trBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openTransferGiftPanel(item, giftObj);
+          });
+        }
+      }
+
+      grid.appendChild(card);
+    });
+  }
+
+  function renderPlayerCollectionFallback(targetId, isSelf) {
+    const me = getCurrentPlayerIdentity();
+    const uStats = window.userStats || { gifts: [], prestige: 0, elo: 1000 };
+    renderPlayerCollectionData({
+      player: {
+        id: targetId,
+        name: isSelf ? me.name : targetId,
+        elo: uStats.elo || 1000,
+        prestige: uStats.prestige || 0,
+        photoUrl: isSelf ? me.photoUrl : ''
+      },
+      gifts: isSelf && Array.isArray(uStats.gifts) ? uStats.gifts : []
+    }, isSelf);
+  }
+
+  let _transferTargetFriend = null;
+
+  function openTransferGiftPanel(item, giftObj) {
+    _activeTransferItem = item;
+    _transferTargetFriend = null;
+    const panel = document.getElementById('collecTransferPanel');
+    const nameLabel = document.getElementById('transferGiftNameLabel');
+    if (!panel) return;
+
+    if (nameLabel) nameLabel.textContent = `${giftObj.icon} ${giftObj.name} (UID: ${item.uid || 'standart'})`;
+    panel.classList.remove('hidden');
+
+    const list = document.getElementById('transferFriendsList');
+    list.innerHTML = '<div class="py-2 text-center text-slate-500">Do\'stlar ro\'yxati yuklanmoqda...</div>';
+
+    const me = getCurrentPlayerIdentity();
+    fetch('/api/tg/directory?myId=' + encodeURIComponent(me.id))
+      .then(res => res.json())
+      .then(data => {
+        const friends = (data && data.myFriends) || [];
+        if (friends.length === 0) {
+          list.innerHTML = '<div class="py-2 text-center text-slate-500">Hozircha do\'stlar yo\'q. Avval Do\'stlar Hubidan do\'st qo\'shing.</div>';
+          return;
+        }
+
+        list.innerHTML = '';
+        friends.forEach(f => {
+          const div = document.createElement('div');
+          const isSel = _transferTargetFriend && _transferTargetFriend.id === f.id;
+          div.className = `p-1.5 rounded-lg flex items-center justify-between cursor-pointer transition ${isSel ? 'bg-sky-950/90 border border-sky-400' : 'bg-slate-950/80 hover:bg-slate-900 border border-slate-800'}`;
+          div.innerHTML = `
+            <div class="flex items-center gap-1.5 min-w-0">
+              <span class="text-xs">👤</span>
+              <span class="font-bold text-white truncate max-w-[120px]">${f.name || f.username || f.id}</span>
+            </div>
+            <span class="text-[9px] font-mono text-amber-300">👑 ${(f.prestige || 0).toLocaleString('en-US')}</span>
+          `;
+          div.addEventListener('click', () => {
+            _transferTargetFriend = { id: f.id, name: f.name || f.username || f.id };
+            openTransferGiftPanel(item, giftObj);
+          });
+          list.appendChild(div);
+        });
+      })
+      .catch(() => {
+        list.innerHTML = '<div class="py-2 text-center text-slate-500">Do\'stlarni yuklab bo\'lmadi</div>';
+      });
+  }
+
+  function executeGiftTransfer() {
+    if (!_activeTransferItem) return;
+    if (!_transferTargetFriend) {
+      if (typeof window.showToast === 'function') window.showToast('Iltimos, sovg\'a hadya qilinadigan do\'stni tanlang!', '⚠️');
+      return;
+    }
+
+    const me = getCurrentPlayerIdentity();
+    const btn = document.getElementById('btnConfirmTransfer');
+    btn.disabled = true;
+    btn.textContent = '⏳ Yuborilmoqda...';
+
+    const payload = {
+      fromId: me.id,
+      toId: _transferTargetFriend.id,
+      giftUid: _activeTransferItem.uid,
+      note: (document.getElementById('inputTransferNote')?.value || '').trim().slice(0, 80)
+    };
+
+    fetch('/api/tg/gifts/transfer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(data => {
+      btn.disabled = false;
+      btn.textContent = '✈️ Hadya qilishni tasdiqlash';
+
+      if (data && data.ok) {
+        document.getElementById('collecTransferPanel').classList.add('hidden');
+        if (data.fromStats && window.userStats) {
+          if (Array.isArray(data.fromStats.gifts)) window.userStats.gifts = data.fromStats.gifts;
+          if (typeof data.fromStats.prestige === 'number') window.userStats.prestige = data.fromStats.prestige;
+          if (data.fromStats.giftSummary) window.userStats.giftSummary = data.fromStats.giftSummary;
+        }
+
+        if (typeof window.saveUserData === 'function') window.saveUserData();
+        if (typeof window.updateMainMenuWidgets === 'function') window.updateMainMenuWidgets();
+        renderDigiGiftShop();
+
+        if (typeof window.playSound === 'function') window.playSound('victory_fanfare');
+        if (typeof window.showToast === 'function') {
+          window.showToast(`✈️ Sovg'a ${_transferTargetFriend.name} ga hadya qilindi!`, '🎁');
+        }
+
+        openPlayerCollectionModal(me.id);
+      } else {
+        const errMsg = (data && (data.message || data.error)) || 'Hadya qilib bo\'lmadi';
+        if (typeof window.showToast === 'function') window.showToast(errMsg, '⚠️');
+      }
+    })
+    .catch(err => {
+      btn.disabled = false;
+      btn.textContent = '✈️ Hadya qilishni tasdiqlash';
+      console.error('Transfer error:', err);
+      if (typeof window.showToast === 'function') window.showToast('Server bilan aloqa uzildi', '⚠️');
+    });
   }
 
   function openDigiGiftShopModal() {
@@ -995,14 +1507,14 @@ To'lov rekvizitlarini yuborsangiz.`;
     }
   }
 
-  // 8. GLOBAL EXPORTS
+  // 9. GLOBAL EXPORTS
   window.renderDigiGiftShop = renderDigiGiftShop;
   window.openDigiGiftShopModal = openDigiGiftShopModal;
   window.openGiftDetailModal = openGiftDetailModal;
   window.openBuyGemsModal = openBuyGemsModal;
+  window.openPlayerCollectionModal = openPlayerCollectionModal;
   window.onDigiGiftsUpdated = onDigiGiftsUpdated;
 
-  // Sahifa yuklanganda do'konni tayyorlab qo'yish
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
       ensureGiftsCustomStyles();

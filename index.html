@@ -1104,10 +1104,10 @@
             <div class="flex items-center gap-2 min-w-0">
               <!-- Profil qutisi -->
               <div class="flex items-center gap-2 pr-2 border-r border-slate-500/40 min-w-0">
-                <div class="w-9 h-9 rounded-lg overflow-hidden border-2 border-amber-400/95 bg-slate-900 shadow-md shrink-0 flex items-center justify-center">
+                <button id="btnOpenMyCollection" type="button" class="cursor-pointer active:scale-95 transition w-9 h-9 rounded-lg overflow-hidden border-2 border-amber-400/95 bg-slate-900 shadow-md shrink-0 flex items-center justify-center">
                   <img id="lobbyAvatarImg" src="" alt="" class="hidden w-full h-full object-cover" />
                   <span id="lobbyAvatarFallback" class="text-sm font-black text-amber-300">🪖</span>
-                </div>
+                </button>
                 <div class="min-w-0 leading-none">
                   <input id="myNameInput" type="text" value="Sardor_UZ" maxlength="16" class="block bg-transparent text-[11px] font-black text-white w-[108px] truncate focus:outline-none focus:border-b focus:border-amber-400" title="Ismingiz" />
                   <div class="flex items-center gap-1 mt-1">
@@ -1138,6 +1138,12 @@
                 <span class="text-xs select-none leading-none">🏆</span>
                 <span id="lobbyEloLabel" class="font-mono font-black text-[11px] text-amber-300 leading-none">1,000</span>
                 <span class="text-amber-400 font-black text-[10px] leading-none">ELO</span>
+              </button>
+
+              <!-- Sovg'alar Kolleksiyasi / Prestige -->
+              <button id="lobbyMyPrestigePill" type="button" class="dg-lob-pill flex items-center gap-1.5 rounded-md px-2 py-1 shrink-0 active:scale-95 transition border border-amber-500/50 bg-gradient-to-r from-amber-950/40 to-slate-900/60" title="Mening kolleksiyam va nufuzim">
+                <span class="text-[11px] select-none leading-none">👑</span>
+                <span id="lobbyMyPrestigeCount" class="font-mono font-black text-[11px] text-amber-300 leading-none">0</span>
               </button>
     
               <div class="w-px h-5 bg-slate-500/45 shrink-0"></div>
@@ -8412,6 +8418,24 @@
         if (g2) g2.textContent = gemsFormatted;
         if (g3) g3.textContent = gemsFormatted;
 
+        const presCountEl = document.getElementById("lobbyMyPrestigeCount");
+        if (presCountEl) {
+          const giftsArr = Array.isArray(userStats.gifts) ? userStats.gifts : [];
+          presCountEl.textContent = giftsArr.length.toString();
+        }
+        if (!window._myCollectionBound) {
+          window._myCollectionBound = true;
+          const openCol = () => {
+            if (typeof window.openPlayerCollectionModal === "function") {
+              window.openPlayerCollectionModal();
+            }
+          };
+          const b1 = document.getElementById("btnOpenMyCollection");
+          const b2 = document.getElementById("lobbyMyPrestigePill");
+          if (b1) b1.addEventListener("click", openCol);
+          if (b2) b2.addEventListener("click", openCol);
+        }
+
         const btnQGems = document.getElementById('btnQuickGemsPill');
         if (btnQGems && !btnQGems._boundGems) {
           btnQGems._boundGems = true;
@@ -8687,6 +8711,10 @@
               const lName = (p.league && p.league.name) || '';
               const selfBadge = p.isSelf ? '<span class="ios-btn-gold px-1.5 py-0.2 text-[8px] rounded-full ml-1">Siz</span>' : '';
               const selfRowCls = p.isSelf ? 'ios-rt-self-row' : '';
+              const presBadge = p.prestige ? `<span class="text-[9.5px] font-bold text-amber-300 ml-1">👑 ${p.prestige}</span>` : '';
+              const topGiftsIcons = (Array.isArray(p.topGifts) && p.topGifts.length > 0)
+                ? p.topGifts.map(g => `<img src="/img/gifts/${g.id || g.giftId}.webp?v=20261124_3" class="w-3.5 h-3.5 object-contain inline-block shrink-0 drop-shadow ml-0.5" title="${escapeFhHtml(g.name || '')}" />`).join('')
+                : '';
 
               let metricHtml = '';
               if (rtActiveCategory === 'kills') {
@@ -8699,12 +8727,12 @@
                 metricHtml = `<span class="text-amber-300 font-extrabold text-[12px]">${p.metricPower} ball</span><span class="text-[9px] text-slate-400">${p.elo} ELO</span>`;
               }
 
-              return `<div class="ios-fh-row ${selfRowCls} flex items-center justify-between gap-2">`
+              return `<div class="ios-fh-row ${selfRowCls} flex items-center justify-between gap-2 cursor-pointer hover:bg-white/5 transition" data-view-collection="${escapeFhHtml(p.id)}">`
                 + `<div class="flex items-center gap-2 min-w-0 flex-1">`
                   + rankHtml
                   + avatarHtml
                   + `<div class="min-w-0 flex-1 leading-tight">`
-                    + `<div class="flex items-center gap-1"><span class="text-[11.5px] font-semibold text-white truncate">${pName}</span>${selfBadge}</div>`
+                    + `<div class="flex items-center gap-1"><span class="text-[11.5px] font-semibold text-white truncate">${pName}</span>${selfBadge}${presBadge}${topGiftsIcons}</div>`
                     + `<div class="text-[9.5px] text-slate-400 truncate mt-0.5">${lIcon} ${lName} · Lv.${p.level || 1} · ${p.metricMatches || 0} o'yin</div>`
                   + `</div>`
                 + `</div>`
@@ -8771,6 +8799,20 @@
             renderRatingLeaderboard(true);
           });
         });
+
+        const ratingBox = document.getElementById('ratingLeaderboardBox');
+        if (ratingBox && !ratingBox._boundCollectionClick) {
+          ratingBox._boundCollectionClick = true;
+          ratingBox.addEventListener('click', (e) => {
+            const row = e.target.closest('[data-view-collection]');
+            if (row) {
+              const pid = row.getAttribute('data-view-collection');
+              if (pid && typeof window.openPlayerCollectionModal === 'function') {
+                window.openPlayerCollectionModal(pid);
+              }
+            }
+          });
+        }
 
         const refreshBtn = document.getElementById('btnRefreshRating');
         if (refreshBtn) {
@@ -9040,16 +9082,18 @@
                 actionBtn = `<button type="button" data-fh-action="add" data-pid="${pid}" data-pname="${pname}" data-pelo="${p.elo}" class="ios-btn-blue px-2.5 py-1 text-[10px] active:opacity-75 transition">+ Qo\x27shish</button>`;
               }
 
+              const presBadge = p.prestige ? `<span class="text-[9.5px] font-bold text-amber-300 shrink-0">👑 ${p.prestige}</span>` : '';
+              const colBtn = `<button type="button" data-fh-action="collection" data-pid="${pid}" class="ios-btn-gray px-2 py-1 text-[10px] active:opacity-75 transition shrink-0 ml-1" title="Kolleksiyani ko\'rish">🎁</button>`;
               return `<div class="ios-fh-row">`
                 + `<div class="flex items-center gap-2 min-w-0 flex-1">`
                   + rankHtml
                   + avatarHtml
                   + `<div class="min-w-0 flex-1 leading-tight">`
-                    + `<div class="flex items-center gap-1.5"><span class="text-[12px] font-semibold text-white truncate">${pname}</span><span class="text-[10px] font-medium text-[#8E8E93] shrink-0">Lv.${p.level}</span></div>`
+                    + `<div class="flex items-center gap-1.5"><span class="text-[12px] font-semibold text-white truncate">${pname}</span><span class="text-[10px] font-medium text-[#8E8E93] shrink-0">Lv.${p.level}</span>${presBadge}</div>`
                     + `<div class="text-[10px] text-[#8E8E93] truncate">${p.totalMatches} o\x27yin · ${p.kills} frag · ${p.powerScore} ball</div>`
                   + `</div>`
                 + `</div>`
-                + `<div class="shrink-0 flex items-center">${actionBtn}</div>`
+                + `<div class="shrink-0 flex items-center gap-1">${actionBtn}${colBtn}</div>`
               + `</div>`;
             }).join('');
           }
@@ -9100,15 +9144,18 @@
                 ? `<span class="text-[#30D158] font-bold">Online</span> · ${f.powerScore} ball`
                 : `<span class="text-slate-400">Offline · ${f.totalMatches} o\x27yin · ${f.powerScore} ball</span>`;
 
+              const presBadge = f.prestige ? `<span class="text-[9.5px] font-bold text-amber-300 shrink-0">👑 ${f.prestige}</span>` : '';
+              const colBtn = `<button type="button" data-fh-action="collection" data-pid="${pid}" class="ios-btn-gray px-2 py-1 text-[10px] active:opacity-75 transition shrink-0" title="Kolleksiyani ko\'rish">🎁</button>`;
               return `<div class="ios-fh-row">`
                 + `<div class="flex items-center gap-2 min-w-0 flex-1">`
                   + avatarHtml
                   + `<div class="min-w-0 flex-1 leading-tight">`
-                    + `<div class="flex items-center gap-1.5"><span class="text-[12px] font-semibold text-white truncate">${fname}</span><span class="text-[10px] font-medium text-[#8E8E93] shrink-0">Lv.${f.level}</span></div>`
+                    + `<div class="flex items-center gap-1.5"><span class="text-[12px] font-semibold text-white truncate">${fname}</span><span class="text-[10px] font-medium text-[#8E8E93] shrink-0">Lv.${f.level}</span>${presBadge}</div>`
                     + `<div class="text-[10px] truncate leading-tight">${statusLine}</div>`
                   + `</div>`
                 + `</div>`
                 + `<div class="flex items-center gap-1 shrink-0">`
+                  + colBtn
                   + `<button type="button" data-fh-action="chat" data-pid="${pid}" data-pname="${fname}" data-tg-user="${escapeFhHtml(f.username || '')}" data-tg-id="${escapeFhHtml(f.tgId || '')}" class="ios-btn-blue px-2.5 py-1 text-[10px] inline-flex items-center gap-1 shrink-0" title="Telegramda yozish"><svg class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/></svg><span>Xabar</span></button>`
                   + `<button type="button" data-fh-action="play" data-pid="${pid}" class="ios-btn-tinted px-2 py-1 text-[10px] active:opacity-75 transition" title="Online lobbi ochish">O\x27ynash</button>`
                   + `<button type="button" data-fh-action="remove" data-pid="${pid}" class="ios-btn-circle active:opacity-75 transition text-[#FF453A]" title="Do\x27stlikdan chiqarish">✕</button>`
@@ -9195,7 +9242,12 @@
             const myElo = (typeof userStats !== 'undefined' && userStats.elo) ? userStats.elo : 1000;
             const curQ = document.getElementById('fhSearchInput') ? document.getElementById('fhSearchInput').value.trim() : '';
 
-            if (action === 'chat') {
+            if (action === 'collection') {
+              if (typeof window.openPlayerCollectionModal === 'function') {
+                window.openPlayerCollectionModal(pid);
+              }
+              return;
+            } else if (action === 'chat') {
               openFriendTelegramChat(btn.getAttribute('data-tg-user') || btn.dataset.tgUser || '', btn.getAttribute('data-tg-id') || btn.dataset.tgId || '', btn.getAttribute('data-pname') || btn.dataset.pname || '');
               return;
             } else if (action === 'add') {
@@ -9257,7 +9309,12 @@
             const myId = getActiveMyId();
             const curQ = document.getElementById('fhSearchInput') ? document.getElementById('fhSearchInput').value.trim() : '';
 
-            if (action === 'chat') {
+            if (action === 'collection') {
+              if (typeof window.openPlayerCollectionModal === 'function') {
+                window.openPlayerCollectionModal(pid);
+              }
+              return;
+            } else if (action === 'chat') {
               openFriendTelegramChat(btn.getAttribute('data-tg-user') || btn.dataset.tgUser || '', btn.getAttribute('data-tg-id') || btn.dataset.tgId || '', btn.getAttribute('data-pname') || btn.dataset.pname || '');
               return;
             } else if (action === 'accept' || action === 'reject') {
@@ -9695,11 +9752,15 @@
 
       // ==================== 6) CS:GO 3D OLTIN HARBIY SANDIQ (3D CASE OPENING + RULETKA) ====================
       const CS_CASE_ITEMS = [
-        { title: 'Harbiy Zaxira', reward: 1500, badge: '🧰', rarity: 'blue', border: '#3b82f6', bg: 'linear-gradient(180deg,#0f172a 0%,#1e3a8a 100%)', hex: 0x3b82f6 },
-        { title: 'Taktik Arsenal', reward: 2500, badge: '💎', rarity: 'purple', border: '#a855f7', bg: 'linear-gradient(180deg,#1e1b4b 0%,#581c87 100%)', hex: 0xa855f7 },
-        { title: 'Maxfiy Qurol', reward: 3500, badge: '🔥', rarity: 'pink', border: '#ec4899', bg: 'linear-gradient(180deg,#3b0764 0%,#9d174d 100%)', hex: 0xec4899 },
-        { title: 'Qizil Elita', reward: 4500, badge: '🦅', rarity: 'red', border: '#ef4444', bg: 'linear-gradient(180deg,#450a0a 0%,#991b1b 100%)', hex: 0xef4444 },
-        { title: '★ OLTIN XAZINA ★', reward: 6000, badge: '👑', rarity: 'gold', border: '#fbbf24', bg: 'linear-gradient(180deg,#451a03 0%,#b45309 100%)', hex: 0xfbbf24 }
+        { id: 'coin_500', title: '500 Tanga', reward: 500, color: '#94a3b8', border: 'border-slate-500', badge: 'Oddiy', hex: 0x94a3b8, type: 'coin' },
+        { id: 'coin_1500', title: '1,500 Tanga', reward: 1500, color: '#3b82f6', border: 'border-blue-500', badge: 'Nodir', hex: 0x3b82f6, type: 'coin' },
+        { id: 'coin_3000', title: '3,000 Tanga', reward: 3000, color: '#a855f7', border: 'border-purple-500', badge: 'Epik', hex: 0xa855f7, type: 'coin' },
+        { id: 'coin_4500', title: '4,500 Tanga', reward: 4500, color: '#ef4444', border: 'border-red-500', badge: 'Qizil Elita', hex: 0xef4444, type: 'coin' },
+        { id: 'coin_6000', title: '6,000 Tanga', reward: 6000, color: '#f59e0b', border: 'border-amber-400', badge: '★ Oltin Xazina', hex: 0xf59e0b, type: 'coin' },
+        { id: 'tactical_medal', title: 'Taktik Medal', giftId: 'tactical_medal', prestige: 250, color: '#c084fc', border: 'border-purple-500', badge: 'Epik Sovg\'a', hex: 0xc084fc, type: 'gift' },
+        { id: 'karambit_neon', title: 'Neon Karambit', giftId: 'karambit_neon', prestige: 600, color: '#38bdf8', border: 'border-sky-500', badge: '★ Afsonaviy', hex: 0x38bdf8, type: 'gift' },
+        { id: 'titan_shield', title: 'Titan Qalqon', giftId: 'titan_shield', prestige: 750, color: '#f59e0b', border: 'border-amber-400', badge: '★ Afsonaviy', hex: 0xf59e0b, type: 'gift' },
+        { id: 'golden_dragon', title: 'Oltin Ajdaho', giftId: 'golden_dragon', prestige: 1500, color: '#f43f5e', border: 'border-rose-500', badge: '👑 Mifik', hex: 0xf43f5e, type: 'gift' }
       ];
 
       let caseThreeRenderer = null;
@@ -10401,6 +10462,47 @@
 
       function populateCaseRouletteStrip(winningItem) {
         const track = document.getElementById('csCaseRouletteTrack');
+        if (!track) return { winIndex: 28 };
+        track.style.transition = 'none';
+        track.style.transform = 'translate3d(0px, 0px, 0px)';
+        track.innerHTML = '';
+
+        const totalCards = 55;
+        const winIndex = 28;
+
+        for (let i = 0; i < totalCards; i++) {
+          let item = CS_CASE_ITEMS[Math.floor(Math.random() * CS_CASE_ITEMS.length)];
+          if (i === winIndex) item = winningItem;
+
+          const isGift = item.type === 'gift';
+          const card = document.createElement('div');
+          card.className = `w-24 h-24 rounded-xl bg-slate-900/90 border-2 ${item.border} flex flex-col items-center justify-between p-2 shrink-0 select-none shadow-md`;
+
+          let centerContent = '';
+          if (isGift) {
+            centerContent = `<img src="/img/gifts/${item.giftId}.webp?v=20261124_3" class="w-10 h-10 object-contain drop-shadow" onerror="this.src='/img/gifts/tactical_medal.webp'" />`;
+          } else {
+            centerContent = `<div class="text-2xl">${item.reward >= 4500 ? '👑' : (item.reward >= 1500 ? '💰' : '🪙')}</div>`;
+          }
+
+          let subContent = isGift
+            ? `<span class="text-[10px] font-bold text-amber-300">+${item.prestige} Ball</span>`
+            : `<span class="text-[10px] font-bold" style="color:${item.color}">+$${item.reward}</span>`;
+
+          card.innerHTML = `
+            <span class="text-[9px] font-black uppercase tracking-wider text-slate-300 text-center truncate w-full">${item.badge}</span>
+            ${centerContent}
+            <div class="text-center leading-none">
+              <span class="font-black text-[11px] block text-white truncate w-20">${item.title}</span>
+              ${subContent}
+            </div>
+          `;
+          track.appendChild(card);
+        }
+        return { winIndex };
+      }
+      function populateCaseRouletteStrip(winningItem) {
+        const track = document.getElementById('csCaseRouletteTrack');
         if (!track) return { totalCards: 46, winIndex: 38 };
         track.innerHTML = '';
         track.style.transition = 'none';
@@ -10465,8 +10567,30 @@
         if (spinBtn) spinBtn.textContent = '⏳ RULETKA AYLANMOQDA...';
 
         // Yuqori ehtimol bilan ★ OLTIN XAZINA (+$6,000) yoki Qizil Elita (+$4,500) chiqishi
+        // 72% Tangalar, 28% Eksklyuziv 3D Sovg'alar
         const roll = Math.random();
-        const winningItem = roll < 0.48 ? CS_CASE_ITEMS[4] : (roll < 0.75 ? CS_CASE_ITEMS[3] : (roll < 0.90 ? CS_CASE_ITEMS[2] : CS_CASE_ITEMS[1]));
+        let winningItem;
+        if (roll < 0.72) {
+          // Tangalar (5 xil)
+          const coinRoll = Math.random();
+          winningItem = coinRoll < 0.35 ? CS_CASE_ITEMS[0] // 500
+            : (coinRoll < 0.65 ? CS_CASE_ITEMS[1] // 1500
+            : (coinRoll < 0.85 ? CS_CASE_ITEMS[2] // 3000
+            : (coinRoll < 0.95 ? CS_CASE_ITEMS[3] // 4500
+            : CS_CASE_ITEMS[4]))); // 6000
+        } else {
+          // 28% Sovg'alar: 14% medal, 8% karambit, 4.5% qalqon, 1.5% ajdaho
+          const giftRoll = Math.random();
+          if (giftRoll < 0.50) { // 14% / 28% = 50%
+            winningItem = CS_CASE_ITEMS[5]; // tactical_medal
+          } else if (giftRoll < 0.7857) { // 8% / 28% ~= 28.57% -> 78.57%
+            winningItem = CS_CASE_ITEMS[6]; // karambit_neon
+          } else if (giftRoll < 0.9464) { // 4.5% / 28% ~= 16.07% -> 94.64%
+            winningItem = CS_CASE_ITEMS[7]; // titan_shield
+          } else { // 1.5% / 28% ~= 5.36%
+            winningItem = CS_CASE_ITEMS[8]; // golden_dragon
+          }
+        }
         const { winIndex } = populateCaseRouletteStrip(winningItem);
 
         // 1-BOSQICH (0.0s -> 4.25s): Sandiq YOPIQ turadi, pastdagi Ruletka sekin va ravon aylanib sovrin ustida to'xtaydi!
@@ -10510,20 +10634,47 @@
             casePrizeGroup.visible = true;
             casePrizeGroup.position.y = 0.04;
           }
-          triggerCaseCoinsBurst(0xfde047);
+          triggerCaseCoinsBurst(winningItem.hex || 0xfde047);
 
-          const reward = winningItem.reward;
-          userStats.coins += reward;
-          saveUserData();
-          updateMainMenuWidgets();
-          if (cLbl) cLbl.textContent = userStats.coins.toLocaleString('en-US');
+          if (winningItem.type === 'gift') {
+            const myId = getActiveMyId();
+            fetch('/api/tg/gifts/claim-bonus', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                playerId: myId,
+                giftId: winningItem.giftId,
+                source: 'bonus_case'
+              })
+            }).then(r => r.json()).then(d => {
+              if (d && d.ok) {
+                if (!Array.isArray(userStats.gifts)) userStats.gifts = [];
+                userStats.gifts.push(d.giftRecord || { giftId: winningItem.giftId, claimedAt: new Date().toISOString() });
+                saveUserData();
+                updateMainMenuWidgets();
+                if (typeof showToast === 'function') showToast(`Tabriklaymiz! ${winningItem.title} sovg\'asi kolleksiyangizga qo\'shildi!`, '🎁');
+              }
+            }).catch(e => console.warn('claim-bonus error:', e));
 
-          // Tilla tangalarning jarangdor shiqirlashi!
-          playSound('case_coins_shiqirlash');
+            playSound('case_coins_shiqirlash');
 
-          if (resTxt) {
-            resTxt.textContent = `${winningItem.badge} ${winningItem.title}: +$${reward.toLocaleString('en-US')}`;
-            resTxt.classList.remove('hidden');
+            if (resTxt) {
+              resTxt.textContent = `🎁 ${winningItem.badge} ${winningItem.title}: +${winningItem.prestige} Ball qo\'shildi!`;
+              resTxt.classList.remove('hidden');
+            }
+          } else {
+            const reward = winningItem.reward;
+            userStats.coins += reward;
+            saveUserData();
+            updateMainMenuWidgets();
+            if (cLbl) cLbl.textContent = userStats.coins.toLocaleString('en-US');
+
+            playSound('case_coins_shiqirlash');
+
+            if (resTxt) {
+              resTxt.textContent = `${winningItem.badge} ${winningItem.title}: +$${reward.toLocaleString('en-US')}`;
+              resTxt.classList.remove('hidden');
+            }
           }
           if (spinBtn) spinBtn.textContent = '🔑 OLTIN SANDIQNI OCHISH (BEPUL)';
           showToast(`Sandiqdan +$${reward.toLocaleString('en-US')} tilla tanga chiqdi!`, '🪙');
@@ -10764,7 +10915,7 @@
   </script>
   <script src="/gifts-catalog.js?v=20261124_1"></script>
   <script src="/telegram-bridge.js?v=20261108_3"></script>
-  <script src="/gifts-ui.js?v=20261124_2"></script>
+  <script src="/gifts-ui.js?v=20261124_3"></script>
   <script src="/mp-client.js"></script>
   <script src="/sfx-engine.js"></script>
 </body>

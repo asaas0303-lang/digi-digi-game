@@ -636,6 +636,9 @@ app.get("/api/tg/directory", (req, res) => {
       headshots: score.headshots,
       powerScore: score.powerScore,
       isOnline: score.isOnline,
+      prestige: p.prestige || 0,
+      giftTotalCount: (p.giftSummary && p.giftSummary.totalCount) || (Array.isArray(p.gifts) ? p.gifts.length : 0),
+      topGifts: (p.giftSummary && p.giftSummary.topGifts) || [],
       lastSeenAt: p.lastSeenAt || p.updatedAt || p.createdAt || 0
     };
   });
@@ -689,6 +692,9 @@ app.get("/api/tg/directory", (req, res) => {
         headshots: score.headshots,
         powerScore: score.powerScore,
         isOnline: score.isOnline,
+        prestige: p.prestige || 0,
+        giftTotalCount: (p.giftSummary && p.giftSummary.totalCount) || (Array.isArray(p.gifts) ? p.gifts.length : 0),
+        topGifts: (p.giftSummary && p.giftSummary.topGifts) || [],
         lastSeenAt: p.lastSeenAt || p.updatedAt || 0
       };
     }
@@ -706,6 +712,9 @@ app.get("/api/tg/directory", (req, res) => {
       headshots: 0,
       powerScore: (sf && sf.elo) || 1000,
       isOnline: false,
+      prestige: (sf && sf.prestige) || 0,
+      giftTotalCount: (sf && sf.giftTotalCount) || 0,
+      topGifts: (sf && sf.topGifts) || [],
       lastSeenAt: 0
     };
   });
@@ -952,7 +961,10 @@ app.get('/api/tg/leaderboard', (req, res) => {
       metricHeadshots,
       metricMatches,
       hsRate,
-      kpm
+      kpm,
+      prestige: (db.players[p.id] && db.players[p.id].prestige) || 0,
+      giftTotalCount: (db.players[p.id] && db.players[p.id].giftSummary && db.players[p.id].giftSummary.totalCount) || (db.players[p.id] && Array.isArray(db.players[p.id].gifts) ? db.players[p.id].gifts.length : 0),
+      topGifts: (db.players[p.id] && db.players[p.id].giftSummary && db.players[p.id].giftSummary.topGifts) || []
     };
   });
 
@@ -1003,7 +1015,10 @@ app.get('/api/tg/leaderboard', (req, res) => {
       metricHeadshots: myAll.headshots,
       metricMatches: myAll.totalMatches,
       hsRate: myAll.hsRate,
-      kpm: myAll.kpm
+      kpm: myAll.kpm,
+      prestige: myObj.prestige || 0,
+      giftTotalCount: (myObj.giftSummary && myObj.giftSummary.totalCount) || (Array.isArray(myObj.gifts) ? myObj.gifts.length : 0),
+      topGifts: (myObj.giftSummary && myObj.giftSummary.topGifts) || []
     };
   }
 
