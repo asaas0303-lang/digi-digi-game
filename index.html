@@ -1842,16 +1842,24 @@
             <canvas id="csCase3DCanvas" class="w-full h-full block cursor-grab active:cursor-grabbing touch-none"></canvas>
             <p id="slotResultText" class="hidden absolute bottom-2.5 left-1/2 -translate-x-1/2 ios-fh-stat-pill border-amber-400/80 text-amber-300 text-[11px] font-extrabold px-3.5 py-1 rounded-full shadow-lg whitespace-nowrap pointer-events-none"></p>
             <!-- SOVG'A YUTILGANDA CHIQADIGAN 3D SOVG'A OVERLAY QATLAMI -->
-            <div id="bonusWonGiftOverlay" class="hidden absolute inset-0 z-30 bg-slate-950/90 flex flex-col items-center justify-center p-3 text-center select-none">
-              <div class="relative w-28 h-28 flex items-center justify-center">
-                <div id="bonusWonGiftAura" class="absolute inset-0 rounded-full bg-amber-500/20 blur-xl"></div>
-                <img id="bonusWonGiftImg" src="/img/gifts/tactical_medal.webp?v=20261124_6" alt="Yutilgan Sovg'a" class="w-24 h-24 object-contain relative z-10 drop-shadow-[0_0_16px_rgba(251,191,36,0.5)]" />
+            <div id="bonusWonGiftOverlay" class="hidden absolute inset-0 z-30 bg-[#040814] flex flex-col items-center justify-between p-2.5 text-center overflow-hidden select-none">
+              <div id="bonusWonGiftAura" class="absolute inset-0 pointer-events-none" style="background:radial-gradient(circle at 50% 46%, rgba(251,191,36,0.34) 0%, rgba(14,165,233,0.12) 45%, transparent 76%);"></div>
+              <div class="relative z-10 w-full flex items-center justify-between">
+                <span class="px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/50 text-[9px] font-black uppercase tracking-wider text-amber-300">🎉 Eksklyuziv 3D Yutuq!</span>
+                <button id="btnCloseBonusWonOverlay" type="button" class="w-6 h-6 rounded-full bg-white/10 hover:bg-white/20 text-slate-300 text-[11px] font-bold flex items-center justify-center" title="Yopish">✕</button>
               </div>
-              <h3 id="bonusWonGiftTitle" class="text-sm font-black text-amber-300 mt-2 drop-shadow">Oltin Taktik Medalyon</h3>
-              <p id="bonusWonGiftPrestige" class="text-[11px] font-mono font-bold text-sky-200 mt-0.5">👑 +400 Obro'</p>
-              <button id="btnBonusWonOpenCollection" type="button" class="ios-btn-gold px-3.5 py-1.5 text-xs font-bold rounded-xl mt-3 shadow-lg flex items-center gap-1.5 cursor-pointer">
-                <span>🎁 Kolleksiyam / Hadya qilish</span>
-              </button>
+              <div class="relative z-10 flex-1 min-h-0 w-full flex items-center justify-center">
+                <img id="bonusWonGiftImg" src="/img/gifts/tactical_medal.webp?v=20261124_7" alt="Yutilgan Sovg'a" class="w-[170px] h-[170px] max-w-[86%] max-h-[92%] object-contain digi-gift-card-idle drop-shadow-[0_0_24px_rgba(251,191,36,0.55)]" style="-webkit-mask-image:radial-gradient(circle at 50% 50%,#000 60%,transparent 97%);mask-image:radial-gradient(circle at 50% 50%,#000 60%,transparent 97%);" />
+              </div>
+              <div class="relative z-10 shrink-0 w-full flex flex-col items-center gap-1.5">
+                <div class="flex items-center justify-center gap-2 leading-none">
+                  <h3 id="bonusWonGiftTitle" class="text-[13px] font-black text-white drop-shadow">Oltin Taktik Medalyon</h3>
+                  <span id="bonusWonGiftPrestige" class="text-[10.5px] font-mono font-extrabold text-amber-300">👑 +400 Obro'</span>
+                </div>
+                <button id="btnBonusWonOpenCollection" type="button" class="ios-btn-gold w-full max-w-[230px] py-1.5 px-3 text-[11px] font-black rounded-xl shadow-lg flex items-center justify-center gap-1.5 cursor-pointer">
+                  <span>🎁 Kolleksiyam / Hadya qilish</span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -10490,21 +10498,21 @@
 
           const isGift = item.type === 'gift';
           const card = document.createElement('div');
-          card.className = `w-24 h-20 rounded-xl bg-slate-900/95 border-2 ${item.border || 'border-amber-400'} flex flex-col items-center justify-between py-1 px-1.5 shrink-0 select-none shadow-md`;
+          card.className = `w-24 h-20 rounded-xl bg-slate-900/95 border-2 ${item.border || 'border-amber-400'} flex flex-col items-center justify-between py-1 px-1 overflow-hidden shrink-0 select-none shadow-md`;
 
           const centerContent = isGift
-            ? `<img src="/img/gifts/${item.giftId}.webp?v=20261124_6" alt="${item.title}" class="w-9 h-9 object-contain drop-shadow pointer-events-none" style="-webkit-mask-image:radial-gradient(circle,#000 62%,transparent 98%);mask-image:radial-gradient(circle,#000 62%,transparent 98%);" onerror="this.src='/img/gifts/tactical_medal.webp'" />`
+            ? `<img src="/img/gifts/${item.giftId}.webp?v=20261124_7" alt="${item.title}" class="w-8 h-8 object-contain drop-shadow pointer-events-none" style="-webkit-mask-image:radial-gradient(circle,#000 60%,transparent 98%);mask-image:radial-gradient(circle,#000 60%,transparent 98%);" onerror="this.src='/img/gifts/tactical_medal.webp'" />`
             : `<div class="text-xl leading-none">${(item.reward || 0) >= 4500 ? '👑' : ((item.reward || 0) >= 1500 ? '💰' : '🪙')}</div>`;
 
           const subContent = isGift
-            ? `<span class="text-[9px] font-mono font-extrabold text-amber-300 leading-none">👑 +${Number(item.prestige || 0).toLocaleString('en-US')}</span>`
-            : `<span class="text-[9.5px] font-mono font-extrabold leading-none" style="color:${item.color || '#fbbf24'}">+$${Number(item.reward || 0).toLocaleString('en-US')}</span>`;
+            ? `<span class="text-[8.5px] font-mono font-extrabold text-amber-300 leading-none">👑 +${Number(item.prestige || 0).toLocaleString('en-US')}</span>`
+            : `<span class="text-[9px] font-mono font-extrabold leading-none" style="color:${item.color || '#fbbf24'}">+${Number(item.reward || 0).toLocaleString('en-US')}</span>`;
 
           card.innerHTML = `
-            <span class="text-[8px] font-black uppercase tracking-tight text-slate-300 text-center truncate w-full leading-none">${item.badge || ''}</span>
+            <span class="text-[7.5px] font-black uppercase tracking-tight text-center truncate w-full leading-none" style="color:${item.color || '#fbbf24'}">${item.badge || ''}</span>
             ${centerContent}
             <div class="text-center leading-tight w-full">
-              <span class="font-bold text-[9.5px] block text-white truncate w-full">${item.title || ''}</span>
+              <span class="font-bold text-[9px] block text-white truncate w-full leading-none mb-0.5">${item.title || ''}</span>
               ${subContent}
             </div>
           `;
@@ -10575,6 +10583,13 @@
           if (typeof window.openPlayerCollectionModal === 'function') {
             window.openPlayerCollectionModal();
           }
+        });
+      }
+      const btnCloseWonOverlay = document.getElementById('btnCloseBonusWonOverlay');
+      if (btnCloseWonOverlay) {
+        btnCloseWonOverlay.addEventListener('click', () => {
+          const wonOverlay = document.getElementById('bonusWonGiftOverlay');
+          if (wonOverlay) wonOverlay.classList.add('hidden');
         });
       }
 
@@ -10702,16 +10717,19 @@
             const giftImgEl = document.getElementById('bonusWonGiftImg');
             const giftTitleEl = document.getElementById('bonusWonGiftTitle');
             const giftPresEl = document.getElementById('bonusWonGiftPrestige');
+            const giftAuraEl = document.getElementById('bonusWonGiftAura');
             const giftData = spinResult.gift || winningItem;
-            if (giftImgEl) giftImgEl.src = `/img/gifts/${giftData.id || giftData.giftId}.webp?v=20261124_6`;
+            const glowColor = giftData.glow || winningItem.color || '#f59e0b';
+            if (giftAuraEl) {
+              giftAuraEl.style.background = `radial-gradient(circle at 50% 46%, ${glowColor}55 0%, rgba(14,165,233,0.12) 45%, transparent 76%)`;
+            }
+            if (giftImgEl) giftImgEl.src = `/img/gifts/${giftData.id || giftData.giftId}.webp?v=20261124_7`;
             if (giftTitleEl) giftTitleEl.textContent = giftData.name || giftData.title;
             if (giftPresEl) giftPresEl.textContent = `👑 +${(giftData.prestige || 0).toLocaleString('en-US')} Obro'`;
             if (wonOverlay) wonOverlay.classList.remove('hidden');
 
-            if (resTxt) {
-              resTxt.textContent = `🎁 ${winningItem.badge} ${giftData.name || winningItem.title}: +${giftData.prestige || winningItem.prestige} Ball qo'shildi!`;
-              resTxt.classList.remove('hidden');
-            }
+            // resTxt ni ko'rsatma - yashir (oltin tugma orqasida qolib ketmasin!)
+            if (resTxt) resTxt.classList.add('hidden');
             if (typeof showToast === 'function') {
               showToast(`Tabriklaymiz! ${giftData.name || winningItem.title} sovg'asi kolleksiyangizga qo'shildi!`, '🎁');
             }
@@ -10976,7 +10994,7 @@
   </script>
   <script src="/gifts-catalog.js?v=20261124_1"></script>
   <script src="/telegram-bridge.js?v=20261108_3"></script>
-  <script src="/gifts-ui.js?v=20261124_6"></script>
+  <script src="/gifts-ui.js?v=20261124_7"></script>
   <script src="/mp-client.js"></script>
   <script src="/sfx-engine.js"></script>
 </body>

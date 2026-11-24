@@ -6,7 +6,7 @@
   'use strict';
 
   // 1. STATIK KONSTANTALAR VA VERSİYALASH
-  const GIFT_IMG_VER = '20261124_6';
+  const GIFT_IMG_VER = '20261124_7';
   const GIFT_IMG_EXT = 'webp';
 
   function getGiftImageUrl(giftId) {
@@ -608,9 +608,72 @@
     }
   }
 
-  function loadGiftRecipients() {
+  let _giftRecipientsCache = null;
+
+  function renderGiftRecipientsList() {
     const list = document.getElementById('giftFriendsList');
     if (!list) return;
+
+    if (!_giftRecipientsCache) {
+      list.innerHTML = '<div class="py-2 text-center text-slate-400 text-[10px]">O\'yinchilar qidirilmoqda...</div>';
+      return;
+    }
+
+    const me = getCurrentPlayerIdentity();
+    let players = [];
+    if (_activeSubTab === 'friends') {
+      players = _giftRecipientsCache.myFriends || [];
+    } else {
+      players = _giftRecipientsCache.allPlayers || [];
+    }
+
+    const myIdUpper = me.id.toUpperCase();
+    const otherPlayers = players.filter(p => String(p.id || '').toUpperCase() !== myIdUpper);
+
+    if (otherPlayers.length === 0) {
+      list.innerHTML = `<div class="py-2 text-center text-slate-500 text-[10px]">${_activeSubTab === 'friends' ? 'Do\'stlar topilmadi. "Barchasi" yoki "ID orqali" ni tanlang.' : 'O\'yinchilar topilmadi.'}</div>`;
+      return;
+    }
+
+    list.innerHTML = '';
+    otherPlayers.forEach(p => {
+      const item = document.createElement('div');
+      const isSel = _selectedFriend && String(_selectedFriend.id).toUpperCase() === String(p.id).toUpperCase();
+      const prestigeFormatted = (p.prestige || 0).toLocaleString('en-US');
+      item.className = `p-1.5 rounded-lg flex items-center justify-between cursor-pointer transition select-none ${isSel ? 'bg-sky-950/90 border border-sky-400 shadow-sm' : 'bg-slate-900/60 hover:bg-slate-800/80 border border-transparent'}`;
+      item.innerHTML = `
+        <div class="flex items-center gap-1.5 min-w-0">
+          <span class="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center text-[10px]">${isSel ? '✅' : '👤'}</span>
+          <div class="min-w-0 leading-tight">
+            <span class="font-bold text-white truncate block max-w-[120px]">${p.name || p.username || p.id}</span>
+            <span class="text-[8px] text-slate-400 font-mono">${p.id} • Lv.${p.level || 1}</span>
+          </div>
+        </div>
+        <div class="text-right shrink-0">
+          <span class="text-[9px] font-mono text-amber-300 block">👑 ${prestigeFormatted}</span>
+          <span class="text-[8px] text-sky-400 font-mono">${p.elo || 1000} ELO</span>
+        </div>
+      `;
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
+        _selectedFriend = { id: p.id, name: p.name || p.username || p.id };
+        const label = document.getElementById('selectedFriendNameLabel');
+        if (label) label.textContent = _selectedFriend.name;
+        updateDetailModeUI();
+        renderGiftRecipientsList(); // FAQAT ro'yxatni qayta chizish, qayta fetch QILMASLIK!
+      });
+      list.appendChild(item);
+    });
+  }
+
+  function loadGiftRecipients(forceRefresh = false) {
+    const list = document.getElementById('giftFriendsList');
+    if (!list) return;
+
+    if (_giftRecipientsCache && !forceRefresh) {
+      renderGiftRecipientsList();
+      return;
+    }
 
     list.innerHTML = '<div class="py-2 text-center text-slate-400 text-[10px]">O\'yinchilar qidirilmoqda...</div>';
 
@@ -618,48 +681,8 @@
     fetch('/api/tg/directory?myId=' + encodeURIComponent(me.id))
       .then(res => res.json())
       .then(data => {
-        let players = [];
-        if (_activeSubTab === 'friends') {
-          players = (data && data.myFriends) || [];
-        } else {
-          players = (data && data.allPlayers) || [];
-        }
-
-        const myIdUpper = me.id.toUpperCase();
-        const otherPlayers = players.filter(p => String(p.id || '').toUpperCase() !== myIdUpper);
-
-        if (otherPlayers.length === 0) {
-          list.innerHTML = `<div class="py-2 text-center text-slate-500 text-[10px]">${_activeSubTab === 'friends' ? 'Do\'stlar topilmadi. "Barchasi" yoki "ID orqali" ni tanlang.' : 'O\'yinchilar topilmadi.'}</div>`;
-          return;
-        }
-
-        list.innerHTML = '';
-        otherPlayers.forEach(p => {
-          const item = document.createElement('div');
-          const isSel = _selectedFriend && String(_selectedFriend.id) === String(p.id);
-          const prestigeFormatted = (p.prestige || 0).toLocaleString('en-US');
-          item.className = `p-1.5 rounded-lg flex items-center justify-between cursor-pointer transition ${isSel ? 'bg-sky-950/80 border border-sky-400/60' : 'bg-slate-900/60 hover:bg-slate-800/80 border border-transparent'}`;
-          item.innerHTML = `
-            <div class="flex items-center gap-1.5 min-w-0">
-              <span class="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center text-[10px]">👤</span>
-              <div class="min-w-0 leading-tight">
-                <span class="font-bold text-white truncate block max-w-[120px]">${p.name || p.username || p.id}</span>
-                <span class="text-[8px] text-slate-400 font-mono">${p.id} • Lv.${p.level || 1}</span>
-              </div>
-            </div>
-            <div class="text-right shrink-0">
-              <span class="text-[9px] font-mono text-amber-300 block">👑 ${prestigeFormatted}</span>
-              <span class="text-[8px] text-sky-400 font-mono">${p.elo || 1000} ELO</span>
-            </div>
-          `;
-          item.addEventListener('click', () => {
-            _selectedFriend = { id: p.id, name: p.name || p.username || p.id };
-            document.getElementById('selectedFriendNameLabel').textContent = _selectedFriend.name;
-            updateDetailModeUI();
-            loadGiftRecipients();
-          });
-          list.appendChild(item);
-        });
+        _giftRecipientsCache = data || {};
+        renderGiftRecipientsList();
       })
       .catch(() => {
         list.innerHTML = '<div class="py-2 text-center text-slate-500 text-[10px]">O\'yinchilar ro\'yxatini yuklab bo\'lmadi</div>';
@@ -1146,7 +1169,7 @@ To'lov rekvizitlarini yuborsangiz, chekni tashlayman.`;
     modal.id = 'modalPlayerCollection';
     modal.className = 'hidden fixed inset-0 z-[58] flex items-center justify-center p-2.5';
     modal.innerHTML = `
-      <div class="ios-fh-sheet w-full max-w-4xl h-[94%] flex flex-col overflow-hidden">
+      <div class="ios-fh-sheet relative w-full max-w-4xl h-[94%] flex flex-col overflow-hidden">
         
         <!-- Yuqori Sarlavha -->
         <div class="ios-fh-nav shrink-0 h-[48px] px-4 flex items-center justify-between gap-2 border-b border-white/10">
@@ -1168,74 +1191,106 @@ To'lov rekvizitlarini yuborsangiz, chekni tashlayman.`;
         </div>
 
         <!-- Profil Qutisi (Avatar, Ism, ELO, Obro', Jami Sovg'alar) -->
-        <div class="shrink-0 p-3 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-b border-white/10 flex items-center justify-between gap-3">
-          <div class="flex items-center gap-2.5 min-w-0">
-            <div id="collecUserAvatarBox" class="w-11 h-11 rounded-xl bg-slate-800 border border-amber-400/40 flex items-center justify-center text-xl shadow-lg shrink-0 overflow-hidden">
+        <div class="shrink-0 py-2 px-3 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-b border-white/10 flex items-center justify-between gap-3">
+          <div class="flex items-center gap-2 min-w-0">
+            <div id="collecUserAvatarBox" class="w-9 h-9 rounded-xl bg-slate-800 border border-amber-400/40 flex items-center justify-center text-lg shadow-lg shrink-0 overflow-hidden">
               👤
             </div>
             <div class="min-w-0">
-              <div class="flex items-center gap-2">
-                <span id="collecUserName" class="text-sm font-black text-white truncate max-w-[180px]">O'yinchi</span>
-                <span id="collecUserElo" class="text-[10px] font-mono font-bold text-sky-400 bg-sky-950/80 px-2 py-0.5 rounded-full border border-sky-400/40 shrink-0">1,000 ELO</span>
+              <div class="flex items-center gap-1.5">
+                <span id="collecUserName" class="text-xs font-black text-white truncate max-w-[160px]">O'yinchi</span>
+                <span id="collecUserElo" class="text-[9.5px] font-mono font-bold text-sky-400 bg-sky-950/80 px-1.5 py-0.2 rounded-full border border-sky-400/40 shrink-0">1,000 ELO</span>
               </div>
-              <span id="collecUserId" class="text-[9.5px] font-mono text-slate-400 block mt-0.5">DOOM-XXXX</span>
+              <span id="collecUserId" class="text-[9px] font-mono text-slate-400 block">DOOM-XXXX</span>
             </div>
           </div>
 
-          <div class="flex items-center gap-2 shrink-0">
-            <div class="px-3 py-1.5 rounded-xl bg-amber-950/70 border border-amber-400/50 text-center">
-              <span class="text-[8px] font-bold text-amber-300/80 uppercase tracking-wider block">Jami Obro'</span>
-              <span id="collecUserPrestige" class="text-sm font-black font-mono text-amber-300">👑 0</span>
+          <div class="flex items-center gap-1.5 shrink-0">
+            <div class="px-2.5 py-1 rounded-xl bg-amber-950/70 border border-amber-400/50 text-center">
+              <span class="text-[7.5px] font-bold text-amber-300/80 uppercase tracking-wider block">Jami Obro'</span>
+              <span id="collecUserPrestige" class="text-xs font-black font-mono text-amber-300">👑 0</span>
             </div>
-            <div class="px-3 py-1.5 rounded-xl bg-slate-950/80 border border-slate-700 text-center">
-              <span class="text-[8px] font-bold text-slate-400 uppercase tracking-wider block">Sovg'alar</span>
-              <span id="collecUserCount" class="text-sm font-black font-mono text-white">🎁 0 ta</span>
+            <div class="px-2.5 py-1 rounded-xl bg-slate-950/80 border border-slate-700 text-center">
+              <span class="text-[7.5px] font-bold text-slate-400 uppercase tracking-wider block">Sovg'alar</span>
+              <span id="collecUserCount" class="text-xs font-black font-mono text-white">🎁 0 ta</span>
             </div>
           </div>
         </div>
 
         <!-- Kolleksiya Vitrinasi (Grid) -->
-        <div class="flex-1 min-h-0 overflow-y-auto p-3 relative">
+        <div class="flex-1 min-h-0 overflow-y-auto p-3">
           <div id="playerCollectionGrid" class="grid grid-cols-3 gap-2.5"></div>
           <div id="playerCollectionEmpty" class="hidden py-16 text-center text-slate-400 space-y-2">
             <span class="text-3xl block">🎁</span>
             <div class="text-xs font-bold text-slate-300">Hozircha sovg'alar kolleksiyasi bo'sh</div>
             <p class="text-[10px] text-slate-500">Do'kondan sovg'a oling yoki 3D Oltin Sandiqdan eksklyuziv sovg'alarni yutib oling!</p>
           </div>
+        </div>
 
-          <!-- Ichki Slayd/Transfer Paneli -->
-          <div id="collecTransferPanel" class="hidden absolute inset-0 z-30 bg-slate-950/95 backdrop-blur-sm p-4 flex flex-col justify-between">
-            <div>
-              <div class="flex items-center justify-between border-b border-white/10 pb-2">
-                <div class="flex items-center gap-2">
-                  <span class="text-xl">✈️</span>
-                  <div>
-                    <h3 class="text-xs font-black text-white">Sovg'ani Hadya Qilish</h3>
-                    <span id="transferGiftNameLabel" class="text-[9px] text-amber-300 font-bold block">Sovg'a nomi</span>
-                  </div>
+        <!-- Butun Oyna Bo'ylab 2 Ustunli Hadya Qilish (Transfer) Paneli -->
+        <div id="collecTransferPanel" class="hidden absolute inset-0 z-30 bg-[#060b16] flex flex-col overflow-hidden">
+          
+          <!-- Yuqori Sarlavha -->
+          <div class="h-[44px] px-4 shrink-0 border-b border-white/10 flex items-center justify-between">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="text-lg">✈️</span>
+              <h3 class="text-xs font-black text-white">Sovg'ani Hadya Qilish</h3>
+            </div>
+            <button id="btnCancelTransfer" type="button" class="ios-btn-circle text-xs" title="Bekor qilish">✕</button>
+          </div>
+
+          <!-- 2 Ustunli Maydon -->
+          <div class="grid grid-cols-2 gap-3 p-3 flex-1 min-h-0 overflow-hidden">
+            
+            <!-- Chap Ustun: Sovg'a Vizuali, Nomi va Tilak -->
+            <div class="ios-fh-group p-2.5 flex flex-col justify-between items-center text-center min-h-0">
+              <div class="w-full flex flex-col items-center gap-1.5 min-h-0">
+                <div class="relative w-28 h-28 flex items-center justify-center my-auto">
+                  <div id="transferGiftAura" class="absolute inset-0 rounded-full bg-amber-500/15 blur-xl pointer-events-none"></div>
+                  <img id="transferGiftPreviewImg" src="/img/gifts/tactical_medal.webp?v=20261124_7" alt="Gift" class="w-28 h-28 object-contain relative z-10 drop-shadow-[0_0_16px_rgba(251,191,36,0.5)]" style="-webkit-mask-image:radial-gradient(circle at 50% 50%,#000 62%,transparent 98%);mask-image:radial-gradient(circle at 50% 50%,#000 62%,transparent 98%);" />
                 </div>
-                <button id="btnCancelTransfer" type="button" class="ios-btn-circle text-xs" title="Bekor qilish">✕</button>
+                <div id="transferGiftNameLabel" class="text-xs font-black text-amber-300 drop-shadow leading-tight">Sovg'a nomi</div>
               </div>
-
-              <div class="space-y-2.5 mt-3">
-                <label class="text-[10px] font-bold text-slate-300 uppercase tracking-wider block">Kimga hadya qilasiz?</label>
-                <div id="transferFriendsList" class="max-h-36 overflow-y-auto space-y-1 p-1 rounded-xl bg-slate-900/90 border border-slate-800 text-[10px]">
-                  <div class="py-2 text-center text-slate-500">Do'stlar ro'yxati...</div>
-                </div>
-
-                <div>
-                  <label class="text-[9.5px] text-slate-400 block mb-1">Tilak yoki xabar:</label>
-                  <input id="inputTransferNote" type="text" maxlength="80" placeholder="Sizga chin dildan! 🌟" class="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-400" />
-                </div>
+              <div class="w-full shrink-0 pt-1.5 border-t border-white/5">
+                <label class="text-[9.5px] text-slate-400 block text-left mb-1">Tilak yoki xabar (ixtiyoriy):</label>
+                <input id="inputTransferNote" type="text" maxlength="80" placeholder="Sizga chin dildan! 🌟" class="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-400" />
               </div>
             </div>
 
-            <div class="pt-2 border-t border-slate-800">
-              <button id="btnConfirmTransfer" type="button" class="ios-btn-blue w-full py-2.5 text-xs font-black flex items-center justify-center gap-1.5">
+            <!-- O'ng Ustun: Qabul Qiluvchi Tanlash va Tasdiqlash -->
+            <div class="ios-fh-group p-2.5 flex flex-col justify-between gap-2 min-h-0">
+              <div class="flex flex-col gap-2 flex-1 min-h-0">
+                <div class="flex items-center justify-between px-0.5">
+                  <span class="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider">Kimga:</span>
+                  <span id="transferSelectedLabel" class="text-[10px] text-sky-400 font-bold truncate max-w-[140px]">Tanlanmagan</span>
+                </div>
+
+                <!-- 3 ta Subtab -->
+                <div class="flex gap-1 text-[10px] shrink-0">
+                  <button id="trTabFriends" type="button" class="flex-1 py-1 rounded-md bg-white/15 text-white font-bold transition">Do'stlar</button>
+                  <button id="trTabAll" type="button" class="flex-1 py-1 rounded-md text-slate-400 hover:text-white transition">Barchasi</button>
+                  <button id="trTabId" type="button" class="flex-1 py-1 rounded-md text-slate-400 hover:text-white transition">ID orqali</button>
+                </div>
+
+                <!-- O'yinchilar ro'yxati -->
+                <div id="transferFriendsList" class="flex-1 min-h-0 overflow-y-auto space-y-1 p-1 rounded-xl bg-slate-950/90 border border-slate-800 text-[10px]">
+                  <div class="py-2 text-center text-slate-500">Do'stlar ro'yxati yuklanmoqda...</div>
+                </div>
+
+                <!-- ID orqali quti -->
+                <div id="transferCustomIdBox" class="hidden shrink-0">
+                  <label class="text-[9.5px] text-slate-400 block mb-1">Qabul qiluvchi ID si:</label>
+                  <input id="inputTransferTargetId" type="text" placeholder="DOOM-XXXX yoki Telegram ID" class="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-400 font-mono" />
+                </div>
+              </div>
+
+              <!-- Tasdiqlash Tugmasi -->
+              <button id="btnConfirmTransfer" type="button" class="ios-btn-blue w-full py-2 text-xs font-black flex items-center justify-center gap-1.5 shrink-0 shadow-lg">
                 <span>✈️</span>
-                <span>Hadya qilishni tasdiqlash</span>
+                <span id="btnConfirmTransferText">Hadya qilishni tasdiqlash</span>
               </button>
             </div>
+
           </div>
 
         </div>
@@ -1256,6 +1311,20 @@ To'lov rekvizitlarini yuborsangiz, chekni tashlayman.`;
     document.getElementById('btnCancelTransfer').addEventListener('click', () => {
       document.getElementById('collecTransferPanel').classList.add('hidden');
       _activeTransferItem = null;
+      _transferTargetFriend = null;
+    });
+
+    document.getElementById('trTabFriends').addEventListener('click', () => {
+      _transferActiveSubTab = 'friends';
+      renderTransferRecipientsList();
+    });
+    document.getElementById('trTabAll').addEventListener('click', () => {
+      _transferActiveSubTab = 'all';
+      renderTransferRecipientsList();
+    });
+    document.getElementById('trTabId').addEventListener('click', () => {
+      _transferActiveSubTab = 'id';
+      renderTransferRecipientsList();
     });
 
     document.getElementById('btnConfirmTransfer').addEventListener('click', executeGiftTransfer);
@@ -1419,69 +1488,179 @@ To'lov rekvizitlarini yuborsangiz, chekni tashlayman.`;
   }
 
   let _transferTargetFriend = null;
+  let _transferDirCache = null;
+  let _transferActiveSubTab = 'friends';
 
-  function openTransferGiftPanel(item, giftObj) {
-    _activeTransferItem = item;
-    _transferTargetFriend = null;
-    const panel = document.getElementById('collecTransferPanel');
-    const nameLabel = document.getElementById('transferGiftNameLabel');
-    if (!panel) return;
-
-    if (nameLabel) nameLabel.textContent = `${giftObj.icon} ${giftObj.name} (UID: ${item.uid || 'standart'})`;
-    panel.classList.remove('hidden');
-
+  function renderTransferRecipientsList() {
     const list = document.getElementById('transferFriendsList');
-    list.innerHTML = '<div class="py-2 text-center text-slate-500">Do\'stlar ro\'yxati yuklanmoqda...</div>';
+    const customIdBox = document.getElementById('transferCustomIdBox');
+    const selLabel = document.getElementById('transferSelectedLabel');
+    const confirmBtnText = document.getElementById('btnConfirmTransferText');
+    const bFriends = document.getElementById('trTabFriends');
+    const bAll = document.getElementById('trTabAll');
+    const bId = document.getElementById('trTabId');
 
-    const me = getCurrentPlayerIdentity();
-    fetch('/api/tg/directory?myId=' + encodeURIComponent(me.id))
-      .then(res => res.json())
-      .then(data => {
-        const friends = (data && data.myFriends) || [];
-        if (friends.length === 0) {
-          list.innerHTML = '<div class="py-2 text-center text-slate-500">Hozircha do\'stlar yo\'q. Avval Do\'stlar Hubidan do\'st qo\'shing.</div>';
-          return;
-        }
+    if (bFriends && bAll && bId) {
+      bFriends.className = _transferActiveSubTab === 'friends' ? 'flex-1 py-1 rounded-md bg-white/15 text-white font-bold transition' : 'flex-1 py-1 rounded-md text-slate-400 hover:text-white transition';
+      bAll.className = _transferActiveSubTab === 'all' ? 'flex-1 py-1 rounded-md bg-white/15 text-white font-bold transition' : 'flex-1 py-1 rounded-md text-slate-400 hover:text-white transition';
+      bId.className = _transferActiveSubTab === 'id' ? 'flex-1 py-1 rounded-md bg-white/15 text-white font-bold transition' : 'flex-1 py-1 rounded-md text-slate-400 hover:text-white transition';
+    }
 
-        list.innerHTML = '';
-        friends.forEach(f => {
-          const div = document.createElement('div');
-          const isSel = _transferTargetFriend && _transferTargetFriend.id === f.id;
-          div.className = `p-1.5 rounded-lg flex items-center justify-between cursor-pointer transition ${isSel ? 'bg-sky-950/90 border border-sky-400' : 'bg-slate-950/80 hover:bg-slate-900 border border-slate-800'}`;
-          div.innerHTML = `
-            <div class="flex items-center gap-1.5 min-w-0">
-              <span class="text-xs">👤</span>
-              <span class="font-bold text-white truncate max-w-[120px]">${f.name || f.username || f.id}</span>
-            </div>
-            <span class="text-[9px] font-mono text-amber-300">👑 ${(f.prestige || 0).toLocaleString('en-US')}</span>
-          `;
-          div.addEventListener('click', () => {
-            _transferTargetFriend = { id: f.id, name: f.name || f.username || f.id };
-            openTransferGiftPanel(item, giftObj);
-          });
-          list.appendChild(div);
-        });
-      })
-      .catch(() => {
-        list.innerHTML = '<div class="py-2 text-center text-slate-500">Do\'stlarni yuklab bo\'lmadi</div>';
-      });
-  }
+    if (_transferActiveSubTab === 'id') {
+      if (list) list.classList.add('hidden');
+      if (customIdBox) customIdBox.classList.remove('hidden');
+      if (selLabel) selLabel.textContent = 'ID orqali kiritish';
+      if (confirmBtnText) confirmBtnText.textContent = '✈️ ID orqali hadya qilish';
+      return;
+    }
 
-  function executeGiftTransfer() {
-    if (!_activeTransferItem) return;
-    if (!_transferTargetFriend) {
-      if (typeof window.showToast === 'function') window.showToast('Iltimos, sovg\'a hadya qilinadigan do\'stni tanlang!', '⚠️');
+    if (list) list.classList.remove('hidden');
+    if (customIdBox) customIdBox.classList.add('hidden');
+
+    if (!list) return;
+
+    if (!_transferDirCache) {
+      list.innerHTML = '<div class="py-2 text-center text-slate-500">Yuklanmoqda...</div>';
       return;
     }
 
     const me = getCurrentPlayerIdentity();
+    let players = [];
+    if (_transferActiveSubTab === 'friends') {
+      players = _transferDirCache.myFriends || [];
+    } else {
+      players = _transferDirCache.allPlayers || [];
+    }
+
+    const myIdUpper = me.id.toUpperCase();
+    const otherPlayers = players.filter(p => String(p.id || '').toUpperCase() !== myIdUpper);
+
+    if (otherPlayers.length === 0) {
+      list.innerHTML = `<div class="py-3 text-center text-slate-500 text-[10px]">${_transferActiveSubTab === 'friends' ? "Do'stlar topilmadi. 'Barchasi' yoki 'ID orqali' ni tanlang." : "O'yinchilar topilmadi."}</div>`;
+      return;
+    }
+
+    list.innerHTML = '';
+    otherPlayers.forEach(p => {
+      const isSel = _transferTargetFriend && String(_transferTargetFriend.id).toUpperCase() === String(p.id).toUpperCase();
+      const div = document.createElement('div');
+      div.className = `p-1.5 rounded-lg flex items-center justify-between cursor-pointer transition select-none ${isSel ? 'bg-sky-950/90 border-2 border-sky-400 shadow-md' : 'bg-slate-950/80 hover:bg-slate-900 border border-slate-800'}`;
+      div.innerHTML = `
+        <div class="flex items-center gap-1.5 min-w-0">
+          <span class="text-xs">${isSel ? '✅' : '👤'}</span>
+          <div class="min-w-0 leading-tight">
+            <span class="font-bold text-white truncate block max-w-[110px]">${p.name || p.username || p.id}</span>
+            <span class="text-[8px] text-slate-400 font-mono">${p.id}</span>
+          </div>
+        </div>
+        <span class="text-[9px] font-mono font-bold text-amber-300">👑 ${(p.prestige || 0).toLocaleString('en-US')}</span>
+      `;
+      div.addEventListener('click', (e) => {
+        e.stopPropagation();
+        _transferTargetFriend = { id: p.id, name: p.name || p.username || p.id };
+        if (selLabel) selLabel.textContent = _transferTargetFriend.name;
+        if (confirmBtnText) confirmBtnText.textContent = `✈️ ${_transferTargetFriend.name} ga hadya qilish`;
+        renderTransferRecipientsList(); // FAQAT ro'yxatni yangilash, qayta fetch va null reset QILMASLIK!
+      });
+      list.appendChild(div);
+    });
+
+    if (_transferTargetFriend) {
+      if (selLabel) selLabel.textContent = _transferTargetFriend.name;
+      if (confirmBtnText) confirmBtnText.textContent = `✈️ ${_transferTargetFriend.name} ga hadya qilish`;
+    } else {
+      if (selLabel) selLabel.textContent = 'Tanlanmagan';
+      if (confirmBtnText) confirmBtnText.textContent = 'Hadya qilishni tasdiqlash';
+    }
+  }
+
+  function openTransferGiftPanel(item, giftObj) {
+    _activeTransferItem = item;
+    _transferTargetFriend = null;
+    _transferActiveSubTab = 'friends';
+
+    const panel = document.getElementById('collecTransferPanel');
+    const nameLabel = document.getElementById('transferGiftNameLabel');
+    const previewImg = document.getElementById('transferGiftPreviewImg');
+    const aura = document.getElementById('transferGiftAura');
+    const noteInput = document.getElementById('inputTransferNote');
+    const targetIdInput = document.getElementById('inputTransferTargetId');
+
+    if (!panel) return;
+
+    if (noteInput) noteInput.value = '';
+    if (targetIdInput) targetIdInput.value = '';
+
+    const giftName = giftObj.name || item.giftName || "Sovg'a";
+    const prestige = item.prestige || giftObj.prestige || 0;
+    if (nameLabel) {
+      // TEXNIK UID YOZILMASIN! Faqat sovg'a nomi va Obro'
+      nameLabel.innerHTML = `${giftObj.icon || '🎁'} ${giftName} <span class="text-sky-300 ml-1">👑 +${prestige.toLocaleString('en-US')}</span>`;
+    }
+    if (previewImg) {
+      previewImg.src = getGiftImageUrl(giftObj.id || item.giftId);
+    }
+    if (aura && giftObj.glow) {
+      aura.style.background = `radial-gradient(circle at 50% 50%, ${giftObj.glow}40 0%, transparent 70%)`;
+    }
+
+    panel.classList.remove('hidden');
+
+    const list = document.getElementById('transferFriendsList');
+    if (_transferDirCache) {
+      renderTransferRecipientsList();
+    } else {
+      if (list) list.innerHTML = '<div class="py-2 text-center text-slate-500">Do\'stlar ro\'yxati yuklanmoqda...</div>';
+      const me = getCurrentPlayerIdentity();
+      fetch('/api/tg/directory?myId=' + encodeURIComponent(me.id))
+        .then(res => res.json())
+        .then(data => {
+          _transferDirCache = data || {};
+          renderTransferRecipientsList();
+        })
+        .catch(() => {
+          if (list) list.innerHTML = '<div class="py-2 text-center text-slate-500">Do\'stlarni yuklab bo\'lmadi</div>';
+        });
+    }
+  }
+
+  function executeGiftTransfer() {
+    if (!_activeTransferItem) return;
+
+    let targetId = '';
+    let targetName = '';
+
+    if (_transferActiveSubTab === 'id') {
+      const customInput = document.getElementById('inputTransferTargetId');
+      targetId = String((customInput && customInput.value) || '').trim().toUpperCase();
+      if (!targetId) {
+        if (typeof window.showToast === 'function') window.showToast('Iltimos, qabul qiluvchi o\'yinchi ID sini kiriting!', '⚠️');
+        return;
+      }
+      targetName = targetId;
+    } else {
+      if (!_transferTargetFriend || !_transferTargetFriend.id) {
+        if (typeof window.showToast === 'function') window.showToast('Iltimos, sovg\'a hadya qilinadigan do\'stni tanlang!', '⚠️');
+        return;
+      }
+      targetId = String(_transferTargetFriend.id).trim().toUpperCase();
+      targetName = _transferTargetFriend.name || targetId;
+    }
+
+    const me = getCurrentPlayerIdentity();
+    if (targetId === me.id.toUpperCase()) {
+      if (typeof window.showToast === 'function') window.showToast('O\'zingizga sovg\'a o\'tkaza olmaysiz!', '⚠️');
+      return;
+    }
+
     const btn = document.getElementById('btnConfirmTransfer');
-    btn.disabled = true;
-    btn.textContent = '⏳ Yuborilmoqda...';
+    const btnText = document.getElementById('btnConfirmTransferText');
+    if (btn) btn.disabled = true;
+    if (btnText) btnText.textContent = '⏳ Yuborilmoqda...';
 
     const payload = {
       fromId: me.id,
-      toId: _transferTargetFriend.id,
+      toId: targetId,
       giftUid: _activeTransferItem.uid,
       note: (document.getElementById('inputTransferNote')?.value || '').trim().slice(0, 80)
     };
@@ -1493,8 +1672,8 @@ To'lov rekvizitlarini yuborsangiz, chekni tashlayman.`;
     })
     .then(res => res.json())
     .then(data => {
-      btn.disabled = false;
-      btn.textContent = '✈️ Hadya qilishni tasdiqlash';
+      if (btn) btn.disabled = false;
+      if (btnText) btnText.textContent = 'Hadya qilishni tasdiqlash';
 
       if (data && data.ok) {
         document.getElementById('collecTransferPanel').classList.add('hidden');
@@ -1510,7 +1689,7 @@ To'lov rekvizitlarini yuborsangiz, chekni tashlayman.`;
 
         if (typeof window.playSound === 'function') window.playSound('victory_fanfare');
         if (typeof window.showToast === 'function') {
-          window.showToast(`✈️ Sovg'a ${_transferTargetFriend.name} ga hadya qilindi!`, '🎁');
+          window.showToast(`✈️ Sovg'a ${targetName} ga hadya qilindi!`, '🎁');
         }
 
         openPlayerCollectionModal(me.id);
@@ -1520,18 +1699,11 @@ To'lov rekvizitlarini yuborsangiz, chekni tashlayman.`;
       }
     })
     .catch(err => {
-      btn.disabled = false;
-      btn.textContent = '✈️ Hadya qilishni tasdiqlash';
+      if (btn) btn.disabled = false;
+      if (btnText) btnText.textContent = 'Hadya qilishni tasdiqlash';
       console.error('Transfer error:', err);
       if (typeof window.showToast === 'function') window.showToast('Server bilan aloqa uzildi', '⚠️');
     });
-  }
-
-  function openDigiGiftShopModal() {
-    if (typeof window.updateMainMenuWidgets === 'function') window.updateMainMenuWidgets();
-    renderDigiGiftShop();
-    const modalShop = document.getElementById('modalShop');
-    if (modalShop) modalShop.classList.remove('hidden');
   }
 
   function onDigiGiftsUpdated() {
