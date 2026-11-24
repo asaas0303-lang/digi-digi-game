@@ -795,16 +795,25 @@
     .ios-btn-danger:active {
       transform: translateY(1px) scale(0.95);
     }
-    /* Jonli #incomingModal ham 90° burilgan lobbida Telegram tugmalariga tegmasin va 3D iOS Glass uslubida bo'lsin */
     #incomingModal {
       font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", sans-serif;
+      background: linear-gradient(135deg, rgba(13, 22, 42, 0.94) 0%, rgba(6, 11, 24, 0.97) 100%);
+      border: 1px solid rgba(56, 189, 248, 0.38);
+      border-radius: 20px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.68), 0 0 22px rgba(14, 165, 233, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+      animation: digiIncSlideIn 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    @keyframes digiIncSlideIn {
+      from { opacity: 0; transform: translate(-50%, -14px) scale(0.95); }
+      to { opacity: 1; transform: translate(-50%, 0px) scale(1); }
     }
     #lobbyView.digi-lobby-rot90 #incomingModal {
       position: absolute !important;
-      top: 12px !important;
-      left: 52% !important;
-      width: 78% !important;
-      max-width: 420px !important;
+      top: 48px !important;
+      left: 50% !important;
+      width: auto !important;
+      min-width: 285px !important;
+      max-width: 365px !important;
       z-index: 60 !important;
     }
     /* === 3D iOS GLASS O'TA SODDA ONLINE LOBBI (#modalOnline) === */
@@ -1068,20 +1077,27 @@
     <span>HIMOYA QALQONI (3s)</span>
   </div>
 
-  <!-- Jonli Kiruvchi Taklif Oynasi (3D iOS Glassmorphism) -->
-  <div id="incomingModal" class="hidden fixed top-3 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-sm ios-fh-sheet p-3">
-    <div class="flex items-start gap-2.5">
-      <div id="incomingIcon" class="w-9 h-9 rounded-full ios-fh-avatar ios-fh-avatar-gold bg-slate-900/90 flex items-center justify-center shrink-0 text-base">🔔</div>
-      <div class="flex-1 min-w-0">
-        <div class="flex items-center justify-between gap-2">
-          <span id="incomingTitle" class="text-[11px] font-bold uppercase tracking-wide text-amber-300 truncate">Yangi Taklifnoma</span>
-          <span id="incomingBadge" class="ios-fh-stat-pill text-[9px] font-mono text-sky-200 px-2 py-0.5 rounded-full whitespace-nowrap shrink-0">DOOM-ID</span>
+  <!-- Jonli Kiruvchi Taklif Oynasi (Ultra-Ixcham iOS Dynamic Glass) -->
+  <div id="incomingModal" class="hidden fixed top-[48px] left-1/2 -translate-x-1/2 z-50 w-auto min-w-[285px] max-w-[365px] px-2.5 py-2">
+    <span id="incomingBadge" class="hidden">DOOM-ID</span>
+    <div class="flex items-center gap-2.5">
+      <!-- Telegram Avatar + LV. Nishoni -->
+      <div class="relative shrink-0">
+        <div class="w-10 h-10 rounded-full p-[1.5px] bg-gradient-to-tr from-amber-400 via-sky-400 to-emerald-400 shadow-[0_0_12px_rgba(251,191,36,0.35)]">
+          <div id="incomingIcon" class="w-full h-full rounded-full bg-slate-900 overflow-hidden flex items-center justify-center text-xs font-black text-amber-300">👤</div>
         </div>
-        <p id="incomingText" class="text-[11px] font-medium text-slate-100 mt-1 leading-snug">Sizni do'stlashishga taklif qildi. Rozilik berasizmi?</p>
-        <div class="flex items-center gap-1.5 mt-2.5">
-          <button id="btnAcceptIncoming" class="flex-1 ios-btn-green text-[10px] py-1.5 px-2.5 transition">✓ Rozilik</button>
-          <button id="btnRejectIncoming" class="flex-1 ios-btn-gray text-[10px] py-1.5 px-2.5 transition">✕ Rad etish</button>
-        </div>
+        <span id="incomingLevelBadge" class="absolute -bottom-1 left-1/2 -translate-x-1/2 px-1.5 py-[1px] rounded-full bg-gradient-to-r from-amber-400 to-yellow-300 text-slate-950 font-black text-[8px] leading-none shadow whitespace-nowrap border border-slate-950/80">LV. 1</span>
+      </div>
+      <!-- Ism va Taklif Izohi (ID ko'rinmaydi!) -->
+      <div class="flex-1 min-w-0 pr-1">
+        <div id="incomingTitle" class="text-[12.5px] font-extrabold text-white truncate leading-tight">O'yinchi</div>
+        <div id="incomingText" class="text-[9.5px] font-semibold text-sky-300/95 truncate leading-tight mt-0.5">🤝 Do'stlik taklifi</div>
+      </div>
+      <!-- Ixcham 3D Tugmalar -->
+      <div class="flex items-center gap-1.5 shrink-0">
+        <button id="btnAcceptIncoming" type="button" class="ios-btn-green text-[10.5px] font-extrabold py-1.5 px-3 rounded-full whitespace-nowrap active:scale-95 transition">✓ Qabul</button>
+        <button id="btnRejectIncoming" type="button" class="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 text-slate-200 text-[11px] font-bold flex items-center justify-center active:scale-90 transition shrink-0" title="Rad etish" aria-label="Rad etish">✕</button>
+        <button id="btnBlockIncoming1Week" type="button" class="w-7 h-7 rounded-full bg-rose-500/15 hover:bg-rose-500/30 border border-rose-400/35 text-rose-300 text-[10px] flex items-center justify-center active:scale-90 transition shrink-0" title="1 haftaga bloklash" aria-label="1 haftaga bloklash">🚫</button>
       </div>
     </div>
   </div>
@@ -3134,14 +3150,12 @@
         const candidate = onlinePlayers.find(p => !p.isFriend) || onlinePlayers[0];
         incomingRequestData = { type, player: candidate };
         incomingBadge.textContent = candidate.id;
-        if (type === 'friend') {
-          incomingIcon.textContent = '🤝';
-          incomingTitle.textContent = 'Do\'stlashish Taklifi';
-          incomingText.textContent = `${candidate.name} (${candidate.id}) sizni do'stlashishga taklif qildi. Rozilik berasizmi?`;
-        } else {
-          incomingIcon.textContent = '⚔️';
-          incomingTitle.textContent = '1v1 Labirint Duel Taklifi';
-          incomingText.textContent = `${candidate.name} (${candidate.id}) sizni qo'rqinchli labirintda 1v1 Duelga chaqirmoqda! Rozilik berasizmi?`;
+        incomingTitle.textContent = candidate.name || "O'yinchi";
+        incomingText.textContent = type === 'friend' ? "🤝 Do'stlik taklifi" : "⚔️ 1v1 Duel taklifi";
+        const lvEl = document.getElementById('incomingLevelBadge');
+        if (lvEl) lvEl.textContent = `LV. ${candidate.level || 1}`;
+        if (incomingIcon) {
+          incomingIcon.textContent = type === 'friend' ? '🤝' : '⚔️';
         }
         incomingModal.classList.remove('hidden');
         playSound('notify');
@@ -3161,7 +3175,7 @@
           renderSquadSlots();
           startGameMatch();
         } else {
-          showToast(`Siz ${p.name} (${p.id}) bilan do'stlashdingiz!`, '✅');
+          showToast(`Siz ${p.name} bilan do'stlashdingiz!`, '✅');
         }
       });
 
@@ -10993,7 +11007,7 @@
     })();
   </script>
   <script src="/gifts-catalog.js?v=20261124_1"></script>
-  <script src="/telegram-bridge.js?v=20261108_3"></script>
+  <script src="/telegram-bridge.js?v=20261124_8"></script>
   <script src="/gifts-ui.js?v=20261124_7"></script>
   <script src="/mp-client.js"></script>
   <script src="/sfx-engine.js"></script>

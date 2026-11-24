@@ -264,13 +264,14 @@
         });
       } catch (e) {}
 
+      const senderName = (currentPendingSender && currentPendingSender.name) || "O'yinchi";
       if (actionType === 'accept') {
-        showBridgeToast(`✅ ${senderId} do'stlar ro'yxatiga qo'shildi!`);
+        showBridgeToast(`✅ ${senderName} do'stlar ro'yxatiga qo'shildi!`);
         syncWithServer(false);
       } else if (actionType === 'reject') {
-        showBridgeToast(`✕ ${senderId} so'rovi rad etildi.`);
+        showBridgeToast(`✕ ${senderName} so'rovi rad etildi.`);
       } else if (actionType === 'block_1_week') {
-        showBridgeToast(`🚫 ${senderId} 1 haftaga bloklandi! 7 kun davomida sizga so'rov yubora olmaydi.`);
+        showBridgeToast(`🚫 ${senderName} 1 haftaga bloklandi.`);
       }
     }
 
@@ -284,14 +285,9 @@
       rejectBtn.addEventListener('click', () => respondToFriendRequest('reject'));
     }
 
-    if (acceptBtn && rejectBtn && !document.getElementById('btnBlockIncoming1Week')) {
-      const btnRow = acceptBtn.parentElement;
-      const blockBtn = document.createElement('button');
-      blockBtn.id = 'btnBlockIncoming1Week';
-      blockBtn.className = 'flex-1 bg-red-900/85 hover:bg-red-700 active:scale-95 border border-red-500/60 text-red-200 font-extrabold text-[11px] py-2 px-2 rounded-xl transition';
-      blockBtn.textContent = '🚫 1 haftaga blok';
-      btnRow.appendChild(blockBtn);
-
+    const blockBtn = document.getElementById('btnBlockIncoming1Week');
+    if (blockBtn && !blockBtn.dataset.tgBound) {
+      blockBtn.dataset.tgBound = '1';
       blockBtn.addEventListener('click', () => respondToFriendRequest('block_1_week'));
     }
 
@@ -474,17 +470,43 @@
           if (getBlockRemaining(req.fromId)) return;
           if (wasRecentlyHandled(req.fromId)) return;
 
-          currentPendingSender = { id: req.fromId, name: req.fromName, elo: req.fromElo || 1050 };
+          currentPendingSender = {
+            id: req.fromId,
+            name: req.fromName || "O'yinchi",
+            elo: req.fromElo || 1050,
+            level: req.fromLevel || 1,
+            photoUrl: req.fromPhotoUrl || ''
+          };
           const modal = document.getElementById('incomingModal');
           const title = document.getElementById('incomingTitle');
           const badge = document.getElementById('incomingBadge');
           const text = document.getElementById('incomingText');
           const icon = document.getElementById('incomingIcon');
+          const lvEl = document.getElementById('incomingLevelBadge');
+
           if (modal && title && badge && text) {
-            if (icon) icon.textContent = '🤝';
-            title.textContent = 'Yangi Do\'stlashish Taklifi';
             badge.textContent = req.fromId;
-            text.textContent = `${req.fromName} (${req.fromId}) siz bilan do'stlashmoqchi!`;
+            title.textContent = currentPendingSender.name;
+            text.textContent = "🤝 Do'stlik taklifi";
+            if (lvEl) lvEl.textContent = 'LV. ' + currentPendingSender.level;
+
+            if (icon) {
+              icon.textContent = '';
+              const initial = (currentPendingSender.name || "O").trim().charAt(0).toUpperCase() || '👤';
+              if (currentPendingSender.photoUrl) {
+                const img = document.createElement('img');
+                img.src = currentPendingSender.photoUrl;
+                img.alt = currentPendingSender.name;
+                img.className = 'w-full h-full object-cover';
+                img.onerror = function() {
+                  if (icon) icon.textContent = initial;
+                };
+                icon.appendChild(img);
+              } else {
+                icon.textContent = initial;
+              }
+            }
+
             modal.classList.remove('hidden');
             modal.style.display = '';
           }

@@ -588,7 +588,7 @@ app.post("/api/tg/friend-request", (req, res) => {
 // 4) O'yinchiga kelgan yangi do'stlashish bildirishnomalarini olish
 app.get("/api/tg/notifications", (req, res) => {
   const myId = String(req.query.myId || "").trim().toUpperCase();
-  if (!myId) return res.json({ requests: [] });
+  if (!myId) return res.json({ requests: [], giftEvents: [] });
 
   const myPlayer = db.players[myId];
   const blockedMap = (myPlayer && myPlayer.blockedUsersMap) ? myPlayer.blockedUsersMap : {};
@@ -600,7 +600,27 @@ app.get("/api/tg/notifications", (req, res) => {
     return true;
   });
 
-  return res.json({ requests: pending });
+  const enriched = pending.map(r => {
+    const sp = db.players[String(r.fromId || "").trim().toUpperCase()] || null;
+    const st = (sp && sp.userStats) || {};
+    const totalKills = Number(st.kills || st.totalKills || 0);
+    const totalMatches = Number(st.matches5v5 || st.botMatches || 0) + Number(st.matchesOnline || st.lobbyMatches || 0);
+    const calcLv = Math.max(1, Number((sp && sp.level) || st.level || (Math.floor(totalKills / 4) + Math.floor(totalMatches / 2) + 1)));
+    const photoUrl = (sp && (sp.photoUrl || st.photoUrl)) || r.fromPhotoUrl || "";
+    const realName = (sp && sp.name) || r.fromName || "O'yinchi";
+    return Object.assign({}, r, {
+      fromName: realName,
+      fromPhotoUrl: photoUrl,
+      fromLevel: calcLv,
+      fromElo: Number((sp && sp.elo) || st.elo || r.fromElo || 1000)
+    });
+  });
+
+  const unDeliveredGifts = (db.giftEvents || []).filter(e => e.toId === myId && !e.delivered);
+  unDeliveredGifts.forEach(e => { e.delivered = true; });
+  if (unDeliveredGifts.length > 0) saveDb();
+
+  return res.json({ requests: enriched, giftEvents: unDeliveredGifts });
 });
 
 // 5) Bildirishnomaga javob berish
