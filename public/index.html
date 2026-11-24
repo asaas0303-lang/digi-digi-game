@@ -1863,6 +1863,20 @@
               <!-- Sovrin toifalari (ixcham 3D shisha nishonlar) -->
               <div class="grid grid-cols-3 gap-1.5 text-center pt-1">
                 <div class="ios-rt-stat-box py-1.5 px-1">
+                  <div class="text-[9px] text-sky-300 font-bold">Tangalar</div>
+                  <div class="text-[10px] font-mono text-white">$500 – $6,000</div>
+                </div>
+                <div class="ios-rt-stat-box py-1.5 px-1">
+                  <div class="text-[9px] text-purple-300 font-bold">🎁 3D Sovg'a</div>
+                  <div class="text-[10px] font-mono text-purple-200">Medalyon · Karambit</div>
+                </div>
+                <div class="ios-rt-stat-box py-1.5 px-1">
+                  <div class="text-[9px] text-amber-300 font-bold">👑 Mifik Jackpot</div>
+                  <div class="text-[10px] font-mono text-amber-200">Qalqon · Ajdar</div>
+                </div>
+              </div>
+              <div class="grid grid-cols-3 gap-1.5 text-center pt-1">
+                <div class="ios-rt-stat-box py-1.5 px-1">
                   <div class="text-[9px] text-sky-300 font-bold">Harbiy</div>
                   <div class="text-[10px] font-mono text-white">+$1,500</div>
                 </div>
@@ -9757,10 +9771,10 @@
         { id: 'coin_3000', title: '3,000 Tanga', reward: 3000, color: '#a855f7', border: 'border-purple-500', badge: 'Epik', hex: 0xa855f7, type: 'coin' },
         { id: 'coin_4500', title: '4,500 Tanga', reward: 4500, color: '#ef4444', border: 'border-red-500', badge: 'Qizil Elita', hex: 0xef4444, type: 'coin' },
         { id: 'coin_6000', title: '6,000 Tanga', reward: 6000, color: '#f59e0b', border: 'border-amber-400', badge: '★ Oltin Xazina', hex: 0xf59e0b, type: 'coin' },
-        { id: 'tactical_medal', title: 'Taktik Medal', giftId: 'tactical_medal', prestige: 250, color: '#c084fc', border: 'border-purple-500', badge: 'Epik Sovg\'a', hex: 0xc084fc, type: 'gift' },
-        { id: 'karambit_neon', title: 'Neon Karambit', giftId: 'karambit_neon', prestige: 600, color: '#38bdf8', border: 'border-sky-500', badge: '★ Afsonaviy', hex: 0x38bdf8, type: 'gift' },
-        { id: 'titan_shield', title: 'Titan Qalqon', giftId: 'titan_shield', prestige: 750, color: '#f59e0b', border: 'border-amber-400', badge: '★ Afsonaviy', hex: 0xf59e0b, type: 'gift' },
-        { id: 'golden_dragon', title: 'Oltin Ajdaho', giftId: 'golden_dragon', prestige: 1500, color: '#f43f5e', border: 'border-rose-500', badge: '👑 Mifik', hex: 0xf43f5e, type: 'gift' }
+        { id: 'tactical_medal', title: 'Taktik Medalyon', giftId: 'tactical_medal', prestige: 400, color: '#f59e0b', border: 'border-amber-400', badge: 'Nodir Sovg\'a', hex: 0xf59e0b, type: 'gift' },
+        { id: 'karambit_neon', title: 'Karambit Neon', giftId: 'karambit_neon', prestige: 900, color: '#a855f7', border: 'border-purple-500', badge: 'Epik Sovg\'a', hex: 0xa855f7, type: 'gift' },
+        { id: 'titan_shield', title: 'Titan Qalqon', giftId: 'titan_shield', prestige: 1500, color: '#0ea5e9', border: 'border-sky-400', badge: 'Epik Sovg\'a', hex: 0x0ea5e9, type: 'gift' },
+        { id: 'golden_dragon', title: 'Oltin Ajdar', giftId: 'golden_dragon', prestige: 3000, color: '#facc15', border: 'border-yellow-400', badge: '👑 Mifik', hex: 0xfacc15, type: 'gift' }
       ];
 
       let caseThreeRenderer = null;
@@ -10462,65 +10476,37 @@
 
       function populateCaseRouletteStrip(winningItem) {
         const track = document.getElementById('csCaseRouletteTrack');
-        if (!track) return { winIndex: 28 };
+        if (!track) return { totalCards: 46, winIndex: 36 };
         track.style.transition = 'none';
         track.style.transform = 'translate3d(0px, 0px, 0px)';
         track.innerHTML = '';
-
-        const totalCards = 55;
-        const winIndex = 28;
-
-        for (let i = 0; i < totalCards; i++) {
-          let item = CS_CASE_ITEMS[Math.floor(Math.random() * CS_CASE_ITEMS.length)];
-          if (i === winIndex) item = winningItem;
-
-          const isGift = item.type === 'gift';
-          const card = document.createElement('div');
-          card.className = `w-24 h-24 rounded-xl bg-slate-900/90 border-2 ${item.border} flex flex-col items-center justify-between p-2 shrink-0 select-none shadow-md`;
-
-          let centerContent = '';
-          if (isGift) {
-            centerContent = `<img src="/img/gifts/${item.giftId}.webp?v=20261124_3" class="w-10 h-10 object-contain drop-shadow" onerror="this.src='/img/gifts/tactical_medal.webp'" />`;
-          } else {
-            centerContent = `<div class="text-2xl">${item.reward >= 4500 ? '👑' : (item.reward >= 1500 ? '💰' : '🪙')}</div>`;
-          }
-
-          let subContent = isGift
-            ? `<span class="text-[10px] font-bold text-amber-300">+${item.prestige} Ball</span>`
-            : `<span class="text-[10px] font-bold" style="color:${item.color}">+$${item.reward}</span>`;
-
-          card.innerHTML = `
-            <span class="text-[9px] font-black uppercase tracking-wider text-slate-300 text-center truncate w-full">${item.badge}</span>
-            ${centerContent}
-            <div class="text-center leading-none">
-              <span class="font-black text-[11px] block text-white truncate w-20">${item.title}</span>
-              ${subContent}
-            </div>
-          `;
-          track.appendChild(card);
-        }
-        return { winIndex };
-      }
-      function populateCaseRouletteStrip(winningItem) {
-        const track = document.getElementById('csCaseRouletteTrack');
-        if (!track) return { totalCards: 46, winIndex: 38 };
-        track.innerHTML = '';
-        track.style.transition = 'none';
-        track.style.transform = 'translate3d(0px, 0px, 0px)';
 
         const totalCards = 46;
-        const winIndex = 38;
+        const winIndex = 36;
+
         for (let i = 0; i < totalCards; i++) {
           let item = CS_CASE_ITEMS[Math.floor(Math.random() * CS_CASE_ITEMS.length)];
           if (i === winIndex && winningItem) item = winningItem;
+
+          const isGift = item.type === 'gift';
           const card = document.createElement('div');
-          card.className = 'shrink-0 w-24 h-16 rounded-xl flex flex-col items-center justify-center px-1.5 select-none shadow-md';
-          card.style.background = item.bg;
-          card.style.border = `2px solid ${item.border}`;
+          card.className = `w-24 h-20 rounded-xl bg-slate-900/95 border-2 ${item.border || 'border-amber-400'} flex flex-col items-center justify-between py-1 px-1.5 shrink-0 select-none shadow-md`;
+
+          const centerContent = isGift
+            ? `<img src="/img/gifts/${item.giftId}.webp?v=20261124_4" alt="${item.title}" class="w-9 h-9 object-contain drop-shadow pointer-events-none" style="-webkit-mask-image:radial-gradient(circle,#000 62%,transparent 98%);mask-image:radial-gradient(circle,#000 62%,transparent 98%);" onerror="this.src='/img/gifts/tactical_medal.webp'" />`
+            : `<div class="text-xl leading-none">${(item.reward || 0) >= 4500 ? '👑' : ((item.reward || 0) >= 1500 ? '💰' : '🪙')}</div>`;
+
+          const subContent = isGift
+            ? `<span class="text-[9px] font-mono font-extrabold text-amber-300 leading-none">👑 +${Number(item.prestige || 0).toLocaleString('en-US')}</span>`
+            : `<span class="text-[9.5px] font-mono font-extrabold leading-none" style="color:${item.color || '#fbbf24'}">+$${Number(item.reward || 0).toLocaleString('en-US')}</span>`;
+
           card.innerHTML = `
-            <span class="text-xl leading-none drop-shadow">${item.badge}</span>
-            <span class="text-[9px] font-black text-white uppercase tracking-tighter truncate w-full text-center mt-1">${item.title}</span>
-            <span class="text-[10px] font-mono font-extrabold text-amber-300">+$${item.reward.toLocaleString('en-US')}</span>
+            <span class="text-[8px] font-black uppercase tracking-tight text-slate-300 text-center truncate w-full leading-none">${item.badge || ''}</span>
+            ${centerContent}
+            <div class="text-center leading-tight w-full">
+              <span class="font-bold text-[9.5px] block text-white truncate w-full">${item.title || ''}</span>
+              ${subContent}
+            </div>
           `;
           track.appendChild(card);
         }
@@ -10915,7 +10901,7 @@
   </script>
   <script src="/gifts-catalog.js?v=20261124_1"></script>
   <script src="/telegram-bridge.js?v=20261108_3"></script>
-  <script src="/gifts-ui.js?v=20261124_3"></script>
+  <script src="/gifts-ui.js?v=20261124_4"></script>
   <script src="/mp-client.js"></script>
   <script src="/sfx-engine.js"></script>
 </body>

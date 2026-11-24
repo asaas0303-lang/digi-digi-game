@@ -6,7 +6,7 @@
   'use strict';
 
   // 1. STATIK KONSTANTALAR VA VERSİYALASH
-  const GIFT_IMG_VER = '20261124_3';
+  const GIFT_IMG_VER = '20261124_4';
   const GIFT_IMG_EXT = 'webp';
 
   function getGiftImageUrl(giftId) {
@@ -919,8 +919,8 @@ To'lov rekvizitlarini yuborsangiz, chekni tashlayman.`;
           </div>
 
           <!-- O'NG: Buyurtma Tafsilotlari va Adminga Yuborish -->
-          <div class="ios-fh-group p-3 flex flex-col justify-between gap-2.5 min-h-0 overflow-y-auto">
-            <div class="space-y-3">
+          <div class="ios-fh-group p-3 flex flex-col justify-between gap-2.5 min-h-0 overflow-y-auto min-w-0">
+            <div class="space-y-2 min-w-0">
               
               <!-- Tanlangan Paket Xulosasi -->
               <div class="p-3 rounded-2xl bg-gradient-to-b from-sky-950/60 to-slate-950 border border-sky-400/40 text-center relative overflow-hidden">
@@ -930,12 +930,12 @@ To'lov rekvizitlarini yuborsangiz, chekni tashlayman.`;
               </div>
 
               <!-- Foydalanuvchi ID si va Nusxalash -->
-              <div class="p-2.5 rounded-xl bg-slate-950/90 border border-slate-800 flex items-center justify-between gap-2">
-                <div class="min-w-0">
-                  <span class="text-[9.5px] text-slate-400 block">Sizning Profilingiz:</span>
-                  <span id="buyGemsUserIdLabel" class="text-xs font-mono font-bold text-white truncate block">--</span>
+              <div class="p-2 rounded-xl bg-slate-950/90 border border-slate-800 flex items-center justify-between gap-2 min-w-0 overflow-hidden">
+                <div class="flex-1 min-w-0 overflow-hidden">
+                  <span class="text-[9px] text-slate-400 block leading-tight">Sizning Profilingiz:</span>
+                  <span id="buyGemsUserIdLabel" class="text-[11px] font-mono font-bold text-white truncate block leading-tight">--</span>
                 </div>
-                <button id="btnCopyOrderId" type="button" class="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[10px] font-bold shrink-0 transition">
+                <button id="btnCopyOrderId" type="button" class="px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[10px] font-bold shrink-0 whitespace-nowrap transition">
                   📋 Nusxalash
                 </button>
               </div>
@@ -1073,7 +1073,7 @@ To'lov rekvizitlarini yuborsangiz, chekni tashlayman.`;
 
     const me = getCurrentPlayerIdentity();
     if (userLabel) {
-      userLabel.textContent = `${me.name} • ${me.id || 'ID yuklanmoqda'}${me.tgId ? ' (TG: ' + me.tgId + ')' : ''}`;
+      userLabel.textContent = `${me.name} · ${me.id || 'NOMA\'LUM'}`;
     }
 
     if (orderPreview) {
