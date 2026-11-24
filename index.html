@@ -1875,19 +1875,6 @@
                   <div class="text-[10px] font-mono text-amber-200">Qalqon · Ajdar</div>
                 </div>
               </div>
-              <div class="grid grid-cols-3 gap-1.5 text-center pt-1">
-                <div class="ios-rt-stat-box py-1.5 px-1">
-                  <div class="text-[9px] text-sky-300 font-bold">Harbiy</div>
-                  <div class="text-[10px] font-mono text-white">+$1,500</div>
-                </div>
-                <div class="ios-rt-stat-box py-1.5 px-1">
-                  <div class="text-[9px] text-purple-300 font-bold">Taktik</div>
-                  <div class="text-[10px] font-mono text-white">+$2,500</div>
-                </div>
-                <div class="ios-rt-stat-box py-1.5 px-1">
-                  <div class="text-[9px] text-amber-300 font-bold">Elita / Jackpot</div>
-                  <div class="text-[10px] font-mono text-amber-200">+$4,500+</div>
-                </div>
               </div>
             </div>
 
@@ -10493,7 +10480,7 @@
           card.className = `w-24 h-20 rounded-xl bg-slate-900/95 border-2 ${item.border || 'border-amber-400'} flex flex-col items-center justify-between py-1 px-1.5 shrink-0 select-none shadow-md`;
 
           const centerContent = isGift
-            ? `<img src="/img/gifts/${item.giftId}.webp?v=20261124_4" alt="${item.title}" class="w-9 h-9 object-contain drop-shadow pointer-events-none" style="-webkit-mask-image:radial-gradient(circle,#000 62%,transparent 98%);mask-image:radial-gradient(circle,#000 62%,transparent 98%);" onerror="this.src='/img/gifts/tactical_medal.webp'" />`
+            ? `<img src="/img/gifts/${item.giftId}.webp?v=20261124_5" alt="${item.title}" class="w-9 h-9 object-contain drop-shadow pointer-events-none" style="-webkit-mask-image:radial-gradient(circle,#000 62%,transparent 98%);mask-image:radial-gradient(circle,#000 62%,transparent 98%);" onerror="this.src='/img/gifts/tactical_medal.webp'" />`
             : `<div class="text-xl leading-none">${(item.reward || 0) >= 4500 ? '👑' : ((item.reward || 0) >= 1500 ? '💰' : '🪙')}</div>`;
 
           const subContent = isGift
@@ -10901,7 +10888,7 @@
   </script>
   <script src="/gifts-catalog.js?v=20261124_1"></script>
   <script src="/telegram-bridge.js?v=20261108_3"></script>
-  <script src="/gifts-ui.js?v=20261124_4"></script>
+  <script src="/gifts-ui.js?v=20261124_5"></script>
   <script src="/mp-client.js"></script>
   <script src="/sfx-engine.js"></script>
 </body>

@@ -6,7 +6,7 @@
   'use strict';
 
   // 1. STATIK KONSTANTALAR VA VERSİYALASH
-  const GIFT_IMG_VER = '20261124_4';
+  const GIFT_IMG_VER = '20261124_5';
   const GIFT_IMG_EXT = 'webp';
 
   function getGiftImageUrl(giftId) {
@@ -911,7 +911,7 @@ To'lov rekvizitlarini yuborsangiz, chekni tashlayman.`;
                 <span class="text-[10px] font-bold uppercase tracking-wider text-amber-300">Rasmiy Kristal Paketlari</span>
                 <span class="text-[9.5px] text-slate-400">1 💎 = 1,000 so'm</span>
               </div>
-              <div id="gemsPackagesList" class="space-y-2"></div>
+              <div id="gemsPackagesList" class="space-y-1.5"></div>
             </div>
             <div class="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 text-[9.5px] text-slate-400 leading-relaxed">
               ℹ️ <b>Eslatma:</b> Kristallar xavfsiz va rasmiy admin orqali to'ldiriladi. To'lov cheki yuborilgach, hisobingizga darhol o'tkaziladi.
@@ -919,14 +919,17 @@ To'lov rekvizitlarini yuborsangiz, chekni tashlayman.`;
           </div>
 
           <!-- O'NG: Buyurtma Tafsilotlari va Adminga Yuborish -->
-          <div class="ios-fh-group p-3 flex flex-col justify-between gap-2.5 min-h-0 overflow-y-auto min-w-0">
-            <div class="space-y-2 min-w-0">
+          <div class="ios-fh-group p-2.5 flex flex-col justify-between gap-2 min-h-0 min-w-0 overflow-y-auto">
+            <div class="space-y-1.5 min-w-0">
               
-              <!-- Tanlangan Paket Xulosasi -->
-              <div class="p-3 rounded-2xl bg-gradient-to-b from-sky-950/60 to-slate-950 border border-sky-400/40 text-center relative overflow-hidden">
-                <span class="text-[10px] font-bold text-sky-300 uppercase tracking-wider">Tanlangan Paket</span>
-                <div id="summaryGemsAmount" class="text-3xl font-black font-mono text-cyan-200 mt-1">💎 35</div>
-                <div id="summaryGemsPrice" class="text-sm font-extrabold text-amber-300 font-mono mt-0.5">35,000 so'm</div>
+              <!-- Tanlangan Paket Xulosasi (Ixcham 1-qatorli — 0% kesilish) -->
+              <div class="px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-sky-950/75 to-slate-950/90 border border-sky-400/40 flex items-center justify-between gap-2 shrink-0">
+                <span class="text-[9.5px] font-bold text-sky-300 uppercase tracking-wider shrink-0">Tanlangan:</span>
+                <div class="flex items-center gap-2 min-w-0">
+                  <span id="summaryGemsAmount" class="text-sm font-black font-mono text-cyan-200 leading-none">💎 35</span>
+                  <span class="text-slate-600 text-[10px]">•</span>
+                  <span id="summaryGemsPrice" class="text-xs font-extrabold text-amber-300 font-mono leading-none">35,000 so'm</span>
+                </div>
               </div>
 
               <!-- Foydalanuvchi ID si va Nusxalash -->
@@ -943,7 +946,7 @@ To'lov rekvizitlarini yuborsangiz, chekni tashlayman.`;
               <!-- Adminga yuboriladigan tayyor matn -->
               <div class="p-2.5 rounded-xl bg-slate-950/90 border border-slate-800 space-y-1">
                 <span class="text-[9.5px] text-slate-400 block">Adminga yuboriladigan buyurtma:</span>
-                <div id="buyGemsOrderTextPreview" class="text-[10px] font-mono text-cyan-100 bg-slate-900/90 p-2 rounded-lg border border-slate-800 whitespace-pre-wrap leading-tight">
+                <div id="buyGemsOrderTextPreview" class="text-[9.5px] font-mono text-cyan-100 bg-slate-900/90 p-1.5 rounded-lg border border-slate-800 whitespace-pre-wrap leading-snug">
                   Yuklanmoqda...
                 </div>
               </div>
@@ -1030,7 +1033,7 @@ To'lov rekvizitlarini yuborsangiz, chekni tashlayman.`;
     packages.forEach(pkg => {
       const isSel = _selectedGemsPackage && _selectedGemsPackage.gems === pkg.gems;
       const card = document.createElement('div');
-      card.className = `p-2 rounded-xl flex items-center justify-between cursor-pointer transition select-none ${isSel ? 'bg-cyan-950/70 border border-cyan-400/80 shadow-[0_0_12px_rgba(6,182,212,0.25)]' : 'bg-slate-900/60 hover:bg-slate-850 border border-slate-800'}`;
+      card.className = `p-1.5 rounded-xl flex items-center justify-between cursor-pointer transition select-none ${isSel ? 'bg-cyan-950/70 border border-cyan-400/80 shadow-[0_0_12px_rgba(6,182,212,0.25)]' : 'bg-slate-900/60 hover:bg-slate-850 border border-slate-800'}`;
 
       card.innerHTML = `
         <div class="flex items-center gap-2 min-w-0">
