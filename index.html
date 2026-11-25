@@ -3639,6 +3639,75 @@
         return { x: goalX, y: goalY };
       }
 
+      // Haqiqiy taktik burilish/chorraha katagini aniqlash
+      function isTacticalCornerCell(gx, gy) {
+        if (gx <= 0 || gy <= 0 || gx >= MAP_SIZE - 1 || gy >= MAP_SIZE - 1) return false;
+        if (!currentMaze[gy] || currentMaze[gy][gx] !== 0) return false;
+        const leftWall = currentMaze[gy][gx - 1] > 0;
+        const rightWall = currentMaze[gy][gx + 1] > 0;
+        const upWall = currentMaze[gy - 1][gx] > 0;
+        const downWall = currentMaze[gy + 1][gx] > 0;
+        const hasWall = leftWall || rightWall || upWall || downWall;
+        const hasHoriz = !leftWall || !rightWall;
+        const hasVert = !upWall || !downWall;
+        return hasWall && hasHoriz && hasVert;
+      }
+
+      // 1..3 katak radiusda devor orti pana (cover) va 1 qadamli peek nuqtasini topish
+      const _coverDirs4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+      function findNearestCoverSpot(bx, by, threatX, threatY) {
+        const bgx = Math.floor(bx);
+        const bgy = Math.floor(by);
+        let best = null;
+        let bestScore = -1e9;
+
+        for (let dy = -3; dy <= 3; dy++) {
+          const ny = bgy + dy;
+          if (ny <= 0 || ny >= MAP_SIZE - 1 || !currentMaze[ny]) continue;
+          for (let dx = -3; dx <= 3; dx++) {
+            const nx = bgx + dx;
+            if (nx <= 0 || nx >= MAP_SIZE - 1) continue;
+            if (currentMaze[ny][nx] !== 0) continue;
+
+            const adjWall = (currentMaze[ny][nx - 1] > 0) || (currentMaze[ny][nx + 1] > 0) ||
+                            (currentMaze[ny - 1][nx] > 0) || (currentMaze[ny + 1][nx] > 0);
+            if (!adjWall) continue;
+
+            const cx = nx + 0.5;
+            const cy = ny + 0.5;
+            if (hasLineOfSight(cx, cy, threatX, threatY)) continue;
+
+            let peekX = null;
+            let peekY = null;
+            for (let k = 0; k < 4; k++) {
+              const px = nx + _coverDirs4[k][0];
+              const py = ny + _coverDirs4[k][1];
+              if (px > 0 && py > 0 && px < MAP_SIZE - 1 && py < MAP_SIZE - 1 && currentMaze[py] && currentMaze[py][px] === 0) {
+                const wx = px + 0.5;
+                const wy = py + 0.5;
+                if (hasLineOfSight(wx, wy, threatX, threatY)) {
+                  peekX = wx;
+                  peekY = wy;
+                  break;
+                }
+              }
+            }
+
+            const distBot = Math.hypot(cx - bx, cy - by);
+            const distThreat = Math.hypot(cx - threatX, cy - threatY);
+            let score = (-distBot * 2.2) + Math.min(6, distThreat) * 0.85;
+            if (peekX !== null) score += 2.4;
+            if (hasLineOfSight(bx, by, cx, cy)) score += 1.6;
+
+            if (score > bestScore) {
+              bestScore = score;
+              best = { x: cx, y: cy, peekX, peekY };
+            }
+          }
+        }
+        return best;
+      }
+
       // --- #17 KEVLAR ZIRH QUTISI VA #28 SQUAD DUO JUFTLIKLARI BILAN SPAWN ---
       function spawnCombatants(resetScores = true) {
         combatants = [];
@@ -3983,15 +4052,37 @@
           });
         }
 
-        // #4 Harakatda otish noaniqligi (Moving Inaccuracy vs Standing Still / ADS Zoom)
-        const movePenalty = player.currentSpeed > 0.5 ? 0.085 : 0;
-        const adsBonus = player.adsZoom ? 0.5 : 1.0;
-        const effectiveSpread = (w.spread + movePenalty) * adsBonus;
+        // #4 CS2 Haqiqiy o'q yoyilishi (Hitboxni shishirmasdan, o'q nurini og'dirish)
+        const movePenalty = player.currentSpeed > 0.5 ? 0.032 : 0;
+        const bloomPenalty = Math.min(0.042, (player.crosshairBloom || 0) * 0.0016);
+        const adsBonus = player.adsZoom ? 0.32 : 1.0;
+        const shotSpread = (w.spread * 0.42 + movePenalty + bloomPenalty) * adsBonus;
+
+        let baseYaw = player.angle;
+        let basePitch = (player.pitch || 0);
+        let eyeY = 0.96;
+        if (typeof THREE !== 'undefined' && threeCamera) {
+          if (!window._shootDirTmp) window._shootDirTmp = new THREE.Vector3();
+          threeCamera.getWorldDirection(window._shootDirTmp);
+          baseYaw = Math.atan2(window._shootDirTmp.z, window._shootDirTmp.x);
+          basePitch = Math.asin(Math.max(-0.98, Math.min(0.98, window._shootDirTmp.y)));
+          eyeY = threeCamera.position.y;
+        }
+        const devYaw = w.isMelee ? 0 : (Math.random() - 0.5) * shotSpread;
+        const devPitch = w.isMelee ? 0 : (Math.random() - 0.5) * shotSpread * 0.65;
+        const shotYaw = baseYaw + devYaw;
+        const shotPitch = basePitch + devPitch;
 
         let bestEnemy = null;
         let bestEnemyDist = 999;
         let bestEnemyWallbang = false;
+        let bestEnemyZone = null;
         let hitFriendly = null;
+
+        const isShotgun = (selectedWeaponIdx === 2);
+        const bodyHalfW = w.isMelee ? 0.42 : (isShotgun ? 0.30 : 0.23);
+        const headHalfW = isShotgun ? 0.17 : 0.145;
+        const legHalfW  = isShotgun ? 0.26 : 0.20;
 
         combatants.forEach(c => {
           if (!c.alive || c.dyingProgress > 0) return;
@@ -4000,28 +4091,40 @@
           const dist = Math.hypot(dx, dy);
           if (w.isMelee && dist > 1.85) return;
 
-          let angleToTarget = Math.atan2(dy, dx) - player.angle;
-          while (angleToTarget < -Math.PI) angleToTarget += Math.PI * 2;
-          while (angleToTarget > Math.PI) angleToTarget -= Math.PI * 2;
+          let angleErr = Math.atan2(dy, dx) - shotYaw;
+          while (angleErr < -Math.PI) angleErr += Math.PI * 2;
+          while (angleErr > Math.PI) angleErr -= Math.PI * 2;
+          if (Math.abs(angleErr) > Math.PI * 0.45) return;
 
-          const hitCone = effectiveSpread + (0.28 / Math.max(0.8, dist));
-          if (Math.abs(angleToTarget) <= hitCone) {
-            const vis = checkVisibilityAndWallbang(player.x, player.y, c.x, c.y);
-            if (vis.clear || (!w.isMelee && vis.wallbang)) {
-              if (c.team === player.team) {
-                if (vis.clear) hitFriendly = c;
-              } else if (dist < bestEnemyDist) {
-                bestEnemyDist = dist;
-                bestEnemy = c;
-                bestEnemyWallbang = vis.wallbang && !vis.clear;
-              }
+          const lateralErr = Math.abs(Math.sin(angleErr)) * dist;
+          const hitY = eyeY + Math.tan(shotPitch) * dist;
+
+          let hitZone = null;
+          if (hitY >= 0.94 && hitY <= 1.30 && lateralErr <= headHalfW) {
+            hitZone = 'head';
+          } else if (hitY >= 0.34 && hitY < 0.98 && lateralErr <= bodyHalfW) {
+            hitZone = 'body';
+          } else if (hitY >= -0.05 && hitY < 0.34 && lateralErr <= legHalfW) {
+            hitZone = 'leg';
+          }
+          if (!hitZone) return;
+
+          const vis = checkVisibilityAndWallbang(player.x, player.y, c.x, c.y);
+          if (vis.clear || (!w.isMelee && vis.wallbang)) {
+            if (c.team === player.team) {
+              if (vis.clear) hitFriendly = c;
+            } else if (dist < bestEnemyDist) {
+              bestEnemyDist = dist;
+              bestEnemy = c;
+              bestEnemyWallbang = vis.wallbang && !vis.clear;
+              bestEnemyZone = hitZone;
             }
           }
         });
 
         if (!w.isMelee) {
           bulletSparks.push({
-            angle: player.angle + (Math.random() - 0.5) * effectiveSpread,
+            angle: shotYaw,
             spreadY: (Math.random() - 0.5) * (player.adsZoom ? 8 : 22),
             isHit: !!bestEnemy,
             color: w.color,
@@ -4032,24 +4135,16 @@
 
         if (bestEnemy) {
           const distFactor = w.isMelee ? 1.0 : Math.max(0.45, 1 - bestEnemyDist * 0.038);
-          // #2 CS Tana Zonalari: Bosh (Headshot 2.4x = ~150 HP), Gavda (1.0x = ~60 HP), Oyoq (0.6x = ~35 HP)
+          // #2 CS Tana Zonalari: Bosh (Headshot 3.25x), Gavda (1.0x), Oyoq (0.72x)
           let zoneMult = 1.0;
           let killBadge = w.isMelee ? '🔪' : '💥';
 
-          // Haqiqiy CS:GO Headshot: nishon askarning bosh qismida (0.02..0.22) VA birinchi aniq o'q / Zoom bo'lgandagina Headshot bo'ladi!
-          let exactAimAngle = Math.atan2(bestEnemy.y - player.y, bestEnemy.x - player.x) - player.angle;
-          while (exactAimAngle < -Math.PI) exactAimAngle += Math.PI * 2;
-          while (exactAimAngle > Math.PI) exactAimAngle -= Math.PI * 2;
-          const centerPrecision = Math.abs(exactAimAngle) < (0.045 / Math.max(0.9, bestEnemyDist));
-          const isHeadshotHit = !w.isMelee && (
-            (lastAimRatioY >= 0.0 && lastAimRatioY <= 0.19 && (centerPrecision || player.adsZoom)) ||
-            (centerPrecision && player.crosshairBloom < 6 && (player.pitch || 0) >= 0.015)
-          );
+          const isHeadshotHit = !w.isMelee && bestEnemyZone === 'head';
           if (isHeadshotHit) {
-            zoneMult = 3.25; // Haqiqiy CS:GO 1-Tap HEADSHOT (100+ HP zarba!)
+            zoneMult = 3.25; // Haqiqiy CS2 1-Tap HEADSHOT!
             killBadge = '🎯HS';
             playSound('headshot');
-          } else if (lastAimRatioY > 0.72) {
+          } else if (bestEnemyZone === 'leg') {
             zoneMult = 0.72; // Oyoq qismi
           }
 
@@ -4078,6 +4173,11 @@
             window.DIGI_MP.sendShoot(bestEnemy.id, dmg, isHeadshotHit, bestEnemyWallbang);
           } else {
             bestEnemy.health -= dmg;
+            bestEnemy.lastHitTime = now;
+            bestEnemy.lastHitByX = player.x;
+            bestEnemy.lastHitByY = player.y;
+            bestEnemy.recentHits = (now - (bestEnemy._recentHitReset || 0) < 1300) ? ((bestEnemy.recentHits || 0) + 1) : 1;
+            bestEnemy._recentHitReset = now;
             // #9 Knockback (devor ichiga kirib ketmasligi uchun resolveMazeCollision bilan!)
             const kbAngle = Math.atan2(bestEnemy.y - player.y, bestEnemy.x - player.x);
             const kbResolved = resolveMazeCollision(
@@ -4717,16 +4817,19 @@
         );
       }
 
-      // --- #5, #6, #7, #9, #16, #19, #28: COUNTER-STRIKE TAKTIK AI VA FIZIKASI ---
+      // --- #5, #6, #7, #9, #16, #19, #28: INSONDEK AQLLI TAKTIK BOT AI (5 HOLATLI HOLAT MASHINASI) ---
+      const _flankDirs4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
       function updateCombatantsAI(dt) {
         const now = performance.now();
         let enemyCloseBehind = false;
         let anyEnemyNear = false;
-        // 3-OPTIMIZATSIYA: botlar indeksini staggered frame keshi uchun hisoblash
         let _botIdx = 0;
 
         combatants.forEach(c => {
           const thisBotIdx = _botIdx++;
+          if (!c.aiRole) c.aiRole = ['tactician', 'ambusher', 'rusher'][thisBotIdx % 3];
+          if (!c.aiState) c.aiState = 'advance';
+
           // #9 Polga qulab tushish (Ragdoll/Death) animatsiyasi
           if (c.dyingProgress > 0) {
             c.dyingProgress += dt * 1.8;
@@ -4752,6 +4855,17 @@
               c._cachedCanSee = false;
               c._cachedLosPlayer = false;
               c.lastAttack = now + 400;
+              c.aiState = 'advance';
+              c.coverSpot = null;
+              c.aiStateUntil = 0;
+              c.lastHitTime = 0;
+              c.recentHits = 0;
+              c.burstLeft = 0;
+              c._peekFired = false;
+              c._ambushReacted = false;
+              c._navStep = null;
+              c._nextNavCalc = 0;
+              c._nextCoverSearch = 0;
             }
             return;
           }
@@ -4759,9 +4873,7 @@
           if (c.hitFlash > 0) c.hitFlash--;
           if (c.muzzleFlash > 0) c.muzzleFlash--;
 
-          // #3: Ko'rinib turgan (hasLineOfSight) dushmanni har doim 1-navbatda nishonga olish!
-          // 3-OPTIMIZATSIYA: Staggered Raycaster — har bot uchun har 3-kadrda bir marta LOS hisoblanadi,
-          // natija c._cachedCanSee da saqlanadi (bot harakati va animatsiyasi har kadrda 60 FPS silliq davom etadi)
+          // Staggered Raycaster — har bot uchun har 3-kadrda bir marta LOS hisoblanadi
           let targetX = null;
           let targetY = null;
           let targetIsPlayer = false;
@@ -4775,7 +4887,7 @@
             const losPlayer = shouldRecalcLOS
               ? (dPlayer < 10.5 && hasLineOfSight(c.x, c.y, player.x, player.y))
               : (c._cachedLosPlayer !== undefined ? c._cachedLosPlayer : false);
-            if (shouldRecalcLOS) c._cachedLosPlayer = (dPlayer < 10.5 && hasLineOfSight(c.x, c.y, player.x, player.y));
+            if (shouldRecalcLOS) c._cachedLosPlayer = losPlayer;
             bestDist = dPlayer;
             bestHasLOS = losPlayer;
             targetX = player.x;
@@ -4796,11 +4908,9 @@
           combatants.forEach(other => {
             if (!other.alive || other.dyingProgress > 0 || other.team === c.team) return;
             const d = Math.hypot(other.x - c.x, other.y - c.y);
-            // 3-OPTIMIZATSIYA: LOS hisob-kitob staggered frames bilan keshlanadi
             const losOther = shouldRecalcLOS
               ? (d < 10.5 && hasLineOfSight(c.x, c.y, other.x, other.y))
               : (other._cachedLos && other._cachedLos[c.id] !== undefined ? other._cachedLos[c.id] : d < 10.5 && hasLineOfSight(c.x, c.y, other.x, other.y));
-            // Ko'rinib turgan nishon har doim devor ortidagi nishondan ustun!
             if ((losOther && !bestHasLOS) || (losOther === bestHasLOS && d < bestDist)) {
               bestDist = d;
               bestHasLOS = losOther;
@@ -4812,31 +4922,247 @@
 
           const blockedBySmoke = smokeClouds.some(sm => Math.hypot(sm.x - c.x, sm.y - c.y) < 2.4 || (targetX !== null && Math.hypot(sm.x - targetX, sm.y - targetY) < 2.2));
           const canSeeTarget = !blockedBySmoke && targetX !== null && bestHasLOS && bestDist < 10.0;
-          // Keshlanadi — har 3 kadrda bir yangilanadi, oraliq kadrlarda eski natija ishlatiladi
           if (shouldRecalcLOS) c._cachedCanSee = canSeeTarget;
           c.isAiming = shouldRecalcLOS ? canSeeTarget : (c._cachedCanSee !== undefined ? c._cachedCanSee : canSeeTarget);
           c.aimTargetX = targetX;
           c.aimTargetY = targetY;
 
+          const botBoost = 1 + (userStats.botLevel - 1) * 0.12;
+          const speed = 1.82 * botBoost * dt;
+          if (!c.preferredDist) c.preferredDist = 3.2 + (thisBotIdx % 4) * 0.65;
 
-          if (c.health <= 22) {
-            const hpCrate = pickups.find(p => p.active && p.type === 'health');
+          // --- 5 HOLATLI TAKTIK HOLAT O'TISHLARI ---
+          const recentlyHit = (now - (c.lastHitTime || 0)) < 1200;
+          const twoRecentHits = (c.recentHits || 0) >= 2 && (now - (c.lastHitTime || 0)) < 900 && c.health < 82;
+          const needRetreat = (c.health <= 58 && (canSeeTarget || recentlyHit)) || twoRecentHits;
+
+          if (needRetreat) {
+            if (c.aiState !== 'peek_hide' && c.aiState !== 'retreat_cover') {
+              c.aiState = 'retreat_cover';
+              c._peekFired = false;
+              c._ambushReacted = false;
+            } else if (c.aiState === 'peek_hide' && ((now - (c.lastHitTime || 0) < 250 && canSeeTarget) || (c.health <= 44))) {
+              const nearHp = pickups.find(p => p.active && p.type === 'health' && Math.hypot(p.x - c.x, p.y - c.y) < 7.5);
+              if (nearHp || (now - (c.lastHitTime || 0) < 250 && canSeeTarget)) {
+                c.aiState = 'retreat_cover';
+                c.coverSpot = null;
+              }
+            }
+          } else if (c.aiState === 'retreat_cover') {
+            if (c.health > 62 && canSeeTarget) {
+              c.aiState = 'engage';
+            } else if (c.health > 62 && !recentlyHit) {
+              c.aiState = 'advance';
+            }
+          }
+
+          if (c.aiState === 'peek_hide') {
+            if (now >= (c.aiStateUntil || 0)) {
+              if (c.coverSpot && c.coverSpot.peekX && targetX !== null && bestDist < 10.5 && c.health > 28) {
+                c.aiState = 'peek_out';
+                c.aiStateUntil = now + 750 + Math.random() * 450;
+                c.burstLeft = 2 + (Math.random() < 0.45 ? 1 : 0);
+                c._peekFired = false;
+              } else if (c.health <= 38) {
+                c.aiState = 'retreat_cover';
+              } else {
+                c.aiState = 'advance';
+                c.coverSpot = null;
+              }
+            }
+          } else if (c.aiState === 'peek_out') {
+            if ((now - (c.lastHitTime || 0) < 260) || now >= (c.aiStateUntil || 0) || (c._peekFired && (c.burstLeft || 0) <= 0)) {
+              c.aiState = 'peek_hide';
+              c.aiStateUntil = now + (c.health <= 38 ? (1400 + Math.random() * 800) : (800 + Math.random() * 600));
+              c._peekFired = false;
+            }
+          } else if (c.aiState === 'ambush') {
+            if (canSeeTarget) {
+              if (!c._ambushReacted) {
+                c._ambushReacted = true;
+                c.burstLeft = Math.max(c.burstLeft || 0, 2 + (Math.random() < 0.45 ? 1 : 0));
+                c._nextBurstShotAt = now;
+              } else if ((c.burstLeft || 0) <= 0) {
+                c.aiState = 'retreat_cover';
+                c._ambushReacted = false;
+                c._nextCoverSearch = 0;
+              }
+            } else if (now >= (c.aiStateUntil || 0)) {
+              c.aiState = 'advance';
+              c._ambushReacted = false;
+            }
+          } else if (c.aiState !== 'retreat_cover') {
+            if (canSeeTarget && c.health > 58) {
+              c.aiState = 'engage';
+              if ((c.aiRole === 'tactician' || c.aiRole === 'ambusher') && now > (c._nextCoverSearch || 0) && targetX !== null) {
+                c._nextCoverSearch = now + 650;
+                const nearSpot = findNearestCoverSpot(c.x, c.y, targetX, targetY);
+                if (nearSpot && Math.hypot(nearSpot.x - c.x, nearSpot.y - c.y) < 2.0) {
+                  c.coverSpot = nearSpot;
+                  c.aiState = 'retreat_cover';
+                }
+              }
+            } else {
+              c.aiState = 'advance';
+              if (!canSeeTarget && c.health > 50 && bestDist >= 2.8 && bestDist <= 8.5 && now > (c.nextAmbushAllowed || 0)) {
+                const cgx = Math.floor(c.x);
+                const cgy = Math.floor(c.y);
+                const cellTag = `${cgx},${cgy}`;
+                if (c._lastAmbushCell !== cellTag) {
+                  c._lastAmbushCell = cellTag;
+                  if ((c.aiRole !== 'rusher' || Math.random() < 0.28) && isTacticalCornerCell(cgx, cgy)) {
+                    c.aiState = 'ambush';
+                    c.aiStateUntil = now + 1700 + Math.random() * 1400;
+                    c.nextAmbushAllowed = now + 7500;
+                    c._ambushReacted = false;
+                  }
+                }
+              }
+            }
+          }
+
+          // --- HARAKAT VECTORINI HISOBLASH ---
+          let moveForwardX = 0;
+          let moveForwardY = 0;
+
+          if (c.aiState === 'retreat_cover') {
+            const hpCrate = c.health <= 44
+              ? pickups.find(p => p.active && p.type === 'health' && Math.hypot(p.x - c.x, p.y - c.y) < 7.5)
+              : null;
             if (hpCrate) {
-              const step = findNextStepBFS(c.x, c.y, hpCrate.x, hpCrate.y);
-              c.moveDirAngle = Math.atan2(step.y - c.y, step.x - c.x);
+              if (!c._navStep || now > (c._nextNavCalc || 0)) {
+                c._nextNavCalc = now + 320;
+                c._navStep = findNextStepBFS(c.x, c.y, hpCrate.x, hpCrate.y);
+              }
+              c.moveDirAngle = Math.atan2(c._navStep.y - c.y, c._navStep.x - c.x);
+              moveForwardX = Math.cos(c.moveDirAngle) * speed * 1.24;
+              moveForwardY = Math.sin(c.moveDirAngle) * speed * 1.24;
               if (Math.hypot(hpCrate.x - c.x, hpCrate.y - c.y) < 0.75) {
                 hpCrate.active = false;
                 c.health = Math.min(100, c.health + 45);
                 setTimeout(() => { hpCrate.active = true; }, 10000);
+                c.aiState = canSeeTarget ? 'engage' : 'advance';
               }
-            } else if (targetX !== null) {
-              c.moveDirAngle = Math.atan2(c.y - targetY, c.x - targetX);
+            } else {
+              if (now > (c._nextCoverSearch || 0)) {
+                c._nextCoverSearch = now + 650;
+                const tx = (now - (c.lastHitTime || 0) < 2500 && c.lastHitByX != null) ? c.lastHitByX : (targetX !== null ? targetX : player.x);
+                const ty = (now - (c.lastHitTime || 0) < 2500 && c.lastHitByY != null) ? c.lastHitByY : (targetY !== null ? targetY : player.y);
+                c.coverSpot = findNearestCoverSpot(c.x, c.y, tx, ty);
+              }
+              if (c.coverSpot) {
+                const distToCov = Math.hypot(c.coverSpot.x - c.x, c.coverSpot.y - c.y);
+                if (distToCov < 0.45 && !canSeeTarget) {
+                  c.aiState = 'peek_hide';
+                  c.aiStateUntil = now + (c.health <= 38 ? (1400 + Math.random() * 800) : (800 + Math.random() * 600));
+                } else {
+                  c.moveDirAngle = Math.atan2(c.coverSpot.y - c.y, c.coverSpot.x - c.x);
+                  moveForwardX = Math.cos(c.moveDirAngle) * speed * 1.24;
+                  moveForwardY = Math.sin(c.moveDirAngle) * speed * 1.24;
+                }
+              } else if (targetX !== null) {
+                const sideDir = c.strafeSign || (thisBotIdx % 2 === 0 ? 1 : -1);
+                c.moveDirAngle = Math.atan2(c.y - targetY, c.x - targetX) + sideDir * 0.55;
+                moveForwardX = Math.cos(c.moveDirAngle) * speed * 1.24;
+                moveForwardY = Math.sin(c.moveDirAngle) * speed * 1.24;
+              }
             }
-          } else if (canSeeTarget) {
+          } else if (c.aiState === 'peek_hide') {
+            if (c.coverSpot) {
+              const distCov = Math.hypot(c.coverSpot.x - c.x, c.coverSpot.y - c.y);
+              if (distCov > 0.35) {
+                const angCov = Math.atan2(c.coverSpot.y - c.y, c.coverSpot.x - c.x);
+                moveForwardX = Math.cos(angCov) * speed * 0.9;
+                moveForwardY = Math.sin(angCov) * speed * 0.9;
+              }
+            }
+            if (targetX !== null) {
+              c.moveDirAngle = Math.atan2(targetY - c.y, targetX - c.x);
+            }
+            if (canSeeTarget) {
+              const strafeSign = c.strafeSign || 1;
+              const strafeAng = c.moveDirAngle + (Math.PI / 2) * strafeSign;
+              moveForwardX += Math.cos(strafeAng) * speed * 0.85;
+              moveForwardY += Math.sin(strafeAng) * speed * 0.85;
+            }
+          } else if (c.aiState === 'peek_out') {
+            if (c.coverSpot && c.coverSpot.peekX) {
+              const dp = Math.hypot(c.coverSpot.peekX - c.x, c.coverSpot.peekY - c.y);
+              if (dp > 0.22) {
+                const angPeek = Math.atan2(c.coverSpot.peekY - c.y, c.coverSpot.peekX - c.x);
+                moveForwardX = Math.cos(angPeek) * speed;
+                moveForwardY = Math.sin(angPeek) * speed;
+              }
+            }
+            if (targetX !== null) {
+              c.moveDirAngle = Math.atan2(targetY - c.y, targetX - c.x);
+            }
+          } else if (c.aiState === 'ambush') {
+            if (targetX !== null) {
+              if (!c._navStep || now > (c._nextNavCalc || 0)) {
+                c._nextNavCalc = now + 320;
+                c._navStep = findNextStepBFS(c.x, c.y, targetX, targetY);
+              }
+              const lookPt = canSeeTarget ? { x: targetX, y: targetY } : (c._navStep || { x: targetX, y: targetY });
+              c.moveDirAngle = Math.atan2(lookPt.y - c.y, lookPt.x - c.x);
+            }
+          } else if (c.aiState === 'engage' && targetX !== null) {
             c.moveDirAngle = Math.atan2(targetY - c.y, targetX - c.x);
+            const stopDist = c.preferredDist;
+            if (bestDist > stopDist) {
+              moveForwardX = Math.cos(c.moveDirAngle) * speed;
+              moveForwardY = Math.sin(c.moveDirAngle) * speed;
+            } else if (bestDist < 2.6) {
+              moveForwardX = -Math.cos(c.moveDirAngle) * speed * 0.65;
+              moveForwardY = -Math.sin(c.moveDirAngle) * speed * 0.65;
+            }
+            if (bestDist <= 8.5) {
+              if (c.hitFlash >= 3) {
+                c.strafeSign = c.strafeSign ? -c.strafeSign : (Math.random() < 0.5 ? -1 : 1);
+                c.nextStrafeSwitch = now + 420 + Math.random() * 420;
+              } else if (!c.nextStrafeSwitch || now > c.nextStrafeSwitch) {
+                c.strafeSign = (Math.random() < 0.12) ? 0 : (Math.random() < 0.5 ? -1 : 1);
+                c.nextStrafeSwitch = now + 520 + Math.random() * 620;
+              }
+              if (c.strafeSign) {
+                const strafeAngle = c.moveDirAngle + (Math.PI / 2) * c.strafeSign;
+                const strafeMult = bestDist <= stopDist + 1.4 ? 0.85 : 0.52;
+                moveForwardX += Math.cos(strafeAngle) * speed * strafeMult;
+                moveForwardY += Math.sin(strafeAngle) * speed * strafeMult;
+              }
+            }
           } else if (targetX !== null) {
-            const nextWaypoint = findNextStepBFS(c.x, c.y, targetX, targetY);
-            c.moveDirAngle = Math.atan2(nextWaypoint.y - c.y, nextWaypoint.x - c.x);
+            // 'advance': Throttled BFS (320 ms) + yon koridordan aylanish (Flank)
+            if (!c._navStep || now > (c._nextNavCalc || 0)) {
+              c._nextNavCalc = now + 320;
+              c._navStep = findNextStepBFS(c.x, c.y, targetX, targetY);
+              if ((c.aiRole === 'tactician' || c.aiRole === 'ambusher') && c._navStep) {
+                const allyBlocking = combatants.some(o =>
+                  o !== c && o.alive && o.dyingProgress === 0 && o.team === c.team &&
+                  Math.hypot(o.x - c.x, o.y - c.y) < 1.6 &&
+                  Math.hypot(o.x - c._navStep.x, o.y - c._navStep.y) < 1.1
+                );
+                if (allyBlocking) {
+                  const ngx = Math.floor(c.x);
+                  const ngy = Math.floor(c.y);
+                  for (let f = 0; f < 4; f++) {
+                    const fx = ngx + _flankDirs4[f][0];
+                    const fy = ngy + _flankDirs4[f][1];
+                    if (fx > 0 && fy > 0 && fx < MAP_SIZE - 1 && fy < MAP_SIZE - 1 && currentMaze[fy] && currentMaze[fy][fx] === 0) {
+                      const wx = fx + 0.5;
+                      const wy = fy + 0.5;
+                      if (Math.hypot(wx - c._navStep.x, wy - c._navStep.y) > 0.9) {
+                        c._navStep = { x: wx, y: wy };
+                        break;
+                      }
+                    }
+                  }
+                }
+              }
+            }
+            c.moveDirAngle = Math.atan2(c._navStep.y - c.y, c._navStep.x - c.x);
+            moveForwardX = Math.cos(c.moveDirAngle) * speed;
+            moveForwardY = Math.sin(c.moveDirAngle) * speed;
           }
 
           let repulseX = 0;
@@ -4858,7 +5184,7 @@
               repulseY += Math.sin(dodgeAngle) * 3.8;
             }
           }
-          // Botlar orasida qat'iy masofa saqlash (Separation — hatto d === 0 bo'lsa ham darhol ajraladi!)
+          // Botlar orasida qat'iy masofa saqlash
           combatants.forEach(other => {
             if (other === c || !other.alive || other.dyingProgress > 0) return;
             const d = Math.hypot(c.x - other.x, c.y - other.y);
@@ -4871,37 +5197,6 @@
               repulseY += ny * push;
             }
           });
-
-          // #4: CS:GO Taktik Strafe (individual jang masofasi + o'q yeganda darhol yon siljish + yaqinlashganda orqaga chekinish)
-          const botBoost = 1 + (userStats.botLevel - 1) * 0.12;
-          const speed = 1.82 * botBoost * dt;
-          if (!c.preferredDist) c.preferredDist = 2.15 + (thisBotIdx % 4) * 0.65;
-          const stopDist = (canSeeTarget && c.health > 22) ? c.preferredDist : 0.2;
-          let moveForwardX = 0;
-          let moveForwardY = 0;
-          if (bestDist > stopDist) {
-            moveForwardX = Math.cos(c.moveDirAngle) * speed;
-            moveForwardY = Math.sin(c.moveDirAngle) * speed;
-          } else if (canSeeTarget && bestDist < 1.55 && c.health > 22) {
-            moveForwardX = -Math.cos(c.moveDirAngle) * speed * 0.55;
-            moveForwardY = -Math.sin(c.moveDirAngle) * speed * 0.55;
-          }
-
-          if (canSeeTarget && bestDist <= 7.5 && c.health > 22) {
-            if (c.hitFlash >= 3) {
-              c.strafeSign = c.strafeSign ? -c.strafeSign : (Math.random() < 0.5 ? -1 : 1);
-              c.nextStrafeSwitch = now + 450 + Math.random() * 450;
-            } else if (!c.nextStrafeSwitch || now > c.nextStrafeSwitch) {
-              c.strafeSign = (Math.random() < 0.15) ? 0 : (Math.random() < 0.5 ? -1 : 1);
-              c.nextStrafeSwitch = now + 550 + Math.random() * 650;
-            }
-            if (c.strafeSign) {
-              const strafeAngle = c.moveDirAngle + (Math.PI / 2) * c.strafeSign;
-              const strafeMult = bestDist <= stopDist + 1.4 ? 0.78 : 0.42;
-              moveForwardX += Math.cos(strafeAngle) * speed * strafeMult;
-              moveForwardY += Math.sin(strafeAngle) * speed * strafeMult;
-            }
-          }
 
           const stepX = moveForwardX + repulseX * dt;
           const stepY = moveForwardY + repulseY * dt;
@@ -4922,13 +5217,25 @@
             c.walkCycle += actualBotMoved * 5.8;
           }
 
-          // #7 Dushman o'q uzganda olov chaqnashi (Muzzle Flash) va #16 3D Spatial Audio
-          const botFireDelay = Math.max(780, 1650 - (userStats.botLevel - 1) * 200);
-          if (canSeeTarget && now - c.lastAttack > botFireDelay) {
-            c.lastAttack = now;
-            c.muzzleFlash = 5;
+          // --- REALISTIK BOT OTISHISHI (2-3 O'QLI QISQA SERIYA + ADOLATLI ANIQLIK) ---
+          const botFireDelay = Math.max(920, 1700 - (userStats.botLevel - 1) * 180);
+          if (canSeeTarget && (c.burstLeft || 0) <= 0 && now - (c.lastAttack || 0) > botFireDelay) {
+            if (c.aiState === 'retreat_cover' && Math.random() > 0.25) {
+              c.lastAttack = now - botFireDelay * 0.45;
+            } else {
+              c.burstLeft = 2 + (Math.random() < 0.45 ? 1 : 0);
+              c._nextBurstShotAt = now;
+              c.lastAttack = now;
+            }
+          }
 
-            // #16 Ovoz qaysi tomondan kelayotganini (Chap -1.0 ... O'ng +1.0) hisoblash
+          if (canSeeTarget && (c.burstLeft || 0) > 0 && now >= (c._nextBurstShotAt || 0)) {
+            c.burstLeft--;
+            c._nextBurstShotAt = now + 195;
+            c.lastAttack = now;
+            c.muzzleFlash = 4;
+            if (c.aiState === 'peek_out') c._peekFired = true;
+
             const relAngle = Math.atan2(c.y - player.y, c.x - player.x) - player.angle;
             const stereoPan = Math.sin(relAngle);
             const distGain = Math.max(0.22, 1 - Math.hypot(c.x - player.x, c.y - player.y) / 12);
@@ -4943,71 +5250,87 @@
             }
 
             if (targetIsPlayer) {
-              if (now < player.spawnShieldUntil) return;
-              const dmg = Math.floor(9 + Math.random() * 7);
-              if (player.armor > 0) {
-                const absorb = Math.min(player.armor, Math.ceil(dmg * 0.50));
-                player.armor -= absorb;
-                player.health = Math.max(0, player.health - (dmg - absorb));
-              } else {
-                player.health = Math.max(0, player.health - dmg);
-              }
-              // #18 O'q tekkanda sekinlashish (CS Tagging), Kamera Titrashi, Yo'nalish Yoyi va Qizil Qon Chaqnashi!
-              player.taggedSlowUntil = now + 450;
-              player.hitShake = 1.0;
-              if (!player.damageArcs) player.damageArcs = [];
-              player.damageArcs.push({
-                worldAngle: Math.atan2(c.y - player.y, c.x - player.x),
-                ttl: 28,
-                maxTtl: 28
-              });
-              try {
-                if (navigator.vibrate) navigator.vibrate(40);
-              } catch (e) {}
-              playSound('hurt', stereoPan, 1.0);
-              if (player.health > 0 && player.health <= 32 && window.DIGI_SFX && soundEnabled) {
-                window.DIGI_SFX.playRadio('need_help', audioCtx, masterGain || (audioCtx && audioCtx.destination), false, 0.75);
-              }
-              triggerDamageFlash();
-              updateHud();
+              if (now >= player.spawnShieldUntil) {
+                const hitChance = Math.max(
+                  0.32,
+                  Math.min(
+                    0.82,
+                    0.78 - bestDist * 0.045 - (player.currentSpeed > 0.5 ? 0.14 : 0) + (c.aiState === 'ambush' ? 0.12 : 0)
+                  )
+                );
+                if (Math.random() <= hitChance) {
+                  const dmg = Math.floor(7 + Math.random() * 7);
+                  if (player.armor > 0) {
+                    const absorb = Math.min(player.armor, Math.ceil(dmg * 0.50));
+                    player.armor -= absorb;
+                    player.health = Math.max(0, player.health - (dmg - absorb));
+                  } else {
+                    player.health = Math.max(0, player.health - dmg);
+                  }
+                  player.taggedSlowUntil = now + 450;
+                  player.hitShake = 1.0;
+                  if (!player.damageArcs) player.damageArcs = [];
+                  player.damageArcs.push({
+                    worldAngle: Math.atan2(c.y - player.y, c.x - player.x),
+                    ttl: 28,
+                    maxTtl: 28
+                  });
+                  try {
+                    if (navigator.vibrate) navigator.vibrate(40);
+                  } catch (e) {}
+                  playSound('hurt', stereoPan, 1.0);
+                  if (player.health > 0 && player.health <= 32 && window.DIGI_SFX && soundEnabled) {
+                    window.DIGI_SFX.playRadio('need_help', audioCtx, masterGain || (audioCtx && audioCtx.destination), false, 0.75);
+                  }
+                  triggerDamageFlash();
+                  updateHud();
 
-              if (player.health <= 0) {
-                c.kills = (c.kills || 0) + 1;
-                player.deaths++;
-                myProfile.deaths = player.deaths;
-                if (c.team === 'red') redScore++;
-                else blueScore++;
-                addKillFeed(c.name, c.team, myProfile.name, player.team, '💥');
-                player.health = 100;
-                player.armor = 50;
-                const pSp = findSafeSpawnPoint(player.team, true);
-                player.x = pSp.x;
-                player.y = pSp.y;
-                player.angle = findOpenCorridorAngle(pSp.x, pSp.y);
-                player.angVel = 0;
-                player.pitch = 0;
-                const rw = WEAPONS[selectedWeaponIdx] || WEAPONS[0];
-                if (rw && !rw.isMelee) {
-                  player.magAmmo = rw.magSize;
-                  player.reserveAmmo = rw.reserveAmmo || rw.reserve || (rw.magSize * 3);
+                  if (player.health <= 0) {
+                    c.kills = (c.kills || 0) + 1;
+                    c.burstLeft = 0;
+                    player.deaths++;
+                    myProfile.deaths = player.deaths;
+                    if (c.team === 'red') redScore++;
+                    else blueScore++;
+                    addKillFeed(c.name, c.team, myProfile.name, player.team, '💥');
+                    player.health = 100;
+                    player.armor = 50;
+                    const pSp = findSafeSpawnPoint(player.team, true);
+                    player.x = pSp.x;
+                    player.y = pSp.y;
+                    player.angle = findOpenCorridorAngle(pSp.x, pSp.y);
+                    player.angVel = 0;
+                    player.pitch = 0;
+                    const rw = WEAPONS[selectedWeaponIdx] || WEAPONS[0];
+                    if (rw && !rw.isMelee) {
+                      player.magAmmo = rw.magSize;
+                      player.reserveAmmo = rw.reserveAmmo || rw.reserve || (rw.magSize * 3);
+                    }
+                    keys.fire = false;
+                    player.isReloadPending = false;
+                    player.reloadingUntil = 0;
+                    player.spawnShieldUntil = performance.now() + 3200;
+                    player.respawnFireLockUntil = performance.now() + 450;
+                    showToast(`${c.name} sizni yo'q qildi!`, '💀');
+                    checkMatchWinCondition();
+                  }
                 }
-                keys.fire = false;
-                player.isReloadPending = false;
-                player.reloadingUntil = 0;
-                player.spawnShieldUntil = performance.now() + 3200;
-                player.respawnFireLockUntil = performance.now() + 450;
-                showToast(`${c.name} sizni yo'q qildi!`, '💀');
-                checkMatchWinCondition();
               }
             } else {
               const victim = combatants.find(o => o.alive && o.dyingProgress === 0 && o.team !== c.team && Math.hypot(o.x - targetX, o.y - targetY) < 0.65);
               if (victim) {
-                victim.health -= 32;
+                victim.health -= Math.floor(14 + Math.random() * 10);
                 victim.hitFlash = 4;
+                victim.lastHitTime = now;
+                victim.lastHitByX = c.x;
+                victim.lastHitByY = c.y;
+                victim.recentHits = (now - (victim._recentHitReset || 0) < 1300) ? ((victim.recentHits || 0) + 1) : 1;
+                victim._recentHitReset = now;
                 if (victim.health <= 0) {
                   victim.dyingProgress = 0.05;
                   victim.deaths = (victim.deaths || 0) + 1;
                   c.kills = (c.kills || 0) + 1;
+                  c.burstLeft = 0;
                   if (c.team === 'red') redScore++;
                   else blueScore++;
                   addKillFeed(c.name, c.team, victim.name, victim.team, '💥');
@@ -6473,7 +6796,7 @@
           }
 
           const projH = Math.max(24, botY - topY);
-          const hitHalfW = Math.max(18, projH * 0.26);
+          const hitHalfW = Math.max(12, projH * 0.22);
           if (Math.abs(screenX - w / 2) <= hitHalfW) {
             if (!aimedFighter || dist < Math.hypot(aimedFighter.x - player.x, aimedFighter.y - player.y)) {
               aimedFighter = c;
