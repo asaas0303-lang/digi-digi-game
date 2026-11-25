@@ -1062,7 +1062,7 @@
 
   <!-- Qon va qo'rqinchli chaqnash qatlami -->
   <div id="damageFlash" class="fixed inset-0 pointer-events-none z-50" style="background: radial-gradient(circle at 50% 50%, rgba(220,38,38,0.12) 32%, rgba(185,28,28,0.78) 100%); opacity: 0; transition: opacity 90ms linear; will-change: opacity;"></div>
-  <div id="jumpscareBanner" class="hidden fixed top-[54px] left-1/2 -translate-x-1/2 z-40 pointer-events-none px-3 py-1 rounded-full bg-red-950/90 border border-red-500/85 shadow-lg">
+  <div id="jumpscareBanner" class="hidden fixed top-[78px] left-1/2 -translate-x-1/2 z-40 pointer-events-none px-3 py-1 rounded-full bg-red-950/90 border border-red-500/85 shadow-lg">
     <p class="retro-font text-red-300 text-[10px] sm:text-xs tracking-wider whitespace-nowrap">⚠️ ORQANGIZDA DUSHMAN!</p>
   </div>
 
@@ -2073,7 +2073,7 @@
           <span id="ngGpu" class="hidden">DC 0</span>
         </div>
 
-        <div id="proximityAlert" class="hidden bg-red-950/90 border border-red-500/80 text-red-200 text-[8px] sm:text-[10px] font-extrabold px-1.5 py-0.5 rounded leading-tight">
+        <div id="proximityAlert" class="hidden fixed top-[54px] left-1/2 -translate-x-1/2 z-30 pointer-events-none bg-red-950/90 border border-red-500/80 text-red-200 text-[8.5px] sm:text-[10px] font-extrabold px-2.5 py-0.5 rounded-full shadow-md leading-tight whitespace-nowrap">
           ⚠️ DUSHMAN YAQIN!
         </div>
       </div>
@@ -5201,14 +5201,14 @@
           }
 
           // --- BOTLARNING HE GRANATA VA TUTUN (SMOKE) TASHLASHI ---
-          if (!isMpMatch && now > (c.nextGrenadeAt || 0) && now - (window._lastBotGrenadeTime || 0) > 4200) {
+          if (!isMpMatch && now > (c.nextGrenadeAt || 0) && now - (window._lastBotGrenadeTime || 0) > 10500) {
             const relAngG = Math.atan2(c.y - player.y, c.x - player.x) - player.angle;
             const stereoPanG = Math.sin(relAngG);
             const distGainG = Math.max(0.22, 1 - Math.hypot(c.x - player.x, c.y - player.y) / 12);
 
             const heLastSeenDist = (c._lastSeenX != null) ? Math.hypot(c._lastSeenX - c.x, c._lastSeenY - c.y) : 99;
             const shouldThrowHiddenHe = isEnemyBot && (c.heGrenades || 0) > 0 && !canSeeTarget && c._lastSeenX != null && (now - (c._lastSeenAt || 0) < 2600) && heLastSeenDist >= 2.6 && heLastSeenDist <= 7.6;
-            const shouldThrowOpenHe = isEnemyBot && (c.heGrenades || 0) > 0 && canSeeTarget && targetIsPlayer && bestDist >= 3.4 && bestDist <= 7.6 && Math.random() < (0.018 + enemyDda * 0.032);
+            const shouldThrowOpenHe = isEnemyBot && (c.heGrenades || 0) > 0 && canSeeTarget && targetIsPlayer && bestDist >= 3.4 && bestDist <= 7.6 && Math.random() < (0.010 + enemyDda * 0.018);
 
             if (shouldThrowHiddenHe || shouldThrowOpenHe) {
               const tx = shouldThrowHiddenHe ? c._lastSeenX : targetX;
@@ -5227,7 +5227,7 @@
                 isBot: true
               });
               c.heGrenades--;
-              c.nextGrenadeAt = now + 9500;
+              c.nextGrenadeAt = now + 16000;
               window._lastBotGrenadeTime = now;
               if (Math.hypot(tx - player.x, ty - player.y) < 6.0 || (shouldThrowOpenHe && targetIsPlayer)) {
                 showToast('⚠️ Dushman granata otdi! Qoching!', '💣');
@@ -5251,7 +5251,7 @@
                   isBot: true
                 });
                 c.smokeGrenades--;
-                c.nextGrenadeAt = now + 10000;
+                c.nextGrenadeAt = now + 15000;
                 window._lastBotGrenadeTime = now;
                 playSound('knife_slash', stereoPanG, distGainG);
               }
@@ -6683,10 +6683,51 @@
       let _smokeGrenadeMat = null;
       let _explFlashPool = null;
       let _smokeMeshPool = null;
+      let _smokeSpriteTex = null;
+      let _explSpriteTex = null;
       window._activeExplosions = [];
 
       function ensureCombatFxPools() {
         if (!threeScene || typeof THREE === 'undefined') return;
+        if (!_smokeSpriteTex) {
+          const sc = document.createElement('canvas');
+          sc.width = sc.height = 128;
+          const sctx = sc.getContext('2d');
+          const puffs = [
+            [64, 64, 54], [46, 54, 42], [82, 56, 40],
+            [52, 78, 40], [78, 76, 42], [64, 44, 36]
+          ];
+          for (let k = 0; k < puffs.length; k++) {
+            const [px, py, pr] = puffs[k];
+            const g = sctx.createRadialGradient(px, py, 2, px, py, pr);
+            g.addColorStop(0.0, 'rgba(220,226,235,0.45)');
+            g.addColorStop(0.55, 'rgba(195,204,218,0.22)');
+            g.addColorStop(1.0, 'rgba(180,190,205,0)');
+            sctx.fillStyle = g;
+            sctx.beginPath();
+            sctx.arc(px, py, pr, 0, Math.PI * 2);
+            sctx.fill();
+          }
+          _smokeSpriteTex = new THREE.CanvasTexture(sc);
+          _smokeSpriteTex.needsUpdate = true;
+        }
+        if (!_explSpriteTex) {
+          const ec = document.createElement('canvas');
+          ec.width = ec.height = 128;
+          const ectx = ec.getContext('2d');
+          const eg = ectx.createRadialGradient(64, 64, 2, 64, 64, 60);
+          eg.addColorStop(0.0, '#fffbeb');
+          eg.addColorStop(0.25, 'rgba(251,191,36,0.92)');
+          eg.addColorStop(0.55, 'rgba(234,88,12,0.58)');
+          eg.addColorStop(0.85, 'rgba(153,27,27,0.18)');
+          eg.addColorStop(1.0, 'rgba(0,0,0,0)');
+          ectx.fillStyle = eg;
+          ectx.beginPath();
+          ectx.arc(64, 64, 60, 0, Math.PI * 2);
+          ectx.fill();
+          _explSpriteTex = new THREE.CanvasTexture(ec);
+          _explSpriteTex.needsUpdate = true;
+        }
         if (!_grenadeMeshPool) {
           const gGeo = new THREE.SphereGeometry(0.085, 8, 8);
           _heGrenadeMat = new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0x991b1b, emissiveIntensity: 0.75, roughness: 0.42 });
@@ -6700,26 +6741,51 @@
           }
         }
         if (!_explFlashPool) {
-          const eGeo = new THREE.SphereGeometry(0.32, 10, 10);
           _explFlashPool = [];
           for (let i = 0; i < 3; i++) {
-            const mat = new THREE.MeshBasicMaterial({ color: 0xff9f1c, transparent: true, opacity: 0.85, depthWrite: false });
-            const m = new THREE.Mesh(eGeo, mat);
-            m.visible = false;
-            threeScene.add(m);
-            _explFlashPool.push(m);
+            const mat = new THREE.SpriteMaterial({
+              map: _explSpriteTex,
+              transparent: true,
+              opacity: 0.95,
+              depthWrite: false,
+              blending: THREE.AdditiveBlending
+            });
+            const s = new THREE.Sprite(mat);
+            s.visible = false;
+            threeScene.add(s);
+            _explFlashPool.push(s);
           }
         }
         if (!_smokeMeshPool) {
-          const sGeo = new THREE.SphereGeometry(1.15, 10, 10);
+          const puffSpecs = [
+            { ox: 0, oy: 0.82, oz: 0, s: 2.45 },
+            { ox: -0.46, oy: 0.62, oz: 0.28, s: 2.05 },
+            { ox: 0.44, oy: 1.02, oz: -0.26, s: 2.10 }
+          ];
           _smokeMeshPool = [];
           for (let i = 0; i < 6; i++) {
-            const mat = new THREE.MeshBasicMaterial({ color: 0xd1d5db, transparent: true, opacity: 0.82, depthWrite: false });
-            const m = new THREE.Mesh(sGeo, mat);
-            m.visible = false;
-            threeScene.add(m);
-            _smokeMeshPool.push(m);
-            smokeMeshes.push(m);
+            const grp = new THREE.Group();
+            const grpPuffs = [];
+            for (let pIdx = 0; pIdx < puffSpecs.length; pIdx++) {
+              const spec = puffSpecs[pIdx];
+              const mat = new THREE.SpriteMaterial({
+                map: _smokeSpriteTex,
+                transparent: true,
+                opacity: 0.72,
+                depthWrite: false,
+                color: 0xdbe2ec
+              });
+              const sp = new THREE.Sprite(mat);
+              sp.position.set(spec.ox, spec.oy, spec.oz);
+              sp.scale.set(spec.s, spec.s, 1);
+              grp.add(sp);
+              grpPuffs.push({ sprite: sp, baseScale: spec.s });
+            }
+            grp.userData.puffs = grpPuffs;
+            grp.visible = false;
+            threeScene.add(grp);
+            _smokeMeshPool.push(grp);
+            smokeMeshes.push(grp);
           }
         }
       }
@@ -7151,11 +7217,12 @@
               if (i < explList.length) {
                 const ex = explList[i];
                 const prog = Math.min(1, Math.max(0, 1 - ex.ttl / ex.maxTtl));
-                const s = 1.0 + prog * 4.8;
+                const s = 1.2 + prog * 3.8;
                 m.visible = true;
-                m.position.set(ex.x, 0.42, ex.z);
-                m.scale.set(s, s, s);
-                m.material.opacity = 0.85 * (1 - prog);
+                m.position.set(ex.x, 0.52 + prog * 0.28, ex.z);
+                m.scale.set(s, s, 1);
+                m.material.opacity = 0.95 * (1 - prog);
+                m.material.rotation = prog * 1.4;
               } else {
                 m.visible = false;
               }
@@ -7164,19 +7231,24 @@
 
           if (_smokeMeshPool) {
             for (let i = 0; i < _smokeMeshPool.length; i++) {
-              const m = _smokeMeshPool[i];
+              const grp = _smokeMeshPool[i];
               if (i < smokeClouds.length) {
                 const sm = smokeClouds[i];
-                const fadeIn = sm.ttl > 395 ? (420 - sm.ttl) / 25 : 1.0;
-                const fadeOut = sm.ttl < 75 ? sm.ttl / 75 : 1.0;
-                const op = Math.max(0.05, Math.min(0.86, 0.82 * Math.min(fadeIn, fadeOut)));
-                const s = 1.25 + Math.sin(nowSec * 1.4 + i) * 0.07;
-                m.visible = true;
-                m.position.set(sm.x, 0.88, sm.y);
-                m.scale.set(s, 0.92, s);
-                m.material.opacity = op;
+                const fadeIn = sm.ttl > 390 ? (420 - sm.ttl) / 30 : 1.0;
+                const fadeOut = sm.ttl < 85 ? sm.ttl / 85 : 1.0;
+                const op = Math.max(0.02, Math.min(0.76, 0.72 * Math.min(fadeIn, fadeOut)));
+                grp.visible = true;
+                grp.position.set(sm.x, 0, sm.y);
+                const puffs = grp.userData.puffs;
+                for (let pIdx = 0; pIdx < puffs.length; pIdx++) {
+                  const pf = puffs[pIdx];
+                  const sc = pf.baseScale * (0.94 + Math.sin(nowSec * 1.1 + i + pIdx * 2.1) * 0.08);
+                  pf.sprite.scale.set(sc, sc, 1);
+                  pf.sprite.material.rotation = nowSec * (pIdx % 2 === 0 ? 0.14 : -0.11) + i;
+                  pf.sprite.material.opacity = op;
+                }
               } else {
-                m.visible = false;
+                grp.visible = false;
               }
             }
           }
@@ -7207,6 +7279,23 @@
 
           if (Math.abs(spriteAngle) > fov * 0.65) return;
           if (!hasLineOfSight(player.x, player.y, c.x, c.y)) return;
+          if (smokeClouds.length > 0) {
+            const segDx = c.x - player.x;
+            const segDy = c.y - player.y;
+            const segLenSq = segDx * segDx + segDy * segDy || 0.0001;
+            let hiddenBySmoke = false;
+            for (let si = 0; si < smokeClouds.length; si++) {
+              const sm = smokeClouds[si];
+              const t = Math.max(0, Math.min(1, ((sm.x - player.x) * segDx + (sm.y - player.y) * segDy) / segLenSq));
+              const cx = player.x + segDx * t;
+              const cy = player.y + segDy * t;
+              if (Math.hypot(sm.x - cx, sm.y - cy) < 1.55) {
+                hiddenBySmoke = true;
+                break;
+              }
+            }
+            if (hiddenBySmoke) return;
+          }
 
           let screenX = Math.floor((0.5 + spriteAngle / fov) * w);
           let topY = Math.floor(halfH - (h * 0.14) / Math.max(0.8, dist));
