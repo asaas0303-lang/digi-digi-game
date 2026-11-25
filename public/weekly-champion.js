@@ -1,4 +1,4 @@
-// DIGI DIGI — «👑 HAFTA CHEMPIONI» VITRINASI VA SUZUVCHI 3D iOS GLASS PROFILI (v20261124_11)
+// DIGI DIGI — «👑 HAFTA CHEMPIONI» VITRINASI VA SUZUVCHI 3D iOS GLASS PROFILI (v20261124_12)
 (function () {
   'use strict';
 
@@ -70,8 +70,24 @@
     style.id = 'digiWeeklyChampionStyles';
     style.textContent = `
       #btnNewsCard {
-        border-color: rgba(251, 191, 36, 0.38) !important;
-        box-shadow: 0 8px 22px rgba(0, 0, 0, 0.78), 0 0 18px rgba(245, 158, 11, 0.14), inset 0 1px 0 rgba(254, 240, 138, 0.22);
+        background:
+          radial-gradient(circle at 18% 64%, rgba(251, 191, 36, 0.22) 0%, rgba(245, 158, 11, 0.05) 46%, transparent 72%),
+          linear-gradient(155deg, rgba(22, 29, 48, 0.94) 0%, rgba(10, 14, 24, 0.97) 100%) !important;
+        border-color: rgba(251, 191, 36, 0.52) !important;
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.80), 0 0 20px rgba(245, 158, 11, 0.18), inset 0 1px 0 rgba(254, 243, 199, 0.32);
+      }
+      .wc-hero-ring {
+        background: conic-gradient(from 180deg, #fde68a, #f59e0b, #fbbf24, #d97706, #fde68a);
+        padding: 2.5px;
+        box-shadow: 0 0 16px rgba(251, 191, 36, 0.42), 0 4px 12px rgba(0, 0, 0, 0.72);
+      }
+      .wc-gift-cta {
+        background: linear-gradient(180deg, rgba(251, 191, 36, 0.34) 0%, rgba(217, 119, 6, 0.24) 100%);
+        border: 1px solid rgba(253, 224, 71, 0.62);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(254, 249, 195, 0.42);
+      }
+      .wc-gift-cta:active {
+        transform: scale(0.94);
       }
       #modalWeeklyChampion {
         background:
@@ -122,14 +138,14 @@
 
         <div class="grid grid-cols-12 gap-2.5 p-2.5 flex-1 min-h-0 overflow-hidden">
           <!-- CHAP USTUN: Chempion Profili, Harakat Tugmalari va 6 ta Statistika -->
-          <div class="col-span-5 ios-fh-group p-2.5 flex flex-col justify-between gap-2 min-h-0 overflow-y-auto">
+          <div class="col-span-5 ios-fh-group p-2.5 flex flex-col justify-start gap-2 min-h-0 overflow-y-auto">
             <div class="flex items-center gap-2.5 min-w-0">
-              <div id="wcModalAvatarWrap" class="relative w-[52px] h-[52px] shrink-0">
-                <div id="wcModalAvatarBox" class="w-full h-full rounded-full ios-fh-avatar ios-fh-avatar-gold bg-slate-900 flex items-center justify-center text-lg font-black text-amber-200 overflow-hidden">👑</div>
+              <div id="wcModalAvatarWrap" class="relative w-[60px] h-[60px] shrink-0">
+                <div id="wcModalAvatarBox" class="wc-hero-ring w-full h-full rounded-full flex items-center justify-center text-xl font-black text-amber-200 overflow-hidden">👑</div>
                 <span class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-amber-500/95 border border-amber-200 text-[10px] flex items-center justify-center shadow">👑</span>
               </div>
               <div class="min-w-0 flex-1 leading-tight">
-                <div id="wcModalName" class="font-black text-white text-[13px] truncate">Yuklanmoqda...</div>
+                <div id="wcModalName" class="font-black text-white text-[13.5px] truncate">Yuklanmoqda...</div>
                 <div id="wcModalUsername" class="text-[9.5px] text-sky-300 font-semibold truncate hidden"></div>
                 <div class="flex items-center gap-1 flex-wrap mt-1">
                   <span id="wcModalLeaguePill" class="text-[8.5px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/15 border border-amber-400/40 text-amber-200">👑 Liga</span>
@@ -166,6 +182,11 @@
                 <button id="btnWcEmptySendGift" type="button" class="hidden ios-btn-gold px-3 py-1.5 text-[10px] font-extrabold cursor-pointer">🎁 Chempionga birinchi sovg'ani yuborish</button>
               </div>
             </div>
+
+            <div id="wcModalGiftsFooter" class="shrink-0 flex items-center justify-between gap-2 pt-1.5 border-t border-white/10">
+              <div id="wcModalTopGiftHint" class="text-[9px] text-slate-300 font-semibold truncate">✨ Eng qimmat sovg'alar yuqorida</div>
+              <button id="btnWcFooterAction" type="button" class="ios-btn-gold px-2.5 py-1 text-[9.5px] font-extrabold shrink-0 cursor-pointer">🎁 Sovg'a yuborish</button>
+            </div>
           </div>
         </div>
       </div>
@@ -187,9 +208,9 @@
     const cleanUrl = String(photoUrl || '').trim();
     const initial = esc((String(name || 'C').replace(/^@/, '').charAt(0) || 'C').toUpperCase());
     if (cleanUrl) {
-      boxEl.innerHTML = `<img src="${esc(cleanUrl)}" alt="${esc(name)}" class="${sizeCls || 'w-full h-full object-cover rounded-full'}" onerror="this.parentNode.textContent='${initial}'" />`;
+      boxEl.innerHTML = `<img src="${esc(cleanUrl)}" alt="${esc(name)}" class="${sizeCls || 'w-full h-full object-cover rounded-full bg-slate-900'}" onerror="this.parentNode.innerHTML='<span class=\\'w-full h-full rounded-full bg-slate-900 flex items-center justify-center text-xl font-black text-amber-200\\'>${initial}</span>'" />`;
     } else {
-      boxEl.textContent = initial;
+      boxEl.innerHTML = `<span class="w-full h-full rounded-full bg-slate-900 flex items-center justify-center text-xl font-black text-amber-200">${initial}</span>`;
     }
   }
 
@@ -207,29 +228,56 @@
     }
 
     const prestigeFormatted = Number(c.prestige || 0).toLocaleString('en-US');
-    const giftCount = Number(c.giftTotalCount || 0);
+    const eloFormatted = Number(c.elo || 1000).toLocaleString('en-US');
     const initial = esc((String(c.name || 'C').replace(/^@/, '').charAt(0) || 'C').toUpperCase());
     const avatarHtml = c.photoUrl
       ? `<img src="${esc(c.photoUrl)}" alt="${esc(c.name)}" class="w-full h-full object-cover rounded-full" onerror="this.parentNode.textContent='${initial}'" />`
       : `<span>${initial}</span>`;
 
+    const allGifts = Array.isArray(c.giftsSorted) ? c.giftsSorted : [];
+    const topGifts = allGifts.slice(0, 3);
+    const miniShowcaseHtml = topGifts.length > 0
+      ? `<div class="flex items-center gap-1 min-w-0 pt-0.5">` +
+          topGifts.map(g => `
+            <div class="w-[20px] h-[20px] rounded-md bg-[#060b16] border border-amber-400/35 flex items-center justify-center overflow-hidden shrink-0">
+              <img src="/img/gifts/${encodeURIComponent(g.giftId)}.webp?v=${WC_IMG_VER}" alt="${esc(g.name)}" class="w-[18px] h-[18px] object-contain" style="-webkit-mask-image: radial-gradient(circle at 50% 50%, #000 62%, transparent 98%); mask-image: radial-gradient(circle at 50% 50%, #000 62%, transparent 98%);" onerror="this.style.display='none';this.nextElementSibling.style.display='inline';" />
+              <span class="hidden text-[10px] leading-none">${esc(g.icon || '🎁')}</span>
+            </div>
+          `).join('') +
+          (allGifts.length > 3 ? `<span class="text-[8px] font-bold text-amber-300/90 shrink-0">+${allGifts.length - 3}</span>` : '') +
+          `<span class="text-[8px] font-bold text-amber-200/85 ml-auto shrink-0">Profil ›</span>` +
+        `</div>`
+      : `<div class="flex items-center gap-1 min-w-0 pt-0.5"><span class="text-[8px] text-slate-400 font-semibold truncate">🎁 Sovg'a yuborish</span><span class="text-[8px] font-bold text-amber-200/85 ml-auto shrink-0">Profil ›</span></div>`;
+
     const headerReset = document.getElementById('wcCardResetBadge');
     if (headerReset) {
-      headerReset.textContent = '#1 • Dush gacha';
+      headerReset.textContent = '#1 · Dushanbagacha';
+      headerReset.className = 'text-[7.5px] font-bold text-amber-200/90 bg-amber-500/15 border border-amber-400/35 px-1.5 py-0.5 rounded-full shrink-0';
     }
 
     const htmlBody = `
-      <div class="relative w-10 h-10 shrink-0">
-        <div class="w-10 h-10 rounded-full border-2 border-amber-400/80 bg-slate-900 flex items-center justify-center text-sm font-black text-amber-200 overflow-hidden shadow-[0_0_10px_rgba(251,191,36,0.35)]">
-          ${avatarHtml}
+      <div class="relative w-[56px] h-[56px] shrink-0">
+        <div class="wc-hero-ring w-full h-full rounded-full">
+          <div class="w-full h-full rounded-full bg-slate-900 overflow-hidden flex items-center justify-center text-lg font-black text-amber-200">
+            ${avatarHtml}
+          </div>
         </div>
-        <span class="absolute -top-1 -right-1 text-[10px] leading-none drop-shadow">👑</span>
+        <span class="absolute -top-1.5 -right-1 text-[12px] leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">👑</span>
+        <span class="absolute -bottom-1 left-1/2 -translate-x-1/2 px-1.5 py-[1px] rounded-full bg-gradient-to-r from-amber-500 to-yellow-300 text-slate-950 text-[7.5px] font-black font-mono leading-none shadow border border-amber-100/80 whitespace-nowrap">LV.${c.level || 1}</span>
       </div>
-      <div class="min-w-0 flex-1 leading-tight">
-        <div class="text-[10.5px] font-black text-white truncate">${esc(c.name)}</div>
-        <div class="text-[8.5px] font-semibold text-slate-300 truncate mt-0.5">LV.${c.level || 1} · 👑 ${prestigeFormatted} · 🎁 ${giftCount}</div>
+      <div class="min-w-0 flex-1 flex flex-col justify-center gap-[3px]">
+        <div class="text-[11.5px] font-black text-white leading-tight truncate drop-shadow">${esc(c.name)}</div>
+        <div class="flex items-center gap-1.5 text-[8.5px] font-mono font-bold leading-none truncate">
+          <span class="text-amber-300">👑 ${prestigeFormatted}</span>
+          <span class="text-slate-600">•</span>
+          <span class="text-sky-300">🏆 ${eloFormatted}</span>
+        </div>
+        ${miniShowcaseHtml}
       </div>
-      <button id="btnWcCardGift" type="button" class="w-8 h-8 rounded-lg bg-gradient-to-b from-amber-400/25 to-amber-600/20 border border-amber-400/55 flex items-center justify-center text-sm shrink-0 hover:bg-amber-400/30 active:scale-95 transition cursor-pointer shadow" title="${c.isSelf ? 'Kolleksiyam' : 'Sovg\'a yuborish'}">🎁</button>
+      <button id="btnWcCardGift" type="button" class="wc-gift-cta w-[44px] h-[54px] rounded-xl flex flex-col items-center justify-center gap-0.5 shrink-0 transition cursor-pointer" title="${c.isSelf ? 'Kolleksiyam' : 'Sovg\'a yuborish'}">
+        <span class="text-[17px] leading-none drop-shadow">🎁</span>
+        <span class="text-[7.5px] font-black uppercase tracking-tight text-amber-100 leading-none">Sovg'a</span>
+      </button>
     `;
 
     if (bodyEl) {
@@ -238,9 +286,9 @@
       card.innerHTML = `
         <div class="shrink-0 flex items-center justify-between w-full border-b border-amber-400/25 pb-1">
           <span class="text-[9px] font-black uppercase text-amber-300 tracking-wider flex items-center gap-1 truncate">👑 HAFTA CHEMPIONI</span>
-          <span id="wcCardResetBadge" class="text-[8px] font-bold text-amber-200/90 bg-amber-500/15 border border-amber-400/35 px-1.5 py-0.5 rounded-full shrink-0">#1 • Dush gacha</span>
+          <span id="wcCardResetBadge" class="text-[7.5px] font-bold text-amber-200/90 bg-amber-500/15 border border-amber-400/35 px-1.5 py-0.5 rounded-full shrink-0">#1 · Dushanbagacha</span>
         </div>
-        <div id="wcCardBody" class="flex items-center gap-2 flex-1 min-h-0 pt-1">
+        <div id="wcCardBody" class="flex items-center gap-2 flex-1 min-h-0 pt-0.5">
           ${htmlBody}
         </div>
       `;
@@ -346,8 +394,8 @@
         actionsRow.appendChild(btnGift);
       } else {
         actionsRow.innerHTML = `
-          <div class="flex-1 px-2 py-1 rounded-full bg-amber-500/15 border border-amber-400/40 text-amber-200 text-[9.5px] font-bold text-center truncate">🏆 Siz bu haftaning eng zo'risiz!</div>
-          <button id="btnWcSelfCollec" type="button" class="ios-btn-gold px-2.5 py-1.5 text-[10px] shrink-0 cursor-pointer">🎁 Kolleksiyam</button>
+          <div class="flex-1 px-2.5 py-1.5 rounded-full bg-amber-500/15 border border-amber-400/45 text-amber-200 text-[10px] font-extrabold text-center whitespace-nowrap">👑 Joriy Chempion</div>
+          <button id="btnWcSelfCollec" type="button" class="ios-btn-gold px-3 py-1.5 text-[10px] font-extrabold shrink-0 cursor-pointer">🎁 Kolleksiyam</button>
         `;
         const selfBtn = actionsRow.querySelector('#btnWcSelfCollec');
         if (selfBtn) {
@@ -361,20 +409,20 @@
       }
     }
 
-    // 6 ta ixcham reyting va jang statistikasi kartasi
+    // 6 ta AAA Esports reyting va jang statistikasi kartasi
     const statsGrid = modal.querySelector('#wcModalStatsGrid');
     if (statsGrid) {
       const wsPower = Number((c.weekStats && c.weekStats.power) || 0).toLocaleString('en-US');
       const cards = [
-        { lbl: '🏆 Reyting', val: `${Number(c.elo || 1000).toLocaleString('en-US')} ELO`, cls: 'text-amber-300' },
-        { lbl: '⚔️ Janglar', val: `${Number(c.totalMatches || 0).toLocaleString('en-US')} ta`, cls: 'text-sky-300' },
-        { lbl: '💀 Fraglar', val: `${Number(c.kills || 0).toLocaleString('en-US')} ta`, cls: 'text-rose-300' },
-        { lbl: '🎯 Headshot', val: `${c.hsRate || 0}% (${c.headshots || 0})`, cls: 'text-emerald-300' },
-        { lbl: '🔫 Asosiy qurol', val: formatShortWeaponName(c.favoriteWeapon), cls: 'text-cyan-200' },
-        { lbl: '🔥 Hafta balli', val: `+${wsPower}`, cls: 'text-amber-200' }
+        { lbl: '🏆 Reyting', val: `${Number(c.elo || 1000).toLocaleString('en-US')} ELO`, cls: 'text-amber-300', accent: 'border-l-amber-400/75' },
+        { lbl: '⚔️ Janglar', val: `${Number(c.totalMatches || 0).toLocaleString('en-US')} ta`, cls: 'text-sky-300', accent: 'border-l-sky-400/75' },
+        { lbl: '💀 Fraglar', val: `${Number(c.kills || 0).toLocaleString('en-US')} ta`, cls: 'text-rose-300', accent: 'border-l-rose-400/75' },
+        { lbl: '🎯 Headshot', val: `${c.hsRate || 0}% (${c.headshots || 0})`, cls: 'text-emerald-300', accent: 'border-l-emerald-400/75' },
+        { lbl: '🔫 Asosiy qurol', val: formatShortWeaponName(c.favoriteWeapon), cls: 'text-cyan-200', accent: 'border-l-cyan-400/75' },
+        { lbl: '🔥 Hafta balli', val: `+${wsPower}`, cls: 'text-amber-200', accent: 'border-l-orange-400/75' }
       ];
       statsGrid.innerHTML = cards.map(item => `
-        <div class="rounded-xl bg-slate-950/75 border border-white/10 px-2 py-1.5 min-w-0">
+        <div class="rounded-xl bg-gradient-to-br from-slate-900/90 to-slate-950/95 border border-white/10 border-l-2 ${item.accent} px-2 py-1.5 min-w-0">
           <div class="text-[8.5px] text-slate-400 font-semibold truncate">${esc(item.lbl)}</div>
           <div class="text-[10.5px] font-black font-mono ${item.cls} truncate mt-0.5">${esc(item.val)}</div>
         </div>
@@ -391,7 +439,36 @@
     const grid = modal.querySelector('#wcModalGiftsGrid');
     const emptyBox = modal.querySelector('#wcModalGiftsEmpty');
     const emptySendBtn = modal.querySelector('#btnWcEmptySendGift');
+    const topGiftHintEl = modal.querySelector('#wcModalTopGiftHint');
+    const footerActionBtn = modal.querySelector('#btnWcFooterAction');
     const gifts = Array.isArray(c.giftsSorted) ? c.giftsSorted : [];
+
+    if (topGiftHintEl) {
+      if (gifts.length > 0) {
+        topGiftHintEl.textContent = `✨ Top sovg'a: ${gifts[0].name} (👑 +${Number(gifts[0].prestige || 0).toLocaleString('en-US')})`;
+      } else {
+        topGiftHintEl.textContent = '✨ Chempionga birinchi sovg\'ani yuboring';
+      }
+    }
+    if (footerActionBtn) {
+      if (c.isSelf) {
+        footerActionBtn.textContent = '🛒 Do\'kondan to\'ldirish';
+        footerActionBtn.onclick = () => {
+          closeWeeklyChampionModal();
+          if (typeof window.openDigiGiftShopModal === 'function') {
+            window.openDigiGiftShopModal();
+          }
+        };
+      } else {
+        footerActionBtn.textContent = '🎁 Sovg\'a yuborish';
+        footerActionBtn.onclick = () => {
+          closeWeeklyChampionModal();
+          if (typeof window.openDigiGiftShopModal === 'function') {
+            window.openDigiGiftShopModal({ id: c.id, name: c.name });
+          }
+        };
+      }
+    }
 
     if (grid && emptyBox) {
       grid.innerHTML = '';
@@ -412,6 +489,11 @@
         }
       } else {
         emptyBox.classList.add('hidden');
+        const isLargeGrid = gifts.length <= 2;
+        grid.className = isLargeGrid ? 'grid grid-cols-2 gap-2.5' : 'grid grid-cols-3 gap-2';
+        const stageHeightCls = isLargeGrid ? 'h-[92px]' : 'h-[72px]';
+        const imgMaxCls = isLargeGrid ? 'max-h-[82px] max-w-[82px]' : 'max-h-[66px] max-w-[66px]';
+
         gifts.forEach(g => {
           const rarity = RARITY_MAP[g.rarity] || RARITY_MAP.common;
           const imgUrl = `/img/gifts/${encodeURIComponent(g.giftId)}.webp?v=${WC_IMG_VER}`;
@@ -424,13 +506,14 @@
           card.className = `relative rounded-xl p-2 flex flex-col justify-between gap-1 select-none bg-gradient-to-b from-slate-900/90 to-slate-950 border ${rarity.border} ${!c.isSelf ? 'cursor-pointer hover:brightness-110 active:scale-[0.98] transition' : ''}`;
           card.innerHTML = `
             ${countBadge}
-            <div class="flex items-center justify-between gap-1 min-w-0 pr-5">
+            <div class="flex items-center justify-between gap-1 min-w-0 ${g.count > 1 ? 'pr-6' : ''}">
               <span class="text-[9.5px] font-bold text-white truncate" title="${esc(g.name)}">${esc(g.name)}</span>
             </div>
-            <div class="h-[64px] w-full flex items-center justify-center relative overflow-hidden rounded-lg bg-[#050914]">
+            <div class="${stageHeightCls} w-full flex items-center justify-center relative overflow-hidden rounded-lg bg-[#050914]">
               <div class="absolute inset-0 pointer-events-none" style="background: radial-gradient(circle at 50% 50%, ${esc(glow)}33 0%, transparent 74%);"></div>
-              <img src="${imgUrl}" alt="${esc(g.name)}" class="max-h-[60px] max-w-[60px] scale-[1.08] object-contain relative z-10" style="-webkit-mask-image: radial-gradient(circle at 50% 50%, #000 62%, transparent 98%); mask-image: radial-gradient(circle at 50% 50%, #000 62%, transparent 98%);" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
+              <img src="${imgUrl}" alt="${esc(g.name)}" class="${imgMaxCls} scale-[1.08] object-contain relative z-10" style="-webkit-mask-image: radial-gradient(circle at 50% 50%, #000 62%, transparent 98%); mask-image: radial-gradient(circle at 50% 50%, #000 62%, transparent 98%);" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
               <span class="hidden items-center justify-center text-3xl relative z-10">${esc(g.icon || '🎁')}</span>
+              <span class="absolute bottom-1 left-1.5 z-20 text-[7.5px] font-bold px-1.5 py-[1px] rounded-full ${rarity.badge}">${esc(rarity.name)}</span>
             </div>
             <div class="flex items-center justify-between gap-1 pt-0.5 border-t border-white/5 text-[8.5px]">
               <span class="text-slate-300 font-bold truncate">${esc(formatGiftPriceTag(g))}</span>
