@@ -243,15 +243,23 @@
     #gameView.digi-landscape-hud .tac-minimap-frame {
       width: 64px !important;
     }
+    #gameView.digi-landscape-hud #proximityAlert,
+    #gameView.digi-landscape-hud #jumpscareBanner {
+      top: 52px !important;
+    }
     #gameView.digi-landscape-hud #lowHpWarningBanner {
-      top: 58px !important;
+      top: 74px !important;
     }
     #gameView.digi-landscape-hud #csEventBanner,
     #gameView.digi-landscape-hud #toastBox {
-      top: 82px !important;
+      top: 96px !important;
     }
     #gameView.digi-landscape-hud #spawnShieldBanner {
-      top: 108px !important;
+      top: 118px !important;
+    }
+    #gameView.digi-match-ended > *:not(#matchEndModal):not(#arenaViewport):not(#threeContainer):not(#doomCanvas),
+    #gameView.digi-match-ended #arenaViewport > *:not(#webglCanvas):not(#doomCanvas) {
+      display: none !important;
     }
     #gameView.digi-landscape-hud #killFeedBox {
       top: calc(36px + var(--digi-safe-top, 0px)) !important;
@@ -1062,7 +1070,7 @@
 
   <!-- Qon va qo'rqinchli chaqnash qatlami -->
   <div id="damageFlash" class="fixed inset-0 pointer-events-none z-50" style="background: radial-gradient(circle at 50% 50%, rgba(220,38,38,0.12) 32%, rgba(185,28,28,0.78) 100%); opacity: 0; transition: opacity 90ms linear; will-change: opacity;"></div>
-  <div id="jumpscareBanner" class="hidden fixed top-[78px] left-1/2 -translate-x-1/2 z-40 pointer-events-none px-3 py-1 rounded-full bg-red-950/90 border border-red-500/85 shadow-lg">
+  <div id="jumpscareBanner" class="hidden fixed top-[52px] left-1/2 -translate-x-1/2 z-40 pointer-events-none px-3 py-1 rounded-full bg-red-950/90 border border-red-500/85 shadow-lg">
     <p class="retro-font text-red-300 text-[10px] sm:text-xs tracking-wider whitespace-nowrap">⚠️ ORQANGIZDA DUSHMAN!</p>
   </div>
 
@@ -1072,13 +1080,13 @@
     <span id="radioTextMsg" class="truncate">[RADIO] O'zimiznikiga otma!</span>
   </div>
 
-  <!-- #2 Headshot / Wallbang / Grenade Kill Banner (Ixcham, KillFeed ostida) -->
-  <div id="csEventBanner" class="hidden fixed top-[132px] left-1/2 -translate-x-1/2 z-40 pointer-events-none bg-red-950/90 border border-amber-400/90 text-amber-300 px-3 py-0.5 rounded-full shadow-lg text-[10px] font-extrabold tracking-wider uppercase whitespace-nowrap">
+  <!-- #2 Headshot / Wallbang / Grenade Kill Banner (Ixcham, 96px pog'onada) -->
+  <div id="csEventBanner" class="hidden fixed top-[96px] left-1/2 -translate-x-1/2 z-40 pointer-events-none bg-red-950/90 border border-amber-400/90 text-amber-300 px-3 py-0.5 rounded-full shadow-lg text-[10px] font-extrabold tracking-wider uppercase whitespace-nowrap">
     🎯 HEADSHOT!
   </div>
 
-  <!-- Qayta tirilganda 3 soniyalik Himoya Qalqoni (Ixcham 1 qatorli taktik indikator) -->
-  <div id="spawnShieldBanner" class="hidden fixed top-[162px] left-1/2 -translate-x-1/2 z-40 pointer-events-none bg-sky-950/88 border border-sky-400/85 text-sky-200 px-2.5 py-0.5 rounded-full shadow-md text-[10px] font-bold tracking-wide flex items-center gap-1 whitespace-nowrap">
+  <!-- Qayta tirilganda 3 soniyalik Himoya Qalqoni (118px pog'onada) -->
+  <div id="spawnShieldBanner" class="hidden fixed top-[118px] left-1/2 -translate-x-1/2 z-40 pointer-events-none bg-sky-950/88 border border-sky-400/85 text-sky-200 px-2.5 py-0.5 rounded-full shadow-md text-[10px] font-bold tracking-wide flex items-center gap-1 whitespace-nowrap">
     <span>🛡️</span>
     <span>HIMOYA QALQONI (3s)</span>
   </div>
@@ -1109,7 +1117,7 @@
   </div>
 
   <!-- Ixcham Taktik Toast Xabar (KillFeed ostida, markazni yopmaydi) -->
-  <div id="toastBox" class="hidden fixed top-[132px] left-1/2 -translate-x-1/2 z-[95] pointer-events-none w-auto max-w-[86%] bg-zinc-950/90 border border-amber-500/60 text-zinc-100 px-2.5 py-1 rounded-lg shadow-xl text-[11px] font-semibold flex items-center gap-1.5">
+  <div id="toastBox" class="hidden fixed top-[96px] left-1/2 -translate-x-1/2 z-[95] pointer-events-none w-auto max-w-[86%] bg-zinc-950/90 border border-amber-500/60 text-zinc-100 px-2.5 py-1 rounded-lg shadow-xl text-[11px] font-semibold flex items-center gap-1.5">
     <span id="toastEmoji" class="text-xs shrink-0">⚡</span>
     <span id="toastMsg" class="leading-tight truncate">Xabar</span>
   </div>
@@ -1972,7 +1980,7 @@
       <div class="absolute inset-0 pointer-events-none z-10" style="background: radial-gradient(circle at 50% 45%, transparent 50%, rgba(0,0,0,0.78) 100%);"></div>
 
       <!-- Jon kam qolganda (<=45%) chiqadigan ixcham qizil ogohlantirish (KillFeed ostida, ustma-ust tushmaydi) -->
-      <div id="lowHpWarningBanner" class="hidden absolute top-[106px] left-1/2 -translate-x-1/2 z-30 pointer-events-none px-2.5 py-0.5 rounded bg-red-950/88 border border-red-500/85 text-red-200 font-black text-[10px] tracking-wide whitespace-nowrap">
+      <div id="lowHpWarningBanner" class="hidden absolute top-[74px] left-1/2 -translate-x-1/2 z-30 pointer-events-none px-2.5 py-0.5 rounded bg-red-950/88 border border-red-500/85 text-red-200 font-black text-[10px] tracking-wide whitespace-nowrap">
         💓 JON KAM QOLDI!
       </div>
 
@@ -2073,7 +2081,7 @@
           <span id="ngGpu" class="hidden">DC 0</span>
         </div>
 
-        <div id="proximityAlert" class="hidden fixed top-[54px] left-1/2 -translate-x-1/2 z-30 pointer-events-none bg-red-950/90 border border-red-500/80 text-red-200 text-[8.5px] sm:text-[10px] font-extrabold px-2.5 py-0.5 rounded-full shadow-md leading-tight whitespace-nowrap">
+        <div id="proximityAlert" class="hidden fixed top-[52px] left-1/2 -translate-x-1/2 z-30 pointer-events-none bg-red-950/90 border border-red-500/80 text-red-200 text-[8.5px] sm:text-[10px] font-extrabold px-2.5 py-0.5 rounded-full shadow-md leading-tight whitespace-nowrap">
           ⚠️ DUSHMAN YAQIN!
         </div>
       </div>
@@ -2969,6 +2977,10 @@
 
       let toastTimer = null;
       function showToast(msg, emoji = '⚡') {
+        const csEl = document.getElementById('csEventBanner');
+        if (csEl) csEl.classList.add('hidden');
+        if (csBannerTimer) { clearTimeout(csBannerTimer); csBannerTimer = null; }
+        csBannerHideAt = 0;
         toastMsg.textContent = msg;
         toastEmoji.textContent = emoji;
         toastBox.classList.remove('hidden');
@@ -2983,6 +2995,8 @@
       function showCsEventBanner(text) {
         const el = document.getElementById('csEventBanner');
         if (!el) return;
+        if (toastTimer) { clearTimeout(toastTimer); toastTimer = null; }
+        if (typeof toastBox !== 'undefined' && toastBox) toastBox.classList.add('hidden');
         el.textContent = text;
         el.classList.remove('hidden');
         csBannerHideAt = performance.now() + 950;
@@ -3987,17 +4001,22 @@
         playSound('knife_slash');
         if (window.DIGI_SFX && soundEnabled) window.DIGI_SFX.playRadio('grenade', audioCtx, masterGain || (audioCtx && audioCtx.destination), true, 1.0);
 
-        const gx0 = player.x + Math.cos(player.angle) * 0.4;
-        const gy0 = player.y + Math.sin(player.angle) * 0.4;
-        const gvx = Math.cos(player.angle) * 6.2;
-        const gvy = Math.sin(player.angle) * 6.2;
+        const rightAng = player.angle + Math.PI / 2;
+        let gx0 = player.x + Math.cos(player.angle) * 0.48 + Math.cos(rightAng) * 0.16;
+        let gy0 = player.y + Math.sin(player.angle) * 0.48 + Math.sin(rightAng) * 0.16;
+        if (isWall(gx0, gy0)) {
+          gx0 = player.x + Math.cos(player.angle) * 0.32;
+          gy0 = player.y + Math.sin(player.angle) * 0.32;
+        }
+        const gvx = Math.cos(player.angle) * 6.4;
+        const gvy = Math.sin(player.angle) * 6.4;
         activeGrenades.push({
           kind: kind,
           x: gx0,
           y: gy0,
           vx: gvx,
           vy: gvy,
-          z: 0.94,
+          z: 0.78,
           vz: 2.35 + Math.max(-0.7, Math.min(1.8, (player.pitch || 0) * 4.5)),
           rotX: 0,
           rotZ: 0,
@@ -4276,7 +4295,10 @@
         if (animFrameId) cancelAnimationFrame(animFrameId);
         if (matchIntervalId) clearInterval(matchIntervalId);
         if (toastTimer) { clearTimeout(toastTimer); toastTimer = null; }
-        ['toastBox', 'csEventBanner', 'spawnShieldBanner', 'lowHpWarningBanner', 'jumpscareBanner', 'friendlyFireBanner', 'targetInfoLabel'].forEach(id => {
+        if (csBannerTimer) { clearTimeout(csBannerTimer); csBannerTimer = null; }
+        const gvEnd = document.getElementById('gameView');
+        if (gvEnd) gvEnd.classList.add('digi-match-ended');
+        ['toastBox', 'csEventBanner', 'spawnShieldBanner', 'lowHpWarningBanner', 'jumpscareBanner', 'friendlyFireBanner', 'proximityAlert', 'targetInfoLabel'].forEach(id => {
           const el = document.getElementById(id);
           if (el) el.classList.add('hidden');
         });
@@ -4688,7 +4710,7 @@
           const dx = pxNew - c.x;
           const dy = pyNew - c.y;
           const d = Math.hypot(dx, dy);
-          const minBotDist = (c.team === player.team) ? 0.52 : 0.66;
+          const minBotDist = (c.team === player.team) ? 0.68 : 0.78;
           if (d < minBotDist) {
             const nx = d > 0.001 ? dx / d : Math.cos(player.angle + Math.PI);
             const ny = d > 0.001 ? dy / d : Math.sin(player.angle + Math.PI);
@@ -4761,8 +4783,8 @@
           if (!isWall(gx, g.y)) g.x = gx; else { g.vx *= -0.48; g.vy *= 0.82; hitWallNow = true; }
           if (!isWall(g.x, gy)) g.y = gy; else { g.vy *= -0.48; g.vx *= 0.82; hitWallNow = true; }
 
-          if (g.z <= 0.085) {
-            g.z = 0.085;
+          if (g.z <= 0.042) {
+            g.z = 0.042;
             if (Math.abs(g.vz) > 0.65) {
               g.vz = -g.vz * 0.44;
               g.vx *= 0.72;
@@ -4977,8 +4999,8 @@
               if (isForPlayer && d < 8.5 && hasLineOfSight(pt.x, pt.y, o.x, o.y)) {
                 score -= 80;
               }
-            } else if (d < 1.4) {
-              score -= 4;
+            } else if (d < (isForPlayer ? 1.8 : 1.4)) {
+              score -= (isForPlayer ? 18 : 4);
             }
           }
 
@@ -5687,18 +5709,19 @@
           else window._shieldBannerEl.classList.add('hidden');
         }
 
-        const proxEl = document.getElementById('proximityAlert');
-        if (anyEnemyNear) proxEl.classList.remove('hidden');
-        else proxEl.classList.add('hidden');
-
         const horrorChecked = document.getElementById('horrorToggle').checked;
         const jumpBanner = document.getElementById('jumpscareBanner');
         if (horrorChecked && enemyCloseBehind && now - lastJumpscareTime > 6500) {
           lastJumpscareTime = now;
+          window._jumpscareUntil = now + 1150;
           playSound('jumpscare');
           jumpBanner.classList.remove('hidden');
           setTimeout(() => jumpBanner.classList.add('hidden'), 1100);
         }
+
+        const proxEl = document.getElementById('proximityAlert');
+        if (anyEnemyNear && now >= (window._jumpscareUntil || 0)) proxEl.classList.remove('hidden');
+        else proxEl.classList.add('hidden');
       }
 
       let dmgFlashTimer = null;
@@ -6091,6 +6114,8 @@
         if (!threeScene.children.includes(window._persistentMuzzleLight)) {
           threeScene.add(window._persistentMuzzleLight);
         }
+        ensureHitBurstPool();
+        ensureCombatFxPools();
       }
 
       function rebuildThreeMazeScene() {
@@ -6798,6 +6823,7 @@
         const fuse = new THREE.Mesh(_m67Assets.fuseGeo, _heFuseMat);
         fuse.position.y = 0.124;
         g.add(fuse);
+        g.scale.setScalar(0.44);
         return g;
       }
 
@@ -6832,6 +6858,7 @@
         band.position.y = 0.018;
         g.add(band);
         g.add(new THREE.Mesh(_m18Assets.valveGeo, _m18Assets.steelMat));
+        g.scale.setScalar(0.42);
         return g;
       }
 
@@ -6842,15 +6869,20 @@
           sc.width = sc.height = 128;
           const sctx = sc.getContext('2d');
           const puffs = [
-            [64, 64, 54], [46, 54, 42], [82, 56, 40],
-            [52, 78, 40], [78, 76, 42], [64, 44, 36]
+            [64, 68, 46, '122,132,146', 0.28],
+            [44, 58, 34, '138,148,162', 0.24],
+            [84, 60, 34, '130,140,154', 0.24],
+            [52, 82, 32, '106,116,130', 0.26],
+            [78, 80, 32, '112,122,136', 0.25],
+            [62, 42, 30, '152,162,176', 0.20]
           ];
           for (let k = 0; k < puffs.length; k++) {
-            const [px, py, pr] = puffs[k];
-            const g = sctx.createRadialGradient(px, py, 2, px, py, pr);
-            g.addColorStop(0.0, 'rgba(220,226,235,0.45)');
-            g.addColorStop(0.55, 'rgba(195,204,218,0.22)');
-            g.addColorStop(1.0, 'rgba(180,190,205,0)');
+            const [px, py, pr, rgb, a0] = puffs[k];
+            const g = sctx.createRadialGradient(px, py, 3, px, py, pr);
+            g.addColorStop(0.0, `rgba(${rgb},${a0})`);
+            g.addColorStop(0.48, `rgba(${rgb},${(a0 * 0.62).toFixed(3)})`);
+            g.addColorStop(0.82, `rgba(${rgb},${(a0 * 0.16).toFixed(3)})`);
+            g.addColorStop(1.0, `rgba(${rgb},0)`);
             sctx.fillStyle = g;
             sctx.beginPath();
             sctx.arc(px, py, pr, 0, Math.PI * 2);
@@ -6927,11 +6959,13 @@
             const blastSmoke = new THREE.Sprite(new THREE.SpriteMaterial({
               map: _smokeSpriteTex,
               transparent: true,
-              opacity: 0.74,
+              opacity: 0.84,
               depthWrite: false,
               blending: THREE.NormalBlending,
-              color: 0x26211e
+              color: 0x57504a
             }));
+            core.renderOrder = 5;
+            ring.renderOrder = 6;
             grp.add(blastSmoke);
             grp.add(core);
             grp.add(ring);
@@ -6942,11 +6976,10 @@
         }
         if (!_smokeMeshPool) {
           const puffSpecs = [
-            { ox: 0.0,   oy: 0.42, oz: 0.0,   s: 2.55, col: 0xbac5d4 },
-            { ox: -0.46, oy: 0.52, oz: 0.34,  s: 2.35, col: 0xc2cddb },
-            { ox: 0.45,  oy: 0.56, oz: -0.32, s: 2.35, col: 0xc2cddb },
-            { ox: -0.22, oy: 1.08, oz: -0.24, s: 2.50, col: 0xd8e0ea },
-            { ox: 0.26,  oy: 1.20, oz: 0.22,  s: 2.45, col: 0xdce4ee }
+            { ox: 0.0,   oy: 0.42, oz: 0.0,   s: 1.55, col: 0x808c9c },
+            { ox: -0.34, oy: 0.68, oz: 0.24,  s: 1.48, col: 0x909cab },
+            { ox: 0.34,  oy: 0.72, oz: -0.24, s: 1.48, col: 0x8693a3 },
+            { ox: 0.02,  oy: 1.08, oz: 0.05,  s: 1.62, col: 0x9aa6b5 }
           ];
           _smokeMeshPool = [];
           for (let i = 0; i < 6; i++) {
@@ -6957,7 +6990,7 @@
               const mat = new THREE.SpriteMaterial({
                 map: _smokeSpriteTex,
                 transparent: true,
-                opacity: 0.82,
+                opacity: 0.66,
                 depthWrite: false,
                 color: spec.col
               });
@@ -6968,7 +7001,7 @@
               grpPuffs.push({ sprite: sp, baseScale: spec.s });
             }
             const canister = buildM18SmokeModel();
-            canister.position.set(0, 0.052, 0);
+            canister.position.set(0, 0.024, 0);
             canister.rotation.set(0, i * 1.1, Math.PI / 2);
             grp.add(canister);
             grp.userData.puffs = grpPuffs;
@@ -6985,10 +7018,10 @@
         ensureCombatFxPools();
         ensureHitBurstPool();
         if (!window._activeExplosions) window._activeExplosions = [];
-        window._activeExplosions.push({ x: wx, z: wz, ttl: 0.65, maxTtl: 0.65 });
+        window._activeExplosions.push({ x: wx, z: wz, ttl: 0.80, maxTtl: 0.80 });
         if (window._activeExplosions.length > 6) window._activeExplosions.shift();
         const dEx = Math.hypot(wx - player.x, wz - player.y);
-        if (dEx < 7.5) player.hitShake = Math.max(player.hitShake || 0, (1 - dEx / 7.5) * 0.95);
+        if (dEx < 6.5) player.hitShake = Math.max(player.hitShake || 0, (1 - dEx / 6.5) * 1.15);
         if (_hitBurstPool) {
           for (let i = 0; i < 10; i++) {
             const slotIdx = _sparkPoolIdx;
@@ -7000,9 +7033,9 @@
               wz + (Math.random() - 0.5) * 0.16
             );
             p.vx = (Math.random() - 0.5) * 1.8 * 3.2;
-            p.vy = 1.4 + Math.random() * 1.8;
+            p.vy = 1.6 + Math.random() * 2.2;
             p.vz = (Math.random() - 0.5) * 1.8 * 3.2;
-            p.ttl = 18;
+            p.ttl = 24;
             p.active = true;
             p.mesh.visible = true;
           }
@@ -7197,6 +7230,10 @@
               return;
             }
             const distCam = Math.hypot(c.x - player.x, c.y - player.y);
+            if (c.dyingProgress === 0 && c.team === player.team && distCam < 0.54) {
+              grp.visible = false;
+              return;
+            }
             if (c.dyingProgress > 0 && c.dyingProgress > 0.35 && distCam < 0.62) {
               grp.visible = false;
               return;
@@ -7389,7 +7426,7 @@
                 slot.root.visible = true;
                 slot.heModel.visible = (g.kind !== 'smoke');
                 slot.smokeModel.visible = (g.kind === 'smoke');
-                slot.root.position.set(g.x, g.z || 0.09, g.y);
+                slot.root.position.set(g.x, g.z || 0.042, g.y);
                 slot.root.rotation.set(g.rotX || 0, Math.atan2(g.vy || 0.01, g.vx || 0.01), g.rotZ || 0);
               } else {
                 slot.root.visible = false;
@@ -7414,26 +7451,26 @@
                 slot.grp.visible = true;
                 slot.grp.position.set(ex.x, 0, ex.z);
 
-                const coreP = Math.min(1, prog / 0.45);
-                slot.core.visible = (prog < 0.48);
-                const cs = 0.9 + coreP * 3.3;
-                slot.core.position.set(0, 0.38 + coreP * 0.24, 0);
+                const coreP = Math.min(1, prog / 0.60);
+                slot.core.visible = (prog < 0.62);
+                const cs = 1.35 + coreP * 3.15;
+                slot.core.position.set(0, 0.56 + coreP * 0.34, 0);
                 slot.core.scale.set(cs, cs, 1);
-                slot.core.material.opacity = 0.96 * (1 - coreP);
+                slot.core.material.opacity = 0.98 * (1 - coreP * coreP);
                 slot.core.material.rotation = coreP * 1.4;
 
-                const ringP = Math.min(1, prog / 0.62);
-                slot.ring.visible = (prog < 0.65);
-                const rs = 0.6 + ringP * 4.4;
-                slot.ring.position.set(0, 0.30, 0);
+                const ringP = Math.min(1, prog / 0.72);
+                slot.ring.visible = (prog < 0.74);
+                const rs = 0.95 + ringP * 4.35;
+                slot.ring.position.set(0, 0.48, 0);
                 slot.ring.scale.set(rs, rs, 1);
-                slot.ring.material.opacity = 0.88 * (1 - ringP);
+                slot.ring.material.opacity = 0.92 * (1 - ringP);
                 slot.ring.material.rotation = -ringP * 0.9;
 
-                const bs = 1.2 + prog * 2.2;
-                slot.blastSmoke.position.set(0, 0.35 + prog * 0.80, 0);
+                const bs = 1.55 + prog * 2.15;
+                slot.blastSmoke.position.set(0, 0.42 + prog * 0.85, 0);
                 slot.blastSmoke.scale.set(bs, bs, 1);
-                slot.blastSmoke.material.opacity = Math.max(0, 0.74 * (1 - prog));
+                slot.blastSmoke.material.opacity = Math.max(0, 0.84 * (1 - prog * 0.92));
                 slot.blastSmoke.material.rotation = prog * 0.75;
               } else {
                 slot.grp.visible = false;
@@ -7448,7 +7485,9 @@
                 const sm = smokeClouds[i];
                 const fadeIn = sm.ttl > 385 ? (420 - sm.ttl) / 35 : 1.0;
                 const fadeOut = sm.ttl < 90 ? sm.ttl / 90 : 1.0;
-                const op = Math.max(0.02, Math.min(0.86, 0.85 * Math.min(fadeIn, fadeOut)));
+                const dCamSm = Math.hypot(sm.x - player.x, sm.y - player.y);
+                const nearFade = dCamSm < 1.05 ? Math.max(0.28, Math.min(1.0, (dCamSm - 0.35) / 0.70)) : 1.0;
+                const op = Math.max(0.02, Math.min(0.68, 0.66 * Math.min(fadeIn, fadeOut) * nearFade));
                 grp.visible = true;
                 grp.position.set(sm.x, 0, sm.y);
                 const puffs = grp.userData.puffs;
@@ -7529,7 +7568,8 @@
 
           const projH = Math.max(24, botY - topY);
           const hitHalfW = Math.max(12, projH * 0.22);
-          if (Math.abs(screenX - w / 2) <= hitHalfW) {
+          const maxAimLockDist = (c.team === player.team) ? 11.5 : (player.adsZoom ? 9.5 : 6.8);
+          if (dist <= maxAimLockDist && Math.abs(screenX - w / 2) <= hitHalfW) {
             if (!aimedFighter || dist < Math.hypot(aimedFighter.x - player.x, aimedFighter.y - player.y)) {
               aimedFighter = c;
               lastAimRatioY = Math.max(0, Math.min(1, (halfH - topY) / projH));
@@ -7547,8 +7587,8 @@
           const { c, screenX, topY, projH } = item;
           const isAlly = (c.team === player.team);
           const isAimed = (aimedFighter === c);
-          if (!isAlly && item.dist > 7.2 && !isAimed) return;
-          const barAlpha = isAlly ? 0.92 : (isAimed ? 0.96 : Math.max(0.20, Math.min(0.92, 1 - (item.dist - 4.2) / 3.4)));
+          if (!isAlly && item.dist > 5.4 && !isAimed) return;
+          const barAlpha = isAlly ? 0.92 : (isAimed ? 0.96 : Math.max(0.18, Math.min(0.92, 1 - (item.dist - 3.0) / 2.6)));
           const barW = Math.max(26, Math.min(54, Math.floor(projH * 0.36)));
           const clampedCenterX = Math.max(barW / 2 + 24, Math.min(w - barW / 2 - 24, screenX));
           let barY = Math.max(22, topY - 6);
@@ -7633,8 +7673,9 @@
             const rel = (Math.atan2(g.y - player.y, g.x - player.x) - player.angle) - Math.PI / 2;
             const ix = cx + Math.cos(rel) * gIndRadius;
             const iy = cy + Math.sin(rel) * gIndRadius;
+            const safeIy = Math.max(122, Math.min(h - 64, iy));
             doomCtx.beginPath();
-            doomCtx.arc(ix, iy, 15, 0, Math.PI * 2);
+            doomCtx.arc(ix, safeIy, 15, 0, Math.PI * 2);
             doomCtx.fillStyle = `rgba(127, 29, 29, ${(blink * 0.85).toFixed(2)})`;
             doomCtx.fill();
             doomCtx.lineWidth = 2;
@@ -7644,10 +7685,10 @@
             doomCtx.textAlign = 'center';
             doomCtx.textBaseline = 'middle';
             doomCtx.fillStyle = '#ffffff';
-            doomCtx.fillText('💣', ix, iy - 1);
+            doomCtx.fillText('💣', ix, safeIy - 1);
             doomCtx.font = 'bold 9px Inter, sans-serif';
             doomCtx.fillStyle = '#fecaca';
-            doomCtx.fillText(`${gDist.toFixed(1)}m`, ix, iy + 22);
+            doomCtx.fillText(`${gDist.toFixed(1)}m`, ix, safeIy + 22);
           }
           doomCtx.textBaseline = 'alphabetic';
         }
@@ -8949,7 +8990,7 @@
         }
         const proxEl = document.getElementById('proximityAlert');
         if (proxEl) {
-          if (anyEnemyNear) proxEl.classList.remove('hidden');
+          if (anyEnemyNear && performance.now() >= (window._jumpscareUntil || 0)) proxEl.classList.remove('hidden');
           else proxEl.classList.add('hidden');
         }
       }
@@ -8966,7 +9007,8 @@
 
         document.getElementById('modalOnline').classList.add('hidden');
         document.getElementById('lobbyView').classList.add('hidden');
-        document.getElementById('gameView').classList.remove('hidden');
+        const gvMp = document.getElementById('gameView');
+        if (gvMp) gvMp.classList.remove('hidden', 'digi-match-ended');
         document.getElementById('matchEndModal').classList.add('hidden');
         document.getElementById('scoreboardModal').classList.add('hidden');
         document.getElementById('killFeedBox').innerHTML = '';
@@ -9245,7 +9287,8 @@
         isMpMatch = false;
         document.getElementById('modalOnline').classList.add('hidden');
         document.getElementById('lobbyView').classList.add('hidden');
-        document.getElementById('gameView').classList.remove('hidden');
+        const gvMp = document.getElementById('gameView');
+        if (gvMp) gvMp.classList.remove('hidden', 'digi-match-ended');
         document.getElementById('matchEndModal').classList.add('hidden');
         document.getElementById('scoreboardModal').classList.add('hidden');
         document.getElementById('killFeedBox').innerHTML = '';
@@ -9323,7 +9366,8 @@
         if (sb) sb.classList.add('hidden');
         if (animFrameId) cancelAnimationFrame(animFrameId);
         if (matchIntervalId) clearInterval(matchIntervalId);
-        document.getElementById('gameView').classList.add('hidden');
+        const gvExit = document.getElementById('gameView');
+        if (gvExit) { gvExit.classList.add('hidden'); gvExit.classList.remove('digi-match-ended'); }
         document.getElementById('matchEndModal').classList.add('hidden');
         document.getElementById('lobbyView').classList.remove('hidden');
         applyLobbyLandscapeLayout();
