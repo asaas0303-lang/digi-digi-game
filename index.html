@@ -4893,11 +4893,26 @@
               }
             } else {
               playSound('smoke_hiss', stereoPanG, distGainG);
-              smokeClouds.push({ x: g.x, y: g.y, ttl: 420 }); // ~7 soniya tutun pardasi (#30)
+              const smPos = resolveMazeCollision(g.x, g.y, 0.46);
+              smokeClouds.push({ x: smPos.x, y: smPos.y, ttl: 420 }); // ~7 soniya tutun pardasi (#30)
             }
             activeGrenades.splice(i, 1);
           }
         }
+      }
+
+      /** Clears residual hit-direction arcs, screen shake, flash and weapon recoil on respawn. */
+      function clearPlayerDamageEffects() {
+        player.damageArcs = [];
+        player.hitShake = 0;
+        player.taggedSlowUntil = 0;
+        player.recoilPitch = 0;
+        player.weaponRecoil = 0;
+        player.crosshairBloom = 0;
+        player.hitMarkerTimer = 0;
+        if (dmgFlashTimer) { clearTimeout(dmgFlashTimer); dmgFlashTimer = null; }
+        const dfEl = _damageFlashEl || document.getElementById('damageFlash');
+        if (dfEl) dfEl.style.opacity = '0';
       }
 
       function handlePlayerDeath(killerName, killerTeam, badge = '💥') {
@@ -4919,6 +4934,7 @@
         player.angle = findOpenCorridorAngle(pSp.x, pSp.y);
         player.angVel = 0;
         player.pitch = 0;
+        clearPlayerDamageEffects();
         const rw = WEAPONS[selectedWeaponIdx] || WEAPONS[0];
         if (rw && !rw.isMelee) {
           player.magAmmo = rw.magSize;
@@ -5566,6 +5582,23 @@
           }
           c.x = resolvedBot.x;
           c.y = resolvedBot.y;
+
+          for (let oi = 0; oi < combatants.length; oi++) {
+            const other = combatants[oi];
+            if (other === c || !other.alive || other.dyingProgress > 0) continue;
+            const dxo = c.x - other.x;
+            const dyo = c.y - other.y;
+            const doDist = Math.hypot(dxo, dyo);
+            const hardMin = 0.68;
+            if (doDist < hardMin) {
+              const nxo = doDist > 0.001 ? dxo / doDist : Math.cos(thisBotIdx * 2.3 + 0.7);
+              const nyo = doDist > 0.001 ? dyo / doDist : Math.sin(thisBotIdx * 2.3 + 0.7);
+              const sepHalf = (hardMin - doDist) * 0.52;
+              const pushedC = resolveMazeCollision(c.x + nxo * sepHalf, c.y + nyo * sepHalf, 0.34);
+              c.x = pushedC.x;
+              c.y = pushedC.y;
+            }
+          }
 
           // #4: Faqat bot haqiqatan joyidan siljigandagina oyoq qadam tashlaydi (Moonwalk yo'q) + Anti-Stuck
           const actualBotMoved = Math.hypot(c.x - prevBotX, c.y - prevBotY);
@@ -6959,10 +6992,10 @@
             const blastSmoke = new THREE.Sprite(new THREE.SpriteMaterial({
               map: _smokeSpriteTex,
               transparent: true,
-              opacity: 0.84,
+              opacity: 0.86,
               depthWrite: false,
               blending: THREE.NormalBlending,
-              color: 0x57504a
+              color: 0x78716c
             }));
             core.renderOrder = 5;
             ring.renderOrder = 6;
@@ -6976,10 +7009,10 @@
         }
         if (!_smokeMeshPool) {
           const puffSpecs = [
-            { ox: 0.0,   oy: 0.42, oz: 0.0,   s: 1.55, col: 0x808c9c },
-            { ox: -0.34, oy: 0.68, oz: 0.24,  s: 1.48, col: 0x909cab },
-            { ox: 0.34,  oy: 0.72, oz: -0.24, s: 1.48, col: 0x8693a3 },
-            { ox: 0.02,  oy: 1.08, oz: 0.05,  s: 1.62, col: 0x9aa6b5 }
+            { ox: 0.0,   oy: 0.44, oz: 0.0,   s: 1.44, col: 0x8a96a6 },
+            { ox: -0.22, oy: 0.66, oz: 0.18,  s: 1.36, col: 0x98a4b3 },
+            { ox: 0.22,  oy: 0.72, oz: -0.18, s: 1.36, col: 0x8f9baa },
+            { ox: 0.02,  oy: 1.04, oz: 0.04,  s: 1.48, col: 0xa2aebc }
           ];
           _smokeMeshPool = [];
           for (let i = 0; i < 6; i++) {
@@ -7018,7 +7051,7 @@
         ensureCombatFxPools();
         ensureHitBurstPool();
         if (!window._activeExplosions) window._activeExplosions = [];
-        window._activeExplosions.push({ x: wx, z: wz, ttl: 0.80, maxTtl: 0.80 });
+        window._activeExplosions.push({ x: wx, z: wz, ttl: 1.05, maxTtl: 1.05 });
         if (window._activeExplosions.length > 6) window._activeExplosions.shift();
         const dEx = Math.hypot(wx - player.x, wz - player.y);
         if (dEx < 6.5) player.hitShake = Math.max(player.hitShake || 0, (1 - dEx / 6.5) * 1.15);
@@ -7451,27 +7484,27 @@
                 slot.grp.visible = true;
                 slot.grp.position.set(ex.x, 0, ex.z);
 
-                const coreP = Math.min(1, prog / 0.60);
-                slot.core.visible = (prog < 0.62);
-                const cs = 1.35 + coreP * 3.15;
+                const coreP = Math.min(1, prog / 0.45);
+                slot.core.visible = (prog < 0.46);
+                const cs = 1.45 + coreP * 3.25;
                 slot.core.position.set(0, 0.56 + coreP * 0.34, 0);
                 slot.core.scale.set(cs, cs, 1);
-                slot.core.material.opacity = 0.98 * (1 - coreP * coreP);
+                slot.core.material.opacity = 1.0 * (1 - coreP * coreP);
                 slot.core.material.rotation = coreP * 1.4;
 
-                const ringP = Math.min(1, prog / 0.72);
-                slot.ring.visible = (prog < 0.74);
-                const rs = 0.95 + ringP * 4.35;
+                const ringP = Math.min(1, prog / 0.58);
+                slot.ring.visible = (prog < 0.60);
+                const rs = 0.95 + ringP * 4.45;
                 slot.ring.position.set(0, 0.48, 0);
                 slot.ring.scale.set(rs, rs, 1);
-                slot.ring.material.opacity = 0.92 * (1 - ringP);
+                slot.ring.material.opacity = 0.94 * (1 - ringP);
                 slot.ring.material.rotation = -ringP * 0.9;
 
-                const bs = 1.55 + prog * 2.15;
-                slot.blastSmoke.position.set(0, 0.42 + prog * 0.85, 0);
+                const bs = 1.45 + prog * 2.1;
+                slot.blastSmoke.position.set(0, 0.42 + prog * 0.92, 0);
                 slot.blastSmoke.scale.set(bs, bs, 1);
-                slot.blastSmoke.material.opacity = Math.max(0, 0.84 * (1 - prog * 0.92));
-                slot.blastSmoke.material.rotation = prog * 0.75;
+                slot.blastSmoke.material.opacity = Math.max(0, 0.86 * (1 - Math.pow(prog, 1.35)));
+                slot.blastSmoke.material.rotation = prog * 0.85;
               } else {
                 slot.grp.visible = false;
               }
@@ -7483,17 +7516,20 @@
               const grp = _smokeMeshPool[i];
               if (i < smokeClouds.length) {
                 const sm = smokeClouds[i];
-                const fadeIn = sm.ttl > 385 ? (420 - sm.ttl) / 35 : 1.0;
+                const ageFrames = Math.max(0, 420 - sm.ttl);
+                const bloomP = Math.min(1, ageFrames / 36);
+                const bloomScale = 0.34 + 0.66 * (1 - Math.pow(1 - bloomP, 2));
+                const fadeIn = sm.ttl > 388 ? (420 - sm.ttl) / 32 : 1.0;
                 const fadeOut = sm.ttl < 90 ? sm.ttl / 90 : 1.0;
                 const dCamSm = Math.hypot(sm.x - player.x, sm.y - player.y);
-                const nearFade = dCamSm < 1.05 ? Math.max(0.28, Math.min(1.0, (dCamSm - 0.35) / 0.70)) : 1.0;
-                const op = Math.max(0.02, Math.min(0.68, 0.66 * Math.min(fadeIn, fadeOut) * nearFade));
+                const nearFade = dCamSm < 1.05 ? Math.max(0.24, Math.min(1.0, (dCamSm - 0.32) / 0.73)) : 1.0;
+                const op = Math.max(0.02, Math.min(0.76, 0.74 * Math.min(fadeIn, fadeOut) * nearFade));
                 grp.visible = true;
                 grp.position.set(sm.x, 0, sm.y);
                 const puffs = grp.userData.puffs;
                 for (let pIdx = 0; pIdx < puffs.length; pIdx++) {
                   const pf = puffs[pIdx];
-                  const sc = pf.baseScale * (0.94 + Math.sin(nowSec * 1.1 + i + pIdx * 2.1) * 0.08);
+                  const sc = pf.baseScale * bloomScale * (0.95 + Math.sin(nowSec * 1.1 + i + pIdx * 2.1) * 0.07);
                   pf.sprite.scale.set(sc, sc, 1);
                   pf.sprite.material.rotation = nowSec * (pIdx % 2 === 0 ? 0.14 : -0.11) + i;
                   pf.sprite.material.opacity = op;
@@ -7703,28 +7739,24 @@
           doomCtx.fillRect(0, 0, w, h);
         }
 
-        // 3D Tutun granatasi pardasi (Smoke overlay — yumshoq kulrang-oq)
+        // Tutun hayot sikli (ttl) va FAQAT o'yinchi tutun ichiga kirgandagi ichki parda (devor ortidan ASLO ko'rinmaydi!)
+        let insideSmokeAlpha = 0;
         for (let i = smokeClouds.length - 1; i >= 0; i--) {
           const sm = smokeClouds[i];
           sm.ttl--;
           if (sm.ttl <= 0) { smokeClouds.splice(i, 1); continue; }
           const dist = Math.hypot(sm.x - player.x, sm.y - player.y);
-          let sa = Math.atan2(sm.y - player.y, sm.x - player.x) - player.angle;
-          while (sa < -Math.PI) sa += Math.PI * 2;
-          while (sa > Math.PI) sa -= Math.PI * 2;
-          if (Math.abs(sa) < fov * 0.85) {
-            const fade = sm.ttl < 75 ? (sm.ttl / 75) : 1.0;
-            const sx = (0.5 + sa / fov) * w;
-            const rSmoke = Math.max(36, Math.min(w * 0.78, (h * 0.96) / Math.max(0.75, dist)));
-            const grad = doomCtx.createRadialGradient(sx, halfH, 6, sx, halfH, rSmoke);
-            grad.addColorStop(0, `rgba(218, 222, 228, ${(0.84 * fade).toFixed(2)})`);
-            grad.addColorStop(0.55, `rgba(156, 163, 175, ${(0.52 * fade).toFixed(2)})`);
-            grad.addColorStop(1, 'rgba(100, 105, 115, 0)');
-            doomCtx.fillStyle = grad;
-            doomCtx.beginPath();
-            doomCtx.arc(sx, halfH, rSmoke, 0, Math.PI * 2);
-            doomCtx.fill();
+          if (dist < 1.38 && hasLineOfSight(player.x, player.y, sm.x, sm.y)) {
+            const fadeIn = sm.ttl > 385 ? (420 - sm.ttl) / 35 : 1.0;
+            const fadeOut = sm.ttl < 80 ? (sm.ttl / 80) : 1.0;
+            const prox = Math.max(0, 1 - dist / 1.38);
+            const a = 0.62 * prox * Math.min(fadeIn, fadeOut);
+            if (a > insideSmokeAlpha) insideSmokeAlpha = a;
           }
+        }
+        if (insideSmokeAlpha > 0.01) {
+          doomCtx.fillStyle = `rgba(146, 156, 168, ${insideSmokeAlpha.toFixed(2)})`;
+          doomCtx.fillRect(0, 0, w, h);
         }
 
         if (!window._aimDomCache) {
@@ -9222,6 +9254,7 @@
               player.angle = findOpenCorridorAngle(data.x, data.y);
               player.angVel = 0;
               player.pitch = 0;
+              clearPlayerDamageEffects();
               player.health = 100;
               player.armor = 50;
               const rw = WEAPONS[selectedWeaponIdx] || WEAPONS[0];
