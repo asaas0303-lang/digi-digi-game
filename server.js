@@ -57,7 +57,8 @@ let db = {
   friendRequests: [], // [ { id, fromId, fromName, fromElo, toId, createdAt, status: 'pending' } ]
   meta: {},
   giftEvents: [],
-  monthlyBonusPool: {}
+  monthlyBonusPool: {},
+  weeklyChampion: null
 };
 
 function loadDb() {
@@ -70,6 +71,7 @@ function loadDb() {
       if (parsed.meta && typeof parsed.meta === "object") db.meta = parsed.meta;
       if (Array.isArray(parsed.giftEvents)) db.giftEvents = parsed.giftEvents;
       if (parsed.monthlyBonusPool && typeof parsed.monthlyBonusPool === "object") db.monthlyBonusPool = parsed.monthlyBonusPool;
+      if (parsed.weeklyChampion && typeof parsed.weeklyChampion === "object") db.weeklyChampion = parsed.weeklyChampion;
     }
   } catch (err) {
     console.error("DB Load error:", err.message);
@@ -91,6 +93,7 @@ loadDb();
 if (!db.meta || typeof db.meta !== "object") db.meta = {};
 if (!Array.isArray(db.giftEvents)) db.giftEvents = [];
 if (!db.monthlyBonusPool || typeof db.monthlyBonusPool !== "object") db.monthlyBonusPool = {};
+if (db.weeklyChampion === undefined) db.weeklyChampion = null;
 
 // Toshkent vaqti (UTC+5) bo'yicha oylik kalit (YYYY-MM)
 function getTashkentMonthKey(nowMs = Date.now()) {
@@ -292,6 +295,193 @@ function computePlayerPowerScore(player) {
   };
 }
 
+function getTashkentNextMondayMs(now = Date.now()) {
+  const tzOffset = 5 * 3600 * 1000;
+  const d = new Date(now + tzOffset);
+  const day = d.getUTCDay(); // 0=Yak, 1=Dush..6=Shan
+  const daysUntilMon = day === 0 ? 1 : (8 - day);
+  const nextMonUtc = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + daysUntilMon, 0, 0, 0, 0);
+  return nextMonUtc - tzOffset;
+}
+
+function sanitizeWeaponStatsMap(ws) {
+  const out = {};
+  if (!ws || typeof ws !== "object") return out;
+  const keys = Object.keys(ws).slice(0, 8);
+  for (const k of keys) {
+    const cleanName = String(k || "").trim().slice(0, 40);
+    if (!cleanName) continue;
+    const v = ws[k];
+    if (!v || typeof v !== "object") continue;
+    const shots = Math.max(0, Math.floor(Number(v.shots) || 0));
+    const kills = Math.max(0, Math.floor(Number(v.kills) || 0));
+    if (shots > 0 || kills > 0) {
+      out[cleanName] = { shots, kills };
+    }
+  }
+  return out;
+}
+
+function mergeWeaponStats(oldWs, newWs) {
+  const prev = sanitizeWeaponStatsMap(oldWs);
+  const next = sanitizeWeaponStatsMap(newWs);
+  const merged = Object.assign({}, prev);
+  for (const [k, v] of Object.entries(next)) {
+    if (!merged[k]) {
+      merged[k] = { shots: v.shots, kills: v.kills };
+    } else {
+      merged[k] = {
+        shots: Math.max(merged[k].shots || 0, v.shots || 0),
+        kills: Math.max(merged[k].kills || 0, v.kills || 0)
+      };
+    }
+  }
+  const entries = Object.entries(merged)
+    .sort((a, b) => ((b[1].kills * 25 + b[1].shots) - (a[1].kills * 25 + a[1].shots)))
+    .slice(0, 8);
+  return Object.fromEntries(entries);
+}
+
+function getPlayerFavoriteWeapon(player) {
+  const ws = player && player.userStats && player.userStats.weaponStats;
+  if (!ws || typeof ws !== "object") {
+    return { name: "M4A1-S AVTOMAT", kills: 0, shots: 0 };
+  }
+  let best = null;
+  let bestScore = -1;
+  for (const [name, stat] of Object.entries(ws)) {
+    if (!stat || typeof stat !== "object") continue;
+    const kills = Math.max(0, Math.floor(Number(stat.kills) || 0));
+    const shots = Math.max(0, Math.floor(Number(stat.shots) || 0));
+    if (kills === 0 && shots === 0) continue;
+    const score = (kills * 25) + shots;
+    if (score > bestScore) {
+      bestScore = score;
+      best = { name, kills, shots };
+    }
+  }
+  return best || { name: "M4A1-S AVTOMAT", kills: 0, shots: 0 };
+}
+
+function ensureWeeklyChampionLocked(now = Date.now()) {
+  const currentWeekKey = getTashkentWeekKey(now);
+  const prevWeekKey = getTashkentWeekKey(now - 7 * 24 * 3600 * 1000);
+
+  if (
+    db.weeklyChampion &&
+    db.weeklyChampion.displayWeekKey === currentWeekKey &&
+    db.weeklyChampion.playerId &&
+    db.players[db.weeklyChampion.playerId]
+  ) {
+    return db.weeklyChampion;
+  }
+
+  const allPlayers = Object.values(db.players || {});
+  if (allPlayers.length === 0) return null;
+
+  const getPrestige = (p) => Number((p.userStats && p.userStats.prestige) || computePrestigeFromGifts(p.userStats && p.userStats.gifts) || 0);
+
+  // 1-ustuvorlik: yakunlangan hafta (prevWeekKey)
+  const prevCandidates = [];
+  for (const p of allPlayers) {
+    const ps = p.periodStats || {};
+    let ws = null;
+    if (ps.weekKey === prevWeekKey && ps.week) ws = ps.week;
+    else if (ps.lastWeekKey === prevWeekKey && ps.lastWeek) ws = ps.lastWeek;
+    if (ws && Number(ws.power) > 0) {
+      prevCandidates.push({ p, ws, all: computePlayerPowerScore(p), prestige: getPrestige(p) });
+    }
+  }
+
+  let winnerEntry = null;
+  let earnedWeekKey = currentWeekKey;
+  let mode = "overall_fallback";
+  let weekStats = { matches: 0, kills: 0, headshots: 0, eloGain: 0, power: 0 };
+
+  if (prevCandidates.length > 0) {
+    prevCandidates.sort((a, b) =>
+      ((Number(b.ws.power) || 0) - (Number(a.ws.power) || 0)) ||
+      ((Number(b.ws.kills) || 0) - (Number(a.ws.kills) || 0)) ||
+      ((Number(b.ws.headshots) || 0) - (Number(a.ws.headshots) || 0)) ||
+      (b.all.elo - a.all.elo) ||
+      (b.prestige - a.prestige)
+    );
+    winnerEntry = prevCandidates[0];
+    earnedWeekKey = prevWeekKey;
+    mode = "prev_week";
+    weekStats = {
+      matches: Number(winnerEntry.ws.matches) || 0,
+      kills: Number(winnerEntry.ws.kills) || 0,
+      headshots: Number(winnerEntry.ws.headshots) || 0,
+      eloGain: Number(winnerEntry.ws.eloGain) || 0,
+      power: Number(winnerEntry.ws.power) || 0
+    };
+  } else {
+    // 2-ustuvorlik: joriy hafta (currentWeekKey)
+    const curCandidates = [];
+    for (const p of allPlayers) {
+      const ps = p.periodStats || {};
+      if (ps.weekKey === currentWeekKey && ps.week && Number(ps.week.power) > 0) {
+        curCandidates.push({ p, ws: ps.week, all: computePlayerPowerScore(p), prestige: getPrestige(p) });
+      }
+    }
+    if (curCandidates.length > 0) {
+      curCandidates.sort((a, b) =>
+        ((Number(b.ws.power) || 0) - (Number(a.ws.power) || 0)) ||
+        ((Number(b.ws.kills) || 0) - (Number(a.ws.kills) || 0)) ||
+        ((Number(b.ws.headshots) || 0) - (Number(a.ws.headshots) || 0)) ||
+        (b.all.elo - a.all.elo) ||
+        (b.prestige - a.prestige)
+      );
+      winnerEntry = curCandidates[0];
+      earnedWeekKey = currentWeekKey;
+      mode = "current_week";
+      weekStats = {
+        matches: Number(winnerEntry.ws.matches) || 0,
+        kills: Number(winnerEntry.ws.kills) || 0,
+        headshots: Number(winnerEntry.ws.headshots) || 0,
+        eloGain: Number(winnerEntry.ws.eloGain) || 0,
+        power: Number(winnerEntry.ws.power) || 0
+      };
+    } else {
+      // 3-ustuvorlik: umumiy eng kuchli o'yinchi
+      const overallCandidates = allPlayers.map(p => ({
+        p,
+        all: computePlayerPowerScore(p),
+        prestige: getPrestige(p)
+      }));
+      overallCandidates.sort((a, b) =>
+        (b.all.powerScore - a.all.powerScore) ||
+        (b.all.elo - a.all.elo) ||
+        (b.prestige - a.prestige) ||
+        (b.all.kills - a.all.kills)
+      );
+      winnerEntry = overallCandidates[0];
+      earnedWeekKey = currentWeekKey;
+      mode = "overall_fallback";
+      weekStats = {
+        matches: winnerEntry.all.totalMatches,
+        kills: winnerEntry.all.kills,
+        headshots: winnerEntry.all.headshots,
+        eloGain: 0,
+        power: winnerEntry.all.powerScore
+      };
+    }
+  }
+
+  db.weeklyChampion = {
+    displayWeekKey: currentWeekKey,
+    earnedWeekKey,
+    mode,
+    playerId: winnerEntry.p.id,
+    weekStats,
+    lockedAt: now,
+    nextResetAt: getTashkentNextMondayMs(now)
+  };
+  saveDb();
+  return db.weeklyChampion;
+}
+
 function updatePlayerPeriodStats(player, prevNorm, nextNorm) {
   if (!player) return;
   const now = Date.now();
@@ -301,7 +491,13 @@ function updatePlayerPeriodStats(player, prevNorm, nextNorm) {
     player.periodStats = {};
   }
   const ps = player.periodStats;
-  if (ps.weekKey !== wk || !ps.week) {
+  if (ps.weekKey && ps.weekKey !== wk && ps.week) {
+    ps.lastWeekKey = ps.weekKey;
+    ps.lastWeek = { ...ps.week };
+    ensureWeeklyChampionLocked(now);
+    ps.weekKey = wk;
+    ps.week = { matches: 0, kills: 0, headshots: 0, eloGain: 0, power: 0 };
+  } else if (ps.weekKey !== wk || !ps.week) {
     ps.weekKey = wk;
     ps.week = { matches: 0, kills: 0, headshots: 0, eloGain: 0, power: 0 };
   }
@@ -405,7 +601,8 @@ app.post("/api/tg/sync", (req, res) => {
           matches5v5: 0,
           matchesOnline: 0,
           ownedSkins: ["classic"],
-          equippedSkinId: "classic"
+          equippedSkinId: "classic",
+          weaponStats: {}
         }, oldP.userStats || {}, (safeClientStats && !initLoad) ? safeClientStats : {}),
         blockedUsersMap: Object.assign({}, oldP.blockedUsersMap || {}, blockedUsersMap || {}),
         savedFriends: Array.isArray(savedFriends) ? savedFriends : (oldP.savedFriends || []),
@@ -413,6 +610,7 @@ app.post("/api/tg/sync", (req, res) => {
         updatedAt: Date.now(),
         lastSeenAt: Date.now()
       };
+      merged.userStats.weaponStats = mergeWeaponStats(oldP.userStats && oldP.userStats.weaponStats, (safeClientStats && !initLoad) ? safeClientStats.weaponStats : null);
       ensurePlayerEconomy(merged);
       db.players[pid] = merged;
       saveDb();
@@ -438,7 +636,8 @@ app.post("/api/tg/sync", (req, res) => {
         matches5v5: 0,
         matchesOnline: 0,
         ownedSkins: ["classic"],
-        equippedSkinId: "classic"
+        equippedSkinId: "classic",
+        weaponStats: {}
       },
       blockedUsersMap: {},
       savedFriends: [],
@@ -449,6 +648,7 @@ app.post("/api/tg/sync", (req, res) => {
     if (safeClientStats && !initLoad) {
       newPlayer.userStats = Object.assign({}, newPlayer.userStats, safeClientStats);
     }
+    newPlayer.userStats.weaponStats = mergeWeaponStats(null, (safeClientStats && !initLoad) ? safeClientStats.weaponStats : null);
     ensurePlayerEconomy(newPlayer);
     db.players[pid] = newPlayer;
     saveDb();
@@ -465,7 +665,9 @@ app.post("/api/tg/sync", (req, res) => {
   // Agar initLoad === true bo'lsa, bazadagi saqlangan statistikani 0 bilan ezib yubormaymiz!
   if (!initLoad && safeClientStats) {
     const prevNorm = normalizeUserStats(existing.userStats);
+    const prevWeaponStats = existing.userStats && existing.userStats.weaponStats;
     existing.userStats = Object.assign({}, existing.userStats, safeClientStats);
+    existing.userStats.weaponStats = mergeWeaponStats(prevWeaponStats, safeClientStats.weaponStats);
     const nextNorm = normalizeUserStats(existing.userStats);
     existing.userStats.kills = nextNorm.kills;
     existing.userStats.totalKills = nextNorm.kills;
@@ -477,6 +679,8 @@ app.post("/api/tg/sync", (req, res) => {
     existing.userStats.lobbyMatches = nextNorm.matchesOnline;
     existing.updatedAt = Date.now();
     updatePlayerPeriodStats(existing, prevNorm, nextNorm);
+  } else if (existing.userStats) {
+    existing.userStats.weaponStats = sanitizeWeaponStatsMap(existing.userStats.weaponStats);
   }
 
   if (blockedUsersMap && typeof blockedUsersMap === "object") {
@@ -1128,6 +1332,131 @@ app.get('/api/tg/leaderboard', (req, res) => {
     monthlyMvp,
     myEntry,
     list: entries.slice(0, 100)
+  });
+});
+
+// 5D-2) 👑 Hafta Chempioni (Har Dushanba 00:00 UTC+5 da qulflanadigan #1 o'yinchi vitrinasi)
+app.get('/api/tg/weekly-champion', (req, res) => {
+  const now = Date.now();
+  const cleanMyId = String(req.query.myId || '').trim().toUpperCase();
+  const lock = ensureWeeklyChampionLocked(now);
+  if (!lock || !lock.playerId || !db.players[lock.playerId]) {
+    return res.json({ ok: true, champion: null });
+  }
+
+  const p = db.players[lock.playerId];
+  ensurePlayerEconomy(p);
+  const score = computePlayerPowerScore(p);
+
+  const rankedAll = Object.values(db.players || {}).map(x => {
+    const sx = computePlayerPowerScore(x);
+    return {
+      id: x.id,
+      powerScore: sx.powerScore,
+      totalMatches: sx.totalMatches,
+      elo: sx.elo,
+      lastSeenAt: Number(x.lastSeenAt || x.updatedAt || x.createdAt || 0)
+    };
+  });
+  rankedAll.sort((a, b) =>
+    (b.powerScore - a.powerScore) ||
+    (b.totalMatches - a.totalMatches) ||
+    (b.elo - a.elo) ||
+    (b.lastSeenAt - a.lastSeenAt)
+  );
+  const rankIdx = rankedAll.findIndex(x => x.id === p.id);
+  const globalRank = rankIdx >= 0 ? (rankIdx + 1) : 1;
+  const totalPlayers = rankedAll.length;
+
+  const favWep = getPlayerFavoriteWeapon(p);
+  const ps = (p.periodStats && typeof p.periodStats === 'object') ? p.periodStats : {};
+  let weekStats = Object.assign({ matches: 0, kills: 0, headshots: 0, eloGain: 0, power: 0 }, lock.weekStats || {});
+  if (lock.mode === 'current_week' && ps.weekKey === lock.displayWeekKey && ps.week) {
+    weekStats = {
+      matches: Number(ps.week.matches) || 0,
+      kills: Number(ps.week.kills) || 0,
+      headshots: Number(ps.week.headshots) || 0,
+      eloGain: Number(ps.week.eloGain) || 0,
+      power: Number(ps.week.power) || 0
+    };
+  }
+
+  const myObj = cleanMyId ? (db.players[cleanMyId] || null) : null;
+  const myFriendIds = new Set(((myObj && myObj.savedFriends) || []).map(f => String(f.id || '').toUpperCase()));
+  const isSelf = cleanMyId !== '' && p.id === cleanMyId;
+  const isFriend = myFriendIds.has(p.id);
+  const hasPendingReq = !isSelf && !isFriend && cleanMyId
+    ? db.friendRequests.some(r => r.fromId === cleanMyId && r.toId === p.id && r.status === 'pending')
+    : false;
+
+  const countsMap = {};
+  for (const item of (p.userStats.gifts || [])) {
+    if (!item || !item.giftId) continue;
+    const gid = String(item.giftId).trim();
+    if (!countsMap[gid]) {
+      const cat = getGiftById(gid);
+      const prestige = Number((cat && cat.prestige) || item.prestige || 0);
+      countsMap[gid] = {
+        giftId: gid,
+        name: (cat && cat.name) || item.giftName || "Sovg'a",
+        icon: (cat && cat.icon) || '🎁',
+        category: (cat && cat.category) || 'coins',
+        currency: (cat && cat.currency) || 'coins',
+        rarity: (cat && cat.rarity) || item.rarity || 'common',
+        prestige,
+        price: Number((cat && cat.price) || 0),
+        uzsPrice: Number((cat && cat.uzsPrice) || 0),
+        color: (cat && cat.color) || '#f59e0b',
+        glow: (cat && cat.glow) || '#fbbf24',
+        desc: (cat && cat.desc) || '',
+        count: 0,
+        totalPrestige: 0
+      };
+    }
+    countsMap[gid].count += 1;
+    countsMap[gid].totalPrestige += countsMap[gid].prestige;
+  }
+
+  const giftsSorted = Object.values(countsMap).sort((a, b) =>
+    (b.prestige - a.prestige) ||
+    ((b.uzsPrice || 0) - (a.uzsPrice || 0)) ||
+    ((b.price || 0) - (a.price || 0))
+  );
+
+  return res.json({
+    ok: true,
+    champion: {
+      id: p.id,
+      tgId: p.tgId || '',
+      name: p.name || p.id,
+      username: p.username || '',
+      photoUrl: p.photoUrl || '',
+      level: score.level,
+      elo: score.elo,
+      league: score.league,
+      globalRank,
+      totalPlayers,
+      totalMatches: score.totalMatches,
+      matches5v5: score.matches5v5,
+      matchesOnline: score.matchesOnline,
+      kills: score.kills,
+      headshots: score.headshots,
+      hsRate: score.hsRate,
+      favoriteWeapon: favWep.name,
+      favoriteWeaponKills: favWep.kills,
+      favoriteWeaponShots: favWep.shots,
+      prestige: Number(p.userStats.prestige) || 0,
+      giftTotalCount: (p.userStats.gifts || []).length,
+      weekStats,
+      mode: lock.mode,
+      isSelf,
+      isFriend,
+      hasPendingReq,
+      giftsSorted,
+      nextResetAt: getTashkentNextMondayMs(now),
+      displayWeekKey: lock.displayWeekKey,
+      earnedWeekKey: lock.earnedWeekKey
+    }
   });
 });
 

@@ -97,7 +97,8 @@
       totalKills: window.userStats.totalKills || 0,
       totalHS: window.userStats.totalHS || 0,
       ownedSkins: Array.isArray(window.userStats.ownedSkins) ? window.userStats.ownedSkins : ['classic'],
-      equippedSkinId: window.userStats.equippedSkinId || 'classic'
+      equippedSkinId: window.userStats.equippedSkinId || 'classic',
+      weaponStats: (window.userStats.weaponStats && typeof window.userStats.weaponStats === 'object') ? window.userStats.weaponStats : undefined
     } : {
       coins: tgState.coins,
       elo: tgState.elo,
@@ -168,6 +169,9 @@
             tgState.friends = data.player.savedFriends;
           }
           saveLocalBridgeState();
+          if (isInitLoad && typeof window.refreshWeeklyChampionCard === 'function') {
+            window.refreshWeeklyChampionCard();
+          }
         }
       }
     } catch (e) {}

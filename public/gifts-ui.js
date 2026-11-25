@@ -975,6 +975,7 @@
         if (typeof window.saveUserData === 'function') window.saveUserData();
         if (typeof window.updateMainMenuWidgets === 'function') window.updateMainMenuWidgets();
         renderDigiGiftShop();
+        if (typeof window.refreshWeeklyChampionCard === 'function') window.refreshWeeklyChampionCard();
 
         if (typeof window.playSound === 'function') window.playSound('victory_fanfare');
         if (typeof window.showToast === 'function') {
@@ -1837,6 +1838,7 @@ To'lov rekvizitlarini yuborsangiz, chekni tashlayman.`;
         if (typeof window.saveUserData === 'function') window.saveUserData();
         if (typeof window.updateMainMenuWidgets === 'function') window.updateMainMenuWidgets();
         renderDigiGiftShop();
+        if (typeof window.refreshWeeklyChampionCard === 'function') window.refreshWeeklyChampionCard();
 
         if (typeof window.playSound === 'function') window.playSound('victory_fanfare');
         if (typeof window.showToast === 'function') {
