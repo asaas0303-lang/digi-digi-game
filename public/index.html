@@ -1062,10 +1062,8 @@
 
   <!-- Qon va qo'rqinchli chaqnash qatlami -->
   <div id="damageFlash" class="fixed inset-0 pointer-events-none z-50" style="background: radial-gradient(circle at 50% 50%, rgba(220,38,38,0.12) 32%, rgba(185,28,28,0.78) 100%); opacity: 0; transition: opacity 90ms linear; will-change: opacity;"></div>
-  <div id="jumpscareBanner" class="hidden fixed inset-0 z-35 pointer-events-none flex items-center justify-center bg-red-950/60">
-    <div class="text-center animate-bounce px-4">
-      <p class="retro-font text-red-500 text-base sm:text-2xl drop-shadow-[0_4px_12px_rgba(255,0,0,0.9)]">⚠️ ORQANGIZDA DUSHMAN! ⚠️</p>
-    </div>
+  <div id="jumpscareBanner" class="hidden fixed top-[54px] left-1/2 -translate-x-1/2 z-40 pointer-events-none px-3 py-1 rounded-full bg-red-950/90 border border-red-500/85 shadow-lg">
+    <p class="retro-font text-red-300 text-[10px] sm:text-xs tracking-wider whitespace-nowrap">⚠️ ORQANGIZDA DUSHMAN!</p>
   </div>
 
   <!-- #25 CS Uslubidagi Ixcham Taktik Radio Xabarnoma (Tugma va joystik ustiga tushmaydi) -->
@@ -3716,6 +3714,7 @@
         ejectedShells = [];
         activeGrenades = [];
         smokeClouds = [];
+        window._activeExplosions = [];
 
         // #17 Labirintda Aptechka (yashil), O'q-dori (sariq) VA Kevlar Zirh (ko'k) qutilari!
         pickups = [
@@ -4085,18 +4084,11 @@
         const adsBonus = player.adsZoom ? 0.32 : 1.0;
         const shotSpread = (w.spread * 0.42 + movePenalty + bloomPenalty) * adsBonus;
 
-        let baseYaw = player.angle;
-        let basePitch = (player.pitch || 0);
-        let eyeY = 0.96;
-        if (typeof THREE !== 'undefined' && threeCamera) {
-          if (!window._shootDirTmp) window._shootDirTmp = new THREE.Vector3();
-          threeCamera.getWorldDirection(window._shootDirTmp);
-          baseYaw = Math.atan2(window._shootDirTmp.z, window._shootDirTmp.x);
-          basePitch = Math.asin(Math.max(-0.98, Math.min(0.98, window._shootDirTmp.y)));
-          eyeY = threeCamera.position.y;
-        }
+        const baseYaw = player.angle;
+        const basePitch = (player.pitch || 0) + (player.recoilPitch || 0) * 0.22;
+        const eyeY = 1.02;
         const devYaw = w.isMelee ? 0 : (Math.random() - 0.5) * shotSpread;
-        const devPitch = w.isMelee ? 0 : (Math.random() - 0.5) * shotSpread * 0.65;
+        const devPitch = w.isMelee ? 0 : (Math.random() - 0.5) * shotSpread * 0.55;
         const shotYaw = baseYaw + devYaw;
         const shotPitch = basePitch + devPitch;
 
@@ -4108,7 +4100,7 @@
 
         const isShotgun = (selectedWeaponIdx === 2);
         const bodyHalfW = w.isMelee ? 0.42 : (isShotgun ? 0.30 : 0.23);
-        const headHalfW = isShotgun ? 0.145 : 0.12;
+        const headHalfW = isShotgun ? 0.13 : 0.105;
         const legHalfW  = isShotgun ? 0.26 : 0.20;
 
         combatants.forEach(c => {
@@ -4127,9 +4119,9 @@
           const hitY = eyeY + Math.tan(shotPitch) * dist;
 
           let hitZone = null;
-          if (hitY >= 1.10 && hitY <= 1.32 && lateralErr <= headHalfW) {
+          if (hitY >= 1.15 && hitY <= 1.34 && lateralErr <= headHalfW) {
             hitZone = 'head';
-          } else if (hitY >= 0.34 && hitY < 1.10 && lateralErr <= bodyHalfW) {
+          } else if (hitY >= 0.34 && hitY < 1.15 && lateralErr <= bodyHalfW) {
             hitZone = 'body';
           } else if (hitY >= -0.05 && hitY < 0.34 && lateralErr <= legHalfW) {
             hitZone = 'leg';
@@ -4155,8 +4147,8 @@
             spreadY: (Math.random() - 0.5) * (player.adsZoom ? 8 : 22),
             isHit: !!bestEnemy,
             color: w.color,
-            maxTtl: 8,
-            ttl: 8
+            maxTtl: 4,
+            ttl: 4
           });
         }
 
@@ -4222,6 +4214,7 @@
               }
               // #9 Darhol g'oyib bo'lmasdan polga yiqilish animatsiyasi boshlanadi!
               bestEnemy.dyingProgress = 0.05;
+              bestEnemy.deathPushAng = Math.atan2(bestEnemy.y - player.y, bestEnemy.x - player.x);
               bestEnemy.deaths = (bestEnemy.deaths || 0) + 1;
               player.kills++;
               player.killStreak = (player.killStreak || 0) + 1;
@@ -4243,8 +4236,23 @@
         } else if (hitFriendly && !w.isMelee) {
           player.magAmmo = Math.min(w.magSize, player.magAmmo + 1);
           showFriendlyFireWarning(hitFriendly.name);
-        } else if (isMpMatch && !w.isMelee && window.DIGI_MP) {
-          window.DIGI_MP.sendShoot('', 0, false, false);
+        } else {
+          if (!w.isMelee && typeof spawn3DWallSpark === 'function') {
+            const cosY = Math.cos(shotYaw);
+            const sinY = Math.sin(shotYaw);
+            for (let rd = 0.35; rd <= 11.0; rd += 0.22) {
+              const rx = player.x + cosY * rd;
+              const ry = player.y + sinY * rd;
+              if (isWall(rx, ry)) {
+                const wallY = Math.max(0.15, Math.min(1.65, eyeY + Math.tan(shotPitch) * rd));
+                spawn3DWallSpark(rx, wallY, ry);
+                break;
+              }
+            }
+          }
+          if (isMpMatch && !w.isMelee && window.DIGI_MP) {
+            window.DIGI_MP.sendShoot('', 0, false, false);
+          }
         }
         updateHud();
       }
@@ -4260,6 +4268,11 @@
         stopAllMovement();
         if (animFrameId) cancelAnimationFrame(animFrameId);
         if (matchIntervalId) clearInterval(matchIntervalId);
+        if (toastTimer) { clearTimeout(toastTimer); toastTimer = null; }
+        ['toastBox', 'csEventBanner', 'spawnShieldBanner', 'lowHpWarningBanner', 'jumpscareBanner', 'friendlyFireBanner', 'targetInfoLabel'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.classList.add('hidden');
+        });
 
         const sbModal = document.getElementById('scoreboardModal');
         if (sbModal) sbModal.classList.add('hidden');
@@ -4668,7 +4681,7 @@
           const dx = pxNew - c.x;
           const dy = pyNew - c.y;
           const d = Math.hypot(dx, dy);
-          const minBotDist = 0.68;
+          const minBotDist = (c.team === player.team) ? 0.52 : 0.66;
           if (d < minBotDist) {
             const nx = d > 0.001 ? dx / d : Math.cos(player.angle + Math.PI);
             const ny = d > 0.001 ? dy / d : Math.sin(player.angle + Math.PI);
@@ -4743,6 +4756,7 @@
 
             if (g.kind === 'he') {
               playSound('grenade_explode', stereoPanG, distGainG);
+              if (typeof spawn3DExplosionEffect === 'function') spawn3DExplosionEffect(g.x, g.y);
               if (!isBotG) {
                 showCsEventBanner('💥 HE GRANATA PORTLADI!');
               } else if (distToPlayer < 6.5) {
@@ -4760,6 +4774,7 @@
                   c.lastHitByY = g.y;
                   if (c.health <= 0) {
                     c.dyingProgress = 0.05;
+                    c.deathPushAng = Math.atan2(c.y - g.y, c.x - g.x);
                     c.deaths = (c.deaths || 0) + 1;
                     if (!isBotG) {
                       player.kills++;
@@ -4837,10 +4852,14 @@
           player.reserveAmmo = rw.reserveAmmo || rw.reserve || (rw.magSize * 3);
         }
         keys.fire = false;
+        if (typeof firePointerId !== 'undefined') firePointerId = null;
+        if (window._autoReloadTimer) { clearTimeout(window._autoReloadTimer); window._autoReloadTimer = null; }
         player.isReloadPending = false;
         player.reloadingUntil = 0;
-        player.spawnShieldUntil = performance.now() + 3200;
-        player.respawnFireLockUntil = performance.now() + 450;
+        const _respawnNow = performance.now();
+        player.lastShotTime = _respawnNow;
+        player.spawnShieldUntil = _respawnNow + 3200;
+        player.respawnFireLockUntil = _respawnNow + 650;
         showToast(`${killerName || 'Dushman'} sizni yo'q qildi!`, badge === '💣' ? '💣' : '💀');
         updateHud();
         checkMatchWinCondition();
@@ -5008,6 +5027,8 @@
               c._lastSeenX = null;
               c._lastSeenY = null;
               c._lastSeenAt = 0;
+              c.deathPushAng = undefined;
+              c._stuckTime = 0;
             }
             return;
           }
@@ -5213,8 +5234,8 @@
               }
               playSound('knife_slash', stereoPanG, distGainG);
             } else if ((c.smokeGrenades || 0) > 0 && targetX !== null) {
-              const shouldThrowRetreatSmoke = (c.aiState === 'retreat_cover' && c.health <= 58 && canSeeTarget);
-              const shouldThrowPushSmoke = (isEnemyBot && canSeeTarget && bestDist >= 3.8 && bestDist <= 7.5 && enemyDda >= 0.45 && Math.random() < 0.025);
+              const shouldThrowRetreatSmoke = (c.aiState === 'retreat_cover' && c.health <= 64 && canSeeTarget);
+              const shouldThrowPushSmoke = (isEnemyBot && canSeeTarget && bestDist >= 3.2 && bestDist <= 7.8 && enemyDda >= 0.32 && Math.random() < 0.065);
               if (shouldThrowRetreatSmoke || shouldThrowPushSmoke) {
                 const ang = Math.atan2(targetY - c.y, targetX - c.x);
                 activeGrenades.push({
@@ -5421,11 +5442,11 @@
               repulseY += Math.sin(dodgeAngle) * 5.2;
             }
           }
-          // Botlar orasida qat'iy masofa saqlash
+          // Botlar orasida qat'iy masofa saqlash (1m tor koridor uchun 0.92m)
           combatants.forEach(other => {
             if (other === c || !other.alive || other.dyingProgress > 0) return;
             const d = Math.hypot(c.x - other.x, c.y - other.y);
-            const minSep = 1.45;
+            const minSep = 0.92;
             if (d < minSep) {
               const nx = d > 0.001 ? (c.x - other.x) / d : Math.cos(thisBotIdx * 2.1 + now * 0.003);
               const ny = d > 0.001 ? (c.y - other.y) / d : Math.sin(thisBotIdx * 2.1 + now * 0.003);
@@ -5447,11 +5468,31 @@
           c.x = resolvedBot.x;
           c.y = resolvedBot.y;
 
-          // #4: Faqat bot haqiqatan joyidan siljigandagina oyoq qadam tashlaydi (Moonwalk yo'q)
+          // #4: Faqat bot haqiqatan joyidan siljigandagina oyoq qadam tashlaydi (Moonwalk yo'q) + Anti-Stuck
           const actualBotMoved = Math.hypot(c.x - prevBotX, c.y - prevBotY);
           c.isMovingNow = actualBotMoved > 0.0025;
           if (c.isMovingNow) {
             c.walkCycle += actualBotMoved * 5.8;
+            c._stuckTime = 0;
+          } else if (c.aiState !== 'ambush' && c.aiState !== 'peek_hide' && Math.hypot(moveForwardX, moveForwardY) > 0.004 && actualBotMoved < 0.002) {
+            c._stuckTime = (c._stuckTime || 0) + dt;
+            if (c._stuckTime > 0.55) {
+              c._stuckTime = 0;
+              c._nextNavCalc = 0;
+              c.coverSpot = null;
+              c.aiState = 'advance';
+              const cxMid = Math.floor(c.x) + 0.5;
+              const cyMid = Math.floor(c.y) + 0.5;
+              const unstuck = resolveMazeCollision(
+                c.x + (cxMid - c.x) * 0.45,
+                c.y + (cyMid - c.y) * 0.45,
+                0.34
+              );
+              c.x = unstuck.x;
+              c.y = unstuck.y;
+            }
+          } else {
+            c._stuckTime = 0;
           }
 
           // --- REALISTIK BOT OTISHISHI (ADAPTIV PRO DDA SERIYALARI VA ADOLATLI ANIQLIK) ---
@@ -5547,6 +5588,7 @@
                 victim._recentHitReset = now;
                 if (victim.health <= 0) {
                   victim.dyingProgress = 0.05;
+                  victim.deathPushAng = Math.atan2(victim.y - c.y, victim.x - c.x);
                   victim.deaths = (victim.deaths || 0) + 1;
                   c.kills = (c.kills || 0) + 1;
                   c.burstLeft = 0;
@@ -6614,6 +6656,101 @@
         }
       }
 
+      function spawn3DWallSpark(wx, wy, wz) {
+        if (!threeScene || typeof THREE === 'undefined') return;
+        ensureHitBurstPool();
+        if (!_hitBurstPool) return;
+        for (let i = 0; i < 3; i++) {
+          const slotIdx = _sparkPoolIdx;
+          _sparkPoolIdx = (_sparkPoolIdx + 1) % 10;
+          const p = _hitBurstPool[slotIdx];
+          p.mesh.position.set(
+            wx + (Math.random() - 0.5) * 0.06,
+            wy + (Math.random() - 0.5) * 0.06,
+            wz + (Math.random() - 0.5) * 0.06
+          );
+          p.vx = (Math.random() - 0.5) * 1.4;
+          p.vy = 0.25 + Math.random() * 0.9;
+          p.vz = (Math.random() - 0.5) * 1.4;
+          p.ttl = 9;
+          p.active = true;
+          p.mesh.visible = true;
+        }
+      }
+
+      let _grenadeMeshPool = null;
+      let _heGrenadeMat = null;
+      let _smokeGrenadeMat = null;
+      let _explFlashPool = null;
+      let _smokeMeshPool = null;
+      window._activeExplosions = [];
+
+      function ensureCombatFxPools() {
+        if (!threeScene || typeof THREE === 'undefined') return;
+        if (!_grenadeMeshPool) {
+          const gGeo = new THREE.SphereGeometry(0.085, 8, 8);
+          _heGrenadeMat = new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0x991b1b, emissiveIntensity: 0.75, roughness: 0.42 });
+          _smokeGrenadeMat = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, emissive: 0x475569, emissiveIntensity: 0.45, roughness: 0.50 });
+          _grenadeMeshPool = [];
+          for (let i = 0; i < 6; i++) {
+            const m = new THREE.Mesh(gGeo, _heGrenadeMat);
+            m.visible = false;
+            threeScene.add(m);
+            _grenadeMeshPool.push(m);
+          }
+        }
+        if (!_explFlashPool) {
+          const eGeo = new THREE.SphereGeometry(0.32, 10, 10);
+          _explFlashPool = [];
+          for (let i = 0; i < 3; i++) {
+            const mat = new THREE.MeshBasicMaterial({ color: 0xff9f1c, transparent: true, opacity: 0.85, depthWrite: false });
+            const m = new THREE.Mesh(eGeo, mat);
+            m.visible = false;
+            threeScene.add(m);
+            _explFlashPool.push(m);
+          }
+        }
+        if (!_smokeMeshPool) {
+          const sGeo = new THREE.SphereGeometry(1.15, 10, 10);
+          _smokeMeshPool = [];
+          for (let i = 0; i < 6; i++) {
+            const mat = new THREE.MeshBasicMaterial({ color: 0xd1d5db, transparent: true, opacity: 0.82, depthWrite: false });
+            const m = new THREE.Mesh(sGeo, mat);
+            m.visible = false;
+            threeScene.add(m);
+            _smokeMeshPool.push(m);
+            smokeMeshes.push(m);
+          }
+        }
+      }
+
+      function spawn3DExplosionEffect(wx, wz) {
+        if (!threeScene || typeof THREE === 'undefined') return;
+        ensureCombatFxPools();
+        ensureHitBurstPool();
+        if (!window._activeExplosions) window._activeExplosions = [];
+        window._activeExplosions.push({ x: wx, z: wz, ttl: 0.30, maxTtl: 0.30 });
+        if (window._activeExplosions.length > 6) window._activeExplosions.shift();
+        if (_hitBurstPool) {
+          for (let i = 0; i < 10; i++) {
+            const slotIdx = _sparkPoolIdx;
+            _sparkPoolIdx = (_sparkPoolIdx + 1) % 10;
+            const p = _hitBurstPool[slotIdx];
+            p.mesh.position.set(
+              wx + (Math.random() - 0.5) * 0.16,
+              0.45 + (Math.random() - 0.5) * 0.12,
+              wz + (Math.random() - 0.5) * 0.16
+            );
+            p.vx = (Math.random() - 0.5) * 1.8 * 3.2;
+            p.vy = 1.4 + Math.random() * 1.8;
+            p.vz = (Math.random() - 0.5) * 1.8 * 3.2;
+            p.ttl = 18;
+            p.active = true;
+            p.mesh.visible = true;
+          }
+        }
+      }
+
       function getOrCreateFighterMesh(c) {
         if (fighterMeshes.has(c.id)) return fighterMeshes.get(c.id);
         ensureSwat3DAssets();
@@ -6801,8 +6938,18 @@
               grp.visible = false;
               return;
             }
+            const distCam = Math.hypot(c.x - player.x, c.y - player.y);
+            if (c.dyingProgress > 0 && c.dyingProgress > 0.35 && distCam < 0.62) {
+              grp.visible = false;
+              return;
+            }
             grp.visible = true;
-            grp.position.set(c.x, 0, c.y);
+            if (c.dyingProgress > 0 && distCam < 0.78) {
+              const awayCamAng = distCam > 0.01 ? Math.atan2(c.y - player.y, c.x - player.x) : (c.deathPushAng !== undefined ? c.deathPushAng : player.angle);
+              grp.position.set(player.x + Math.cos(awayCamAng) * 0.78, 0, player.y + Math.sin(awayCamAng) * 0.78);
+            } else {
+              grp.position.set(c.x, 0, c.y);
+            }
 
             const ud = grp.userData;
             const holder = ud.actorHolder;
@@ -6833,9 +6980,12 @@
               rifle.rotation.set(c.muzzleFlash > 0 ? -0.055 : 0, 0, 0);
             }
 
-            // #3: Askar nishonni ko'rganda darhol unga burilib stvolni to'g'rilaydi
+            // #3: Askar nishonni ko'rganda darhol unga burilib stvolni to'g'rilaydi; yiqilishda qotildan orqaga qulaydi
             let desiredDirAngle = typeof c.moveDirAngle === 'number' ? c.moveDirAngle : 0;
-            if (c.isAiming && c.aimTargetX !== null && c.aimTargetY !== null) {
+            if (c.dyingProgress > 0) {
+              const pushAng = c.deathPushAng !== undefined ? c.deathPushAng : Math.atan2(c.y - player.y, c.x - player.x);
+              desiredDirAngle = pushAng + Math.PI;
+            } else if (c.isAiming && c.aimTargetX !== null && c.aimTargetY !== null) {
               desiredDirAngle = Math.atan2(c.aimTargetY - c.y, c.aimTargetX - c.x);
             } else if (c.muzzleFlash > 0) {
               desiredDirAngle = Math.atan2(player.y - c.y, player.x - c.x);
@@ -6844,10 +6994,10 @@
             let diffYaw = targetThreeYaw - (ud.visualYaw || 0);
             while (diffYaw < -Math.PI) diffYaw += Math.PI * 2;
             while (diffYaw > Math.PI) diffYaw -= Math.PI * 2;
-            ud.visualYaw = (ud.visualYaw || 0) + diffYaw * (c.isAiming ? 0.38 : 0.22);
+            ud.visualYaw = (ud.visualYaw || 0) + diffYaw * (c.dyingProgress > 0 ? 0.55 : (c.isAiming ? 0.38 : 0.22));
             grp.rotation.y = ud.visualYaw;
 
-            // #2 & #4: O'q tekkanda pushti arvoh bo'lmasdan engil silkinadi (flinch), o'lganda polga yiqiladi
+            // #2 & #4: O'q tekkanda engil flinch, o'lganda polga orqaga yiqiladi
             if (c.dyingProgress > 0) {
               holder.rotation.x = -c.dyingProgress * (Math.PI / 2.15);
               holder.position.y = c.dyingProgress * 0.08;
@@ -6969,6 +7119,68 @@
             mesh.rotation.y = nowSec * 0.85;
           });
 
+          ensureCombatFxPools();
+          if (_grenadeMeshPool) {
+            for (let i = 0; i < _grenadeMeshPool.length; i++) {
+              const m = _grenadeMeshPool[i];
+              if (i < activeGrenades.length) {
+                const g = activeGrenades[i];
+                m.visible = true;
+                const nextGMat = g.kind === 'smoke' ? _smokeGrenadeMat : _heGrenadeMat;
+                if (m.material !== nextGMat) m.material = nextGMat;
+                m.position.set(g.x, 0.14 + Math.abs(Math.sin(g.timer * 7.5)) * 0.34, g.y);
+                m.rotation.y += 0.14;
+                m.rotation.x += 0.10;
+              } else {
+                m.visible = false;
+              }
+            }
+          }
+
+          const nowFxMs = performance.now();
+          const dtFx = Math.min(0.05, Math.max(0.004, (nowFxMs - (window._lastFxMs || nowFxMs)) * 0.001));
+          window._lastFxMs = nowFxMs;
+          if (_explFlashPool) {
+            const explList = window._activeExplosions || [];
+            for (let i = explList.length - 1; i >= 0; i--) {
+              explList[i].ttl -= dtFx;
+              if (explList[i].ttl <= 0) explList.splice(i, 1);
+            }
+            for (let i = 0; i < _explFlashPool.length; i++) {
+              const m = _explFlashPool[i];
+              if (i < explList.length) {
+                const ex = explList[i];
+                const prog = Math.min(1, Math.max(0, 1 - ex.ttl / ex.maxTtl));
+                const s = 1.0 + prog * 4.8;
+                m.visible = true;
+                m.position.set(ex.x, 0.42, ex.z);
+                m.scale.set(s, s, s);
+                m.material.opacity = 0.85 * (1 - prog);
+              } else {
+                m.visible = false;
+              }
+            }
+          }
+
+          if (_smokeMeshPool) {
+            for (let i = 0; i < _smokeMeshPool.length; i++) {
+              const m = _smokeMeshPool[i];
+              if (i < smokeClouds.length) {
+                const sm = smokeClouds[i];
+                const fadeIn = sm.ttl > 395 ? (420 - sm.ttl) / 25 : 1.0;
+                const fadeOut = sm.ttl < 75 ? sm.ttl / 75 : 1.0;
+                const op = Math.max(0.05, Math.min(0.86, 0.82 * Math.min(fadeIn, fadeOut)));
+                const s = 1.25 + Math.sin(nowSec * 1.4 + i) * 0.07;
+                m.visible = true;
+                m.position.set(sm.x, 0.88, sm.y);
+                m.scale.set(s, 0.92, s);
+                m.material.opacity = op;
+              } else {
+                m.visible = false;
+              }
+            }
+          }
+
           window._frameTick = (window._frameTick || 0) + 1;
 
           threeRenderer.render(threeScene, threeCamera);
@@ -7038,20 +7250,14 @@
           const clampedCenterX = Math.max(barW / 2 + 24, Math.min(w - barW / 2 - 24, screenX));
           let barY = Math.max(22, topY - 6);
 
-          // CS:GO uslubi: Ism faqat nishon tushgan (isAimed) askarda yoziladi — shunda ismlar hech qachon ustma-ust mingashib ketmaydi!
+          // CS:GO uslubi: Takroriy ism yozuvi chizilmaydi — faqat toza HP chizig'i (ism yagona #targetInfoLabel da!)
           const barX = Math.floor(clampedCenterX - barW / 2);
           doomCtx.fillStyle = 'rgba(0,0,0,0.85)';
           doomCtx.fillRect(barX - 1, barY - 1, barW + 2, 4);
           doomCtx.fillStyle = isAlly ? '#10b981' : '#ef4444';
           doomCtx.fillRect(barX, barY, Math.max(2, (c.health / 100) * barW), 2.5);
 
-          if (isAimed) {
-            const roleTag = isAlly ? '🛡️ ' : '🎯 ';
-            doomCtx.font = 'bold 11px Inter, sans-serif';
-            doomCtx.textAlign = 'center';
-            doomCtx.fillStyle = isAlly ? '#6ee7b7' : '#fca5a5';
-            doomCtx.fillText(roleTag + c.name, clampedCenterX, barY - 5);
-          } else if (isAlly) {
+          if (isAlly && !isAimed) {
             // Sherik boshida kichik yashil uchburchak (CS:GO Teammate Pip)
             doomCtx.fillStyle = '#10b981';
             doomCtx.beginPath();
@@ -7106,8 +7312,41 @@
           }
         }
 
-        // Jon kam qolganda (<= 45% HP) ekran chetida yurak urishiga mos qizil qon pulsatsiyasi
-        if (player.health > 0 && player.health <= 45) {
+        // 💣 Faol dushman HE granatasi xavf indikatori (5.8m radiusda)
+        if (activeGrenades && activeGrenades.length > 0) {
+          const cx = w / 2;
+          const cy = halfH;
+          const arcRadius = Math.min(w, h) * 0.28;
+          const blink = 0.55 + Math.abs(Math.sin(performance.now() * 0.018)) * 0.45;
+          for (let gi = 0; gi < activeGrenades.length; gi++) {
+            const g = activeGrenades[gi];
+            if (g.kind !== 'he' || (g.ownerTeam || player.team) === player.team) continue;
+            const gDist = Math.hypot(g.x - player.x, g.y - player.y);
+            if (gDist >= 5.8) continue;
+            const rel = (Math.atan2(g.y - player.y, g.x - player.x) - player.angle) - Math.PI / 2;
+            const ix = cx + Math.cos(rel) * arcRadius;
+            const iy = cy + Math.sin(rel) * arcRadius;
+            doomCtx.beginPath();
+            doomCtx.arc(ix, iy, 15, 0, Math.PI * 2);
+            doomCtx.fillStyle = `rgba(127, 29, 29, ${(blink * 0.85).toFixed(2)})`;
+            doomCtx.fill();
+            doomCtx.lineWidth = 2;
+            doomCtx.strokeStyle = `rgba(248, 113, 113, ${blink.toFixed(2)})`;
+            doomCtx.stroke();
+            doomCtx.font = 'bold 13px sans-serif';
+            doomCtx.textAlign = 'center';
+            doomCtx.textBaseline = 'middle';
+            doomCtx.fillStyle = '#ffffff';
+            doomCtx.fillText('💣', ix, iy - 1);
+            doomCtx.font = 'bold 9px Inter, sans-serif';
+            doomCtx.fillStyle = '#fecaca';
+            doomCtx.fillText(`${gDist.toFixed(1)}m`, ix, iy + 22);
+          }
+          doomCtx.textBaseline = 'alphabetic';
+        }
+
+        // Jon kam qolganda (<= 30% HP) ekran chetida yurak urishiga mos qizil qon pulsatsiyasi
+        if (player.health > 0 && player.health <= 30) {
           const pulse = 0.28 + Math.abs(Math.sin(performance.now() * 0.0055)) * 0.38;
           const rGrad = doomCtx.createRadialGradient(w / 2, halfH, Math.min(w, h) * 0.25, w / 2, halfH, Math.max(w, h) * 0.65);
           rGrad.addColorStop(0, 'rgba(220, 38, 38, 0)');
@@ -7116,7 +7355,7 @@
           doomCtx.fillRect(0, 0, w, h);
         }
 
-        // 3D Tutun granatasi pardasi (Smoke overlay)
+        // 3D Tutun granatasi pardasi (Smoke overlay — yumshoq kulrang-oq)
         for (let i = smokeClouds.length - 1; i >= 0; i--) {
           const sm = smokeClouds[i];
           sm.ttl--;
@@ -7125,12 +7364,14 @@
           let sa = Math.atan2(sm.y - player.y, sm.x - player.x) - player.angle;
           while (sa < -Math.PI) sa += Math.PI * 2;
           while (sa > Math.PI) sa -= Math.PI * 2;
-          if (Math.abs(sa) < fov * 0.8) {
+          if (Math.abs(sa) < fov * 0.85) {
+            const fade = sm.ttl < 75 ? (sm.ttl / 75) : 1.0;
             const sx = (0.5 + sa / fov) * w;
-            const rSmoke = Math.max(30, Math.min(w * 0.7, (h * 0.9) / Math.max(0.8, dist)));
-            const grad = doomCtx.createRadialGradient(sx, halfH, 5, sx, halfH, rSmoke);
-            grad.addColorStop(0, 'rgba(120, 120, 125, 0.85)');
-            grad.addColorStop(1, 'rgba(60, 60, 65, 0)');
+            const rSmoke = Math.max(36, Math.min(w * 0.78, (h * 0.96) / Math.max(0.75, dist)));
+            const grad = doomCtx.createRadialGradient(sx, halfH, 6, sx, halfH, rSmoke);
+            grad.addColorStop(0, `rgba(218, 222, 228, ${(0.84 * fade).toFixed(2)})`);
+            grad.addColorStop(0.55, `rgba(156, 163, 175, ${(0.52 * fade).toFixed(2)})`);
+            grad.addColorStop(1, 'rgba(100, 105, 115, 0)');
             doomCtx.fillStyle = grad;
             doomCtx.beginPath();
             doomCtx.arc(sx, halfH, rSmoke, 0, Math.PI * 2);
@@ -7154,7 +7395,7 @@
         const ad = window._aimDomCache;
         if (aimedFighter) {
           const isAlly = aimedFighter.team === player.team;
-          const isHsZone = !isAlly && lastAimRatioY <= 0.21;
+          const isHsZone = !isAlly && lastAimRatioY <= 0.14;
           const hpPct = Math.max(0, Math.round(aimedFighter.health));
           const nextText = isAlly
             ? `🛡️ ${aimedFighter.name} • ${hpPct}%`
@@ -7202,7 +7443,7 @@
             bulletSparks.splice(i, 1);
             continue;
           }
-          const maxT = b.maxTtl || 8;
+          const maxT = b.maxTtl || 4;
           const life = b.ttl / maxT; // 1.0 -> 0.0
           const prog = 1.0 - life;
           const isLandTracer = w > h;
@@ -7212,28 +7453,26 @@
           const sy = isLandTracer
             ? (player.adsZoom ? h * 0.60 : h * 0.63)
             : (player.adsZoom ? h * 0.58 : h * 0.61);
-          const endX = w * 0.50 + (b.angle - player.angle) * w * 0.65;
-          const endY = halfH + (b.spreadY || 0);
+          const endX = w * 0.50 + (b.angle - player.angle) * w * 0.55;
+          const endY = halfH + (b.spreadY || 0) * 0.45;
 
-          const p0 = Math.max(0, prog - 0.55);
-          const p1 = Math.min(1.0, prog + 0.25);
+          const p0 = Math.max(0, prog - 0.35);
+          const p1 = Math.min(1.0, prog + 0.35);
           const x0 = sx + (endX - sx) * p0;
           const y0 = sy + (endY - sy) * p0;
           const x1 = sx + (endX - sx) * p1;
           const y1 = sy + (endY - sy) * p1;
-          const alpha = Math.max(0.24, life * 0.98);
+          const alpha = Math.max(0.18, life * 0.96);
 
-          doomCtx.strokeStyle = b.isHit
-            ? `rgba(255, 210, 90, ${(alpha * 0.72).toFixed(2)})`
-            : `rgba(255, 175, 65, ${(alpha * 0.62).toFixed(2)})`;
-          doomCtx.lineWidth = 3.4;
+          doomCtx.strokeStyle = `rgba(251, 191, 36, ${(alpha * 0.28).toFixed(2)})`;
+          doomCtx.lineWidth = 3.2;
           doomCtx.beginPath();
           doomCtx.moveTo(x0, y0);
           doomCtx.lineTo(x1, y1);
           doomCtx.stroke();
 
-          doomCtx.strokeStyle = `rgba(255, 253, 235, ${alpha.toFixed(2)})`;
-          doomCtx.lineWidth = 1.6;
+          doomCtx.strokeStyle = `rgba(254, 243, 199, ${alpha.toFixed(2)})`;
+          doomCtx.lineWidth = 1.4;
           doomCtx.beginPath();
           doomCtx.moveTo(x0, y0);
           doomCtx.lineTo(x1, y1);
@@ -8441,6 +8680,7 @@
         ejectedShells = [];
         activeGrenades = [];
         smokeClouds = [];
+        window._activeExplosions = [];
         fighterMeshes.forEach(mesh => { if (threeScene) threeScene.remove(mesh); });
         fighterMeshes.clear();
 
@@ -8640,14 +8880,18 @@
                 player.reserveAmmo = rw.magSize * 3;
               }
               keys.fire = false;
+              if (typeof firePointerId !== 'undefined') firePointerId = null;
+              if (window._autoReloadTimer) { clearTimeout(window._autoReloadTimer); window._autoReloadTimer = null; }
               player.isReloadPending = false;
               player.reloadingUntil = 0;
               player.heGrenades = 2;
               player.smokeGrenades = 1;
               player.killStreak = 0;
               updateGrenadeLabels();
-              player.spawnShieldUntil = performance.now() + 2600;
-              player.respawnFireLockUntil = performance.now() + 450;
+              const _mpRespNow = performance.now();
+              player.lastShotTime = _mpRespNow;
+              player.spawnShieldUntil = _mpRespNow + 2600;
+              player.respawnFireLockUntil = _mpRespNow + 650;
               updateHud();
             } else {
               const c = combatants.find(x => x.id === data.id);
@@ -9034,6 +9278,10 @@
       fireBtn.addEventListener('pointerdown', (e) => {
         e.preventDefault();
         e.stopPropagation();
+        if (player.respawnFireLockUntil && performance.now() < player.respawnFireLockUntil) {
+          keys.fire = false;
+          return;
+        }
         firePointerId = e.pointerId;
         lastFireAimX = e.clientX;
         lastFireAimY = e.clientY;
