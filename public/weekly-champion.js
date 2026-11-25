@@ -1,4 +1,4 @@
-// DIGI DIGI — «👑 HAFTA CHEMPIONI» VITRINASI VA SUZUVCHI 3D iOS GLASS PROFILI (v20261124_12)
+// DIGI DIGI — «👑 HAFTA CHEMPIONI» VITRINASI VA SUZUVCHI 3D iOS GLASS PROFILI (v20261124_13)
 (function () {
   'use strict';
 
@@ -69,25 +69,21 @@
     const style = document.createElement('style');
     style.id = 'digiWeeklyChampionStyles';
     style.textContent = `
-      #btnNewsCard {
-        background:
-          radial-gradient(circle at 18% 64%, rgba(251, 191, 36, 0.22) 0%, rgba(245, 158, 11, 0.05) 46%, transparent 72%),
-          linear-gradient(155deg, rgba(22, 29, 48, 0.94) 0%, rgba(10, 14, 24, 0.97) 100%) !important;
-        border-color: rgba(251, 191, 36, 0.52) !important;
-        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.80), 0 0 20px rgba(245, 158, 11, 0.18), inset 0 1px 0 rgba(254, 243, 199, 0.32);
-      }
       .wc-hero-ring {
         background: conic-gradient(from 180deg, #fde68a, #f59e0b, #fbbf24, #d97706, #fde68a);
-        padding: 2.5px;
-        box-shadow: 0 0 16px rgba(251, 191, 36, 0.42), 0 4px 12px rgba(0, 0, 0, 0.72);
+        padding: 2px;
+        box-shadow: 0 0 12px rgba(251, 191, 36, 0.36), 0 3px 10px rgba(0, 0, 0, 0.65);
       }
       .wc-gift-cta {
-        background: linear-gradient(180deg, rgba(251, 191, 36, 0.34) 0%, rgba(217, 119, 6, 0.24) 100%);
-        border: 1px solid rgba(253, 224, 71, 0.62);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(254, 249, 195, 0.42);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.16) 0%, rgba(15, 23, 42, 0.36) 100%);
+        border: 1px solid rgba(251, 191, 36, 0.48);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.36), inset 0 1px 0 rgba(255, 255, 255, 0.32);
+      }
+      .wc-gift-cta:hover {
+        background: linear-gradient(180deg, rgba(251, 191, 36, 0.22) 0%, rgba(15, 23, 42, 0.42) 100%);
       }
       .wc-gift-cta:active {
-        transform: scale(0.94);
+        transform: scale(0.93);
       }
       #modalWeeklyChampion {
         background:
@@ -239,7 +235,7 @@
     const miniShowcaseHtml = topGifts.length > 0
       ? `<div class="flex items-center gap-1 min-w-0 pt-0.5">` +
           topGifts.map(g => `
-            <div class="w-[20px] h-[20px] rounded-md bg-[#060b16] border border-amber-400/35 flex items-center justify-center overflow-hidden shrink-0">
+            <div class="w-[20px] h-[20px] rounded-md bg-slate-950/45 border border-white/20 flex items-center justify-center overflow-hidden shrink-0">
               <img src="/img/gifts/${encodeURIComponent(g.giftId)}.webp?v=${WC_IMG_VER}" alt="${esc(g.name)}" class="w-[18px] h-[18px] object-contain" style="-webkit-mask-image: radial-gradient(circle at 50% 50%, #000 62%, transparent 98%); mask-image: radial-gradient(circle at 50% 50%, #000 62%, transparent 98%);" onerror="this.style.display='none';this.nextElementSibling.style.display='inline';" />
               <span class="hidden text-[10px] leading-none">${esc(g.icon || '🎁')}</span>
             </div>
@@ -252,11 +248,11 @@
     const headerReset = document.getElementById('wcCardResetBadge');
     if (headerReset) {
       headerReset.textContent = '#1 · Dushanbagacha';
-      headerReset.className = 'text-[7.5px] font-bold text-amber-200/90 bg-amber-500/15 border border-amber-400/35 px-1.5 py-0.5 rounded-full shrink-0';
+      headerReset.className = 'text-[7.5px] font-bold text-slate-100/90 bg-white/10 border border-white/20 px-1.5 py-0.5 rounded-full shrink-0';
     }
 
     const htmlBody = `
-      <div class="relative w-[56px] h-[56px] shrink-0">
+      <div class="relative w-[54px] h-[54px] shrink-0">
         <div class="wc-hero-ring w-full h-full rounded-full">
           <div class="w-full h-full rounded-full bg-slate-900 overflow-hidden flex items-center justify-center text-lg font-black text-amber-200">
             ${avatarHtml}
@@ -267,16 +263,21 @@
       </div>
       <div class="min-w-0 flex-1 flex flex-col justify-center gap-[3px]">
         <div class="text-[11.5px] font-black text-white leading-tight truncate drop-shadow">${esc(c.name)}</div>
-        <div class="flex items-center gap-1.5 text-[8.5px] font-mono font-bold leading-none truncate">
+        <div class="flex items-center gap-1 text-[8.5px] font-mono font-bold leading-none whitespace-nowrap">
           <span class="text-amber-300">👑 ${prestigeFormatted}</span>
           <span class="text-slate-600">•</span>
           <span class="text-sky-300">🏆 ${eloFormatted}</span>
         </div>
         ${miniShowcaseHtml}
       </div>
-      <button id="btnWcCardGift" type="button" class="wc-gift-cta w-[44px] h-[54px] rounded-xl flex flex-col items-center justify-center gap-0.5 shrink-0 transition cursor-pointer" title="${c.isSelf ? 'Kolleksiyam' : 'Sovg\'a yuborish'}">
-        <span class="text-[17px] leading-none drop-shadow">🎁</span>
-        <span class="text-[7.5px] font-black uppercase tracking-tight text-amber-100 leading-none">Sovg'a</span>
+      <button id="btnWcCardGift" type="button" class="wc-gift-cta w-[34px] h-[44px] rounded-xl flex flex-col items-center justify-center gap-1 shrink-0 transition cursor-pointer" title="${c.isSelf ? 'Kolleksiyam' : 'Sovg\'a yuborish'}">
+        <svg class="w-[17px] h-[17px] drop-shadow-[0_1px_3px_rgba(0,0,0,0.75)]" viewBox="0 0 24 24" fill="none">
+          <path d="M12 7.5C12 5.4 10.6 3.5 8.8 3.5C7.4 3.5 6.5 4.4 6.5 5.6C6.5 6.8 7.5 7.5 9.2 7.5H12ZM12 7.5C12 5.4 13.4 3.5 15.2 3.5C16.6 3.5 17.5 4.4 17.5 5.6C17.5 6.8 16.5 7.5 14.8 7.5H12Z" stroke="#fde047" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          <rect x="3.5" y="7.5" width="17" height="4" rx="1.4" fill="rgba(56,189,248,0.28)" stroke="#e2e8f0" stroke-width="1.5"/>
+          <path d="M5 11.5H19V18.5C19 19.6 18.1 20.5 17 20.5H7C5.9 20.5 5 19.6 5 18.5V11.5Z" fill="rgba(56,189,248,0.18)" stroke="#e2e8f0" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M12 7.5V20.5" stroke="#fbbf24" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        <span class="text-[6.5px] font-extrabold uppercase tracking-tight text-amber-100/95 leading-none">Sovg'a</span>
       </button>
     `;
 
@@ -284,9 +285,9 @@
       bodyEl.innerHTML = htmlBody;
     } else {
       card.innerHTML = `
-        <div class="shrink-0 flex items-center justify-between w-full border-b border-amber-400/25 pb-1">
+        <div class="shrink-0 flex items-center justify-between w-full border-b border-white/15 pb-1">
           <span class="text-[9px] font-black uppercase text-amber-300 tracking-wider flex items-center gap-1 truncate">👑 HAFTA CHEMPIONI</span>
-          <span id="wcCardResetBadge" class="text-[7.5px] font-bold text-amber-200/90 bg-amber-500/15 border border-amber-400/35 px-1.5 py-0.5 rounded-full shrink-0">#1 · Dushanbagacha</span>
+          <span id="wcCardResetBadge" class="text-[7.5px] font-bold text-slate-100/90 bg-white/10 border border-white/20 px-1.5 py-0.5 rounded-full shrink-0">#1 · Dushanbagacha</span>
         </div>
         <div id="wcCardBody" class="flex items-center gap-2 flex-1 min-h-0 pt-0.5">
           ${htmlBody}

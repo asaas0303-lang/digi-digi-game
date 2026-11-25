@@ -7,6 +7,7 @@ const https = require("https");
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
+const zlib = require("zlib");
 const { GEMS_CONFIG, GIFTS_CATALOG, getGiftById, computePrestigeFromGifts, summarizeGifts } = require("./gifts-catalog.js");
 const ADMIN_TG_ID = "5155194813";
 
@@ -39,6 +40,89 @@ app.use((req, res, next) => {
     res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
   }
   next();
+});
+
+// 0B) Zero-Dep RAM-Keshli Gzip Middleware (faqat issiq matnli frontend fayllari uchun)
+const HOT_TEXT_ASSETS = {
+  "/": { fileName: "index.html", contentType: "text/html; charset=UTF-8" },
+  "/index.html": { fileName: "index.html", contentType: "text/html; charset=UTF-8" },
+  "/weekly-champion.js": { fileName: "weekly-champion.js", contentType: "application/javascript; charset=UTF-8" },
+  "/gifts-ui.js": { fileName: "gifts-ui.js", contentType: "application/javascript; charset=UTF-8" },
+  "/telegram-bridge.js": { fileName: "telegram-bridge.js", contentType: "application/javascript; charset=UTF-8" },
+  "/mp-client.js": { fileName: "mp-client.js", contentType: "application/javascript; charset=UTF-8" },
+  "/sfx-engine.js": { fileName: "sfx-engine.js", contentType: "application/javascript; charset=UTF-8" },
+  "/gifts-catalog.js": { fileName: "gifts-catalog.js", contentType: "application/javascript; charset=UTF-8" }
+};
+const hotAssetCache = new Map();
+
+function resolveHotAssetPath(fileName) {
+  const pubPath = path.join(__dirname, "public", fileName);
+  if (fs.existsSync(pubPath)) return pubPath;
+  const rootPath = path.join(__dirname, fileName);
+  if (fs.existsSync(rootPath)) return rootPath;
+  return null;
+}
+
+function getHotAsset(urlPath) {
+  const spec = HOT_TEXT_ASSETS[urlPath];
+  if (!spec) return null;
+  const fullPath = resolveHotAssetPath(spec.fileName);
+  if (!fullPath) return null;
+  try {
+    const stat = fs.statSync(fullPath);
+    const cached = hotAssetCache.get(spec.fileName);
+    if (cached && cached.mtimeMs === stat.mtimeMs) {
+      return cached;
+    }
+    const raw = fs.readFileSync(fullPath);
+    const gzip = zlib.gzipSync(raw, { level: 6 });
+    const entry = { mtimeMs: stat.mtimeMs, raw, gzip, contentType: spec.contentType };
+    hotAssetCache.set(spec.fileName, entry);
+    return entry;
+  } catch (_) {
+    return null;
+  }
+}
+
+function warmHotAssetCache() {
+  const loaded = new Map();
+  for (const urlPath of Object.keys(HOT_TEXT_ASSETS)) {
+    const spec = HOT_TEXT_ASSETS[urlPath];
+    const entry = getHotAsset(urlPath);
+    if (entry && !loaded.has(spec.fileName)) {
+      loaded.set(spec.fileName, entry);
+    }
+  }
+  let rawBytes = 0;
+  let gzBytes = 0;
+  for (const e of loaded.values()) {
+    rawBytes += e.raw.length;
+    gzBytes += e.gzip.length;
+  }
+  console.log(
+    `Hot Gzip RAM-Cache ready: ${loaded.size} files (${Math.round(rawBytes / 1024)} KB -> ${Math.round(gzBytes / 1024)} KB gzip)`
+  );
+}
+
+app.use((req, res, next) => {
+  if (req.method !== "GET" && req.method !== "HEAD") return next();
+  const entry = getHotAsset(req.path);
+  if (!entry) return next();
+
+  res.setHeader("Content-Type", entry.contentType);
+  res.setHeader("Vary", "Accept-Encoding");
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+
+  const acceptsGzip = /\bgzip\b/i.test(String(req.headers["accept-encoding"] || ""));
+  if (acceptsGzip) {
+    res.setHeader("Content-Encoding", "gzip");
+    res.setHeader("Content-Length", entry.gzip.length);
+    return req.method === "HEAD" ? res.end() : res.end(entry.gzip);
+  }
+  res.setHeader("Content-Length", entry.raw.length);
+  return req.method === "HEAD" ? res.end() : res.end(entry.raw);
 });
 
 app.use(express.static(path.join(__dirname, "public")));
@@ -2090,6 +2174,7 @@ try {
 
 const httpServer = app.listen(PORT, async () => {
   console.log(`DIGI DIGI Server running on port ${PORT}`);
+  warmHotAssetCache();
 
   try {
     const webhookRes = await tgApiCall("setWebhook", {
