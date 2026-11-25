@@ -3760,6 +3760,10 @@
         player.isReloadPending = false;
         player.heGrenades = 2;
         player.smokeGrenades = 1;
+        player.killStreak = 0;
+        window._ddaAnnouncedTier = 0;
+        window._enemyIntel = null;
+        window._lastBotGrenadeTime = 0;
         if (resetScores) {
           player.kills = 0;
           player.deaths = 0;
@@ -3767,6 +3771,7 @@
           myProfile.deaths = 0;
         }
 
+        const nowInit = performance.now();
         if (gameMode === '1v1') {
           const oppData = onlinePlayers.find(p => p.id === duelOpponentId) || onlinePlayers[0];
           const oppTeam = player.team === 'red' ? 'blue' : 'red';
@@ -3789,7 +3794,13 @@
             walkCycle: 0,
             kills: 0,
             deaths: 0,
-            duoLeaderId: null
+            duoLeaderId: null,
+            heGrenades: 1,
+            smokeGrenades: 1,
+            nextGrenadeAt: nowInit + 3500 + Math.random() * 4000,
+            _lastSeenX: null,
+            _lastSeenY: null,
+            _lastSeenAt: 0
           });
         } else {
           const teamSize = gameMode === '5v5' ? 5 : 4;
@@ -3817,7 +3828,13 @@
                 walkCycle: Math.random() * 6,
                 kills: 0,
                 deaths: 0,
-                duoSlot: rIdx % 2
+                duoSlot: rIdx % 2,
+                heGrenades: 1,
+                smokeGrenades: 1,
+                nextGrenadeAt: nowInit + 3500 + Math.random() * 4000,
+                _lastSeenX: null,
+                _lastSeenY: null,
+                _lastSeenAt: 0
               });
             } else if (p.team === 'blue' && bIdx < teamSize) {
               const sp = blueSpawnPoints[bIdx++];
@@ -3839,7 +3856,13 @@
                 walkCycle: Math.random() * 6,
                 kills: 0,
                 deaths: 0,
-                duoSlot: bIdx % 2
+                duoSlot: bIdx % 2,
+                heGrenades: 1,
+                smokeGrenades: 1,
+                nextGrenadeAt: nowInit + 3500 + Math.random() * 4000,
+                _lastSeenX: null,
+                _lastSeenY: null,
+                _lastSeenAt: 0
               });
             }
           });
@@ -3975,7 +3998,11 @@
           y: gy0,
           vx: gvx,
           vy: gvy,
-          timer: 1.15 // 1.15 soniyadan so'ng portlaydi!
+          timer: 1.15, // 1.15 soniyadan so'ng portlaydi!
+          ownerTeam: player.team,
+          ownerName: myProfile.name,
+          ownerId: 'player',
+          isBot: false
         });
         if (isMpMatch && window.DIGI_MP && typeof window.DIGI_MP.sendGrenade === 'function') {
           window.DIGI_MP.sendGrenade(kind, gx0, gy0, gvx, gvy);
@@ -4081,7 +4108,7 @@
 
         const isShotgun = (selectedWeaponIdx === 2);
         const bodyHalfW = w.isMelee ? 0.42 : (isShotgun ? 0.30 : 0.23);
-        const headHalfW = isShotgun ? 0.17 : 0.145;
+        const headHalfW = isShotgun ? 0.145 : 0.12;
         const legHalfW  = isShotgun ? 0.26 : 0.20;
 
         combatants.forEach(c => {
@@ -4100,9 +4127,9 @@
           const hitY = eyeY + Math.tan(shotPitch) * dist;
 
           let hitZone = null;
-          if (hitY >= 0.94 && hitY <= 1.30 && lateralErr <= headHalfW) {
+          if (hitY >= 1.10 && hitY <= 1.32 && lateralErr <= headHalfW) {
             hitZone = 'head';
-          } else if (hitY >= 0.34 && hitY < 0.98 && lateralErr <= bodyHalfW) {
+          } else if (hitY >= 0.34 && hitY < 1.10 && lateralErr <= bodyHalfW) {
             hitZone = 'body';
           } else if (hitY >= -0.05 && hitY < 0.34 && lateralErr <= legHalfW) {
             hitZone = 'leg';
@@ -4135,13 +4162,13 @@
 
         if (bestEnemy) {
           const distFactor = w.isMelee ? 1.0 : Math.max(0.45, 1 - bestEnemyDist * 0.038);
-          // #2 CS Tana Zonalari: Bosh (Headshot 3.25x), Gavda (1.0x), Oyoq (0.72x)
+          // #2 CS Tana Zonalari: Bosh (Headshot 2.75x), Gavda (1.0x), Oyoq (0.72x)
           let zoneMult = 1.0;
           let killBadge = w.isMelee ? '🔪' : '💥';
 
           const isHeadshotHit = !w.isMelee && bestEnemyZone === 'head';
           if (isHeadshotHit) {
-            zoneMult = 3.25; // Haqiqiy CS2 1-Tap HEADSHOT!
+            zoneMult = 2.75; // Haqiqiy CS2 HEADSHOT!
             killBadge = '🎯HS';
             playSound('headshot');
           } else if (bestEnemyZone === 'leg') {
@@ -4197,6 +4224,7 @@
               bestEnemy.dyingProgress = 0.05;
               bestEnemy.deaths = (bestEnemy.deaths || 0) + 1;
               player.kills++;
+              player.killStreak = (player.killStreak || 0) + 1;
               if (w && w.name) {
                 if (!userStats.weaponStats || typeof userStats.weaponStats !== 'object') userStats.weaponStats = {};
                 if (!userStats.weaponStats[w.name]) userStats.weaponStats[w.name] = { shots: 0, kills: 0 };
@@ -4615,9 +4643,9 @@
           csBannerHideAt = 0;
         }
 
-        // Jon kam qolganda (<= 45% HP) haqiqiy "Duk-Duk, Duk-Duk" yurak urishi tovushi!
+        // Jon kam qolganda (<= 30% HP) haqiqiy "Duk-Duk, Duk-Duk" yurak urishi tovushi!
         const lowHpBanner = document.getElementById('lowHpWarningBanner');
-        if (player.health > 0 && player.health <= 45) {
+        if (player.health > 0 && player.health <= 30) {
           if (lowHpBanner) lowHpBanner.classList.remove('hidden');
           const beatInterval = player.health <= 22 ? 580 : 820;
           if (now - (player.lastHeartbeatTime || 0) > beatInterval) {
@@ -4706,34 +4734,116 @@
           g.vy *= 0.94;
 
           if (g.timer <= 0) {
+            const ownerTeam = g.ownerTeam || player.team;
+            const isBotG = !!g.isBot;
+            const relAngG = Math.atan2(g.y - player.y, g.x - player.x) - player.angle;
+            const stereoPanG = Math.sin(relAngG);
+            const distToPlayer = Math.hypot(g.x - player.x, g.y - player.y);
+            const distGainG = Math.max(0.28, 1 - distToPlayer / 14);
+
             if (g.kind === 'he') {
-              playSound('grenade_explode');
-              showCsEventBanner('💥 HE GRANATA PORTLADI!');
+              playSound('grenade_explode', stereoPanG, distGainG);
+              if (!isBotG) {
+                showCsEventBanner('💥 HE GRANATA PORTLADI!');
+              } else if (distToPlayer < 6.5) {
+                showCsEventBanner('💥 DUSHMAN GRANATASI PORTLADI!');
+              }
               combatants.forEach(c => {
-                if (!c.alive || c.dyingProgress > 0 || c.team === player.team) return;
+                if (!c.alive || c.dyingProgress > 0 || c.team === ownerTeam) return;
                 const d = Math.hypot(c.x - g.x, c.y - g.y);
                 if (d < 3.8) {
-                  const dmg = Math.round(115 * (1 - d / 4.2));
+                  const dmg = Math.round(110 * (1 - d / 4.2));
                   c.health -= dmg;
                   c.hitFlash = 8;
+                  c.lastHitTime = now;
+                  c.lastHitByX = g.x;
+                  c.lastHitByY = g.y;
                   if (c.health <= 0) {
                     c.dyingProgress = 0.05;
                     c.deaths = (c.deaths || 0) + 1;
-                    player.kills++;
-                    myProfile.kills = player.kills;
-                    if (player.team === 'red') redScore++; else blueScore++;
-                    addKillFeed(myProfile.name, player.team, c.name, c.team, '💣');
+                    if (!isBotG) {
+                      player.kills++;
+                      player.killStreak = (player.killStreak || 0) + 1;
+                      myProfile.kills = player.kills;
+                    } else if (g.ownerId) {
+                      const thrower = combatants.find(b => b.id === g.ownerId);
+                      if (thrower) thrower.kills = (thrower.kills || 0) + 1;
+                    }
+                    if (ownerTeam === 'red') redScore++; else blueScore++;
+                    addKillFeed(g.ownerName || myProfile.name, ownerTeam, c.name, c.team, '💣');
                     checkMatchWinCondition();
                   }
                 }
               });
+
+              if (ownerTeam !== player.team && now >= player.spawnShieldUntil) {
+                const dp = distToPlayer;
+                if (dp < 3.5 && (dp < 1.45 || hasLineOfSight(g.x, g.y, player.x, player.y))) {
+                  const dmg = Math.round(76 * (1 - dp / 3.8));
+                  if (player.armor > 0) {
+                    const absorb = Math.min(player.armor, Math.ceil(dmg * 0.45));
+                    player.armor -= absorb;
+                    player.health = Math.max(0, player.health - (dmg - absorb));
+                  } else {
+                    player.health = Math.max(0, player.health - dmg);
+                  }
+                  player.hitShake = 1.45;
+                  player.taggedSlowUntil = now + 500;
+                  if (!player.damageArcs) player.damageArcs = [];
+                  player.damageArcs.push({
+                    worldAngle: Math.atan2(g.y - player.y, g.x - player.x),
+                    ttl: 28,
+                    maxTtl: 28
+                  });
+                  playSound('hurt', stereoPanG, 1.0);
+                  triggerDamageFlash();
+                  updateHud();
+                  if (player.health <= 0) {
+                    handlePlayerDeath(g.ownerName || 'Dushman', ownerTeam, '💣');
+                  }
+                }
+              }
             } else {
-              playSound('smoke_hiss');
+              playSound('smoke_hiss', stereoPanG, distGainG);
               smokeClouds.push({ x: g.x, y: g.y, ttl: 420 }); // ~7 soniya tutun pardasi (#30)
             }
             activeGrenades.splice(i, 1);
           }
         }
+      }
+
+      function handlePlayerDeath(killerName, killerTeam, badge = '💥') {
+        const kTeam = killerTeam || (player.team === 'red' ? 'blue' : 'red');
+        player.deaths++;
+        myProfile.deaths = player.deaths;
+        player.killStreak = 0;
+        if (kTeam === 'red') redScore++;
+        else blueScore++;
+        addKillFeed(killerName || 'Dushman', kTeam, myProfile.name, player.team, badge);
+        player.health = 100;
+        player.armor = 50;
+        player.heGrenades = 2;
+        player.smokeGrenades = 1;
+        updateGrenadeLabels();
+        const pSp = findSafeSpawnPoint(player.team, true);
+        player.x = pSp.x;
+        player.y = pSp.y;
+        player.angle = findOpenCorridorAngle(pSp.x, pSp.y);
+        player.angVel = 0;
+        player.pitch = 0;
+        const rw = WEAPONS[selectedWeaponIdx] || WEAPONS[0];
+        if (rw && !rw.isMelee) {
+          player.magAmmo = rw.magSize;
+          player.reserveAmmo = rw.reserveAmmo || rw.reserve || (rw.magSize * 3);
+        }
+        keys.fire = false;
+        player.isReloadPending = false;
+        player.reloadingUntil = 0;
+        player.spawnShieldUntil = performance.now() + 3200;
+        player.respawnFireLockUntil = performance.now() + 450;
+        showToast(`${killerName || 'Dushman'} sizni yo'q qildi!`, badge === '💣' ? '💣' : '💀');
+        updateHud();
+        checkMatchWinCondition();
       }
 
       function findOpenCorridorAngle(x, y) {
@@ -4825,10 +4935,36 @@
         let anyEnemyNear = false;
         let _botIdx = 0;
 
+        // Match ichidagi Dinamik Kuchayish (DDA — O(1))
+        const myTeamScore = player.team === 'red' ? redScore : blueScore;
+        const enemyTeamScore = player.team === 'red' ? blueScore : redScore;
+        const scoreLead = Math.max(0, myTeamScore - enemyTeamScore);
+        const kdRatio = (player.kills || 0) / Math.max(1, player.deaths || 1);
+        const streak = player.killStreak || 0;
+        const enemyDda = Math.max(
+          0.22,
+          Math.min(1.0, 0.24 + scoreLead * 0.055 + Math.max(0, streak - 1) * 0.095 + Math.max(0, kdRatio - 1.1) * 0.14)
+        );
+        if (enemyDda >= 0.78 && (window._ddaAnnouncedTier || 0) < 2) {
+          window._ddaAnnouncedTier = 2;
+          showCsEventBanner('🔥 RAQIB JAMOA: PRO TAKTIKA FAOL!');
+        } else if (enemyDda >= 0.50 && (window._ddaAnnouncedTier || 0) < 1) {
+          window._ddaAnnouncedTier = 1;
+          showCsEventBanner('⚡ RAQIB JAMOA KUCHAYDI: ELITA REJIMI!');
+        }
+
         combatants.forEach(c => {
           const thisBotIdx = _botIdx++;
           if (!c.aiRole) c.aiRole = ['tactician', 'ambusher', 'rusher'][thisBotIdx % 3];
           if (!c.aiState) c.aiState = 'advance';
+          if (c.heGrenades === undefined) {
+            c.heGrenades = 1;
+            c.smokeGrenades = 1;
+            c.nextGrenadeAt = now + 3500 + Math.random() * 4000;
+            c._lastSeenX = null;
+            c._lastSeenY = null;
+            c._lastSeenAt = 0;
+          }
 
           // #9 Polga qulab tushish (Ragdoll/Death) animatsiyasi
           if (c.dyingProgress > 0) {
@@ -4866,6 +5002,12 @@
               c._navStep = null;
               c._nextNavCalc = 0;
               c._nextCoverSearch = 0;
+              c.heGrenades = 1;
+              c.smokeGrenades = 1;
+              c.nextGrenadeAt = now + 3500 + Math.random() * 4000;
+              c._lastSeenX = null;
+              c._lastSeenY = null;
+              c._lastSeenAt = 0;
             }
             return;
           }
@@ -4927,14 +5069,30 @@
           c.aimTargetX = targetX;
           c.aimTargetY = targetY;
 
+          const isEnemyBot = (c.team !== player.team);
+          if (isEnemyBot && targetIsPlayer && canSeeTarget) {
+            window._enemyIntel = { x: player.x, y: player.y, time: now };
+            c._lastSeenX = player.x;
+            c._lastSeenY = player.y;
+            c._lastSeenAt = now;
+          }
+
+          let navTargetX = targetX;
+          let navTargetY = targetY;
+          if (isEnemyBot && !canSeeTarget && window._enemyIntel && (now - window._enemyIntel.time < 3800)) {
+            navTargetX = window._enemyIntel.x;
+            navTargetY = window._enemyIntel.y;
+          }
+
           const botBoost = 1 + (userStats.botLevel - 1) * 0.12;
-          const speed = 1.82 * botBoost * dt;
+          const speed = (isEnemyBot ? (1.92 + enemyDda * 0.46) : 1.84) * botBoost * dt;
           if (!c.preferredDist) c.preferredDist = 3.2 + (thisBotIdx % 4) * 0.65;
 
           // --- 5 HOLATLI TAKTIK HOLAT O'TISHLARI ---
           const recentlyHit = (now - (c.lastHitTime || 0)) < 1200;
           const twoRecentHits = (c.recentHits || 0) >= 2 && (now - (c.lastHitTime || 0)) < 900 && c.health < 82;
-          const needRetreat = (c.health <= 58 && (canSeeTarget || recentlyHit)) || twoRecentHits;
+          const retreatHpThresh = isEnemyBot ? (58 + Math.round(enemyDda * 10)) : 58;
+          const needRetreat = (c.health <= retreatHpThresh && (canSeeTarget || recentlyHit)) || twoRecentHits;
 
           if (needRetreat) {
             if (c.aiState !== 'peek_hide' && c.aiState !== 'retreat_cover') {
@@ -4949,9 +5107,9 @@
               }
             }
           } else if (c.aiState === 'retreat_cover') {
-            if (c.health > 62 && canSeeTarget) {
+            if (c.health > retreatHpThresh + 4 && canSeeTarget) {
               c.aiState = 'engage';
-            } else if (c.health > 62 && !recentlyHit) {
+            } else if (c.health > retreatHpThresh + 4 && !recentlyHit) {
               c.aiState = 'advance';
             }
           }
@@ -4992,7 +5150,7 @@
               c._ambushReacted = false;
             }
           } else if (c.aiState !== 'retreat_cover') {
-            if (canSeeTarget && c.health > 58) {
+            if (canSeeTarget && c.health > retreatHpThresh) {
               c.aiState = 'engage';
               if ((c.aiRole === 'tactician' || c.aiRole === 'ambusher') && now > (c._nextCoverSearch || 0) && targetX !== null) {
                 c._nextCoverSearch = now + 650;
@@ -5017,6 +5175,64 @@
                     c._ambushReacted = false;
                   }
                 }
+              }
+            }
+          }
+
+          // --- BOTLARNING HE GRANATA VA TUTUN (SMOKE) TASHLASHI ---
+          if (!isMpMatch && now > (c.nextGrenadeAt || 0) && now - (window._lastBotGrenadeTime || 0) > 4200) {
+            const relAngG = Math.atan2(c.y - player.y, c.x - player.x) - player.angle;
+            const stereoPanG = Math.sin(relAngG);
+            const distGainG = Math.max(0.22, 1 - Math.hypot(c.x - player.x, c.y - player.y) / 12);
+
+            const heLastSeenDist = (c._lastSeenX != null) ? Math.hypot(c._lastSeenX - c.x, c._lastSeenY - c.y) : 99;
+            const shouldThrowHiddenHe = isEnemyBot && (c.heGrenades || 0) > 0 && !canSeeTarget && c._lastSeenX != null && (now - (c._lastSeenAt || 0) < 2600) && heLastSeenDist >= 2.6 && heLastSeenDist <= 7.6;
+            const shouldThrowOpenHe = isEnemyBot && (c.heGrenades || 0) > 0 && canSeeTarget && targetIsPlayer && bestDist >= 3.4 && bestDist <= 7.6 && Math.random() < (0.018 + enemyDda * 0.032);
+
+            if (shouldThrowHiddenHe || shouldThrowOpenHe) {
+              const tx = shouldThrowHiddenHe ? c._lastSeenX : targetX;
+              const ty = shouldThrowHiddenHe ? c._lastSeenY : targetY;
+              const ang = Math.atan2(ty - c.y, tx - c.x);
+              activeGrenades.push({
+                kind: 'he',
+                x: c.x + Math.cos(ang) * 0.4,
+                y: c.y + Math.sin(ang) * 0.4,
+                vx: Math.cos(ang) * 5.4,
+                vy: Math.sin(ang) * 5.4,
+                timer: 1.35,
+                ownerTeam: c.team,
+                ownerName: c.name,
+                ownerId: c.id,
+                isBot: true
+              });
+              c.heGrenades--;
+              c.nextGrenadeAt = now + 9500;
+              window._lastBotGrenadeTime = now;
+              if (Math.hypot(tx - player.x, ty - player.y) < 6.0 || (shouldThrowOpenHe && targetIsPlayer)) {
+                showToast('⚠️ Dushman granata otdi! Qoching!', '💣');
+              }
+              playSound('knife_slash', stereoPanG, distGainG);
+            } else if ((c.smokeGrenades || 0) > 0 && targetX !== null) {
+              const shouldThrowRetreatSmoke = (c.aiState === 'retreat_cover' && c.health <= 58 && canSeeTarget);
+              const shouldThrowPushSmoke = (isEnemyBot && canSeeTarget && bestDist >= 3.8 && bestDist <= 7.5 && enemyDda >= 0.45 && Math.random() < 0.025);
+              if (shouldThrowRetreatSmoke || shouldThrowPushSmoke) {
+                const ang = Math.atan2(targetY - c.y, targetX - c.x);
+                activeGrenades.push({
+                  kind: 'smoke',
+                  x: c.x + Math.cos(ang) * 0.45,
+                  y: c.y + Math.sin(ang) * 0.45,
+                  vx: Math.cos(ang) * 4.4,
+                  vy: Math.sin(ang) * 4.4,
+                  timer: 0.55,
+                  ownerTeam: c.team,
+                  ownerName: c.name,
+                  ownerId: c.id,
+                  isBot: true
+                });
+                c.smokeGrenades--;
+                c.nextGrenadeAt = now + 10000;
+                window._lastBotGrenadeTime = now;
+                playSound('knife_slash', stereoPanG, distGainG);
               }
             }
           }
@@ -5098,12 +5314,12 @@
               c.moveDirAngle = Math.atan2(targetY - c.y, targetX - c.x);
             }
           } else if (c.aiState === 'ambush') {
-            if (targetX !== null) {
+            if (navTargetX !== null) {
               if (!c._navStep || now > (c._nextNavCalc || 0)) {
                 c._nextNavCalc = now + 320;
-                c._navStep = findNextStepBFS(c.x, c.y, targetX, targetY);
+                c._navStep = findNextStepBFS(c.x, c.y, navTargetX, navTargetY);
               }
-              const lookPt = canSeeTarget ? { x: targetX, y: targetY } : (c._navStep || { x: targetX, y: targetY });
+              const lookPt = canSeeTarget ? { x: targetX, y: targetY } : (c._navStep || { x: navTargetX, y: navTargetY });
               c.moveDirAngle = Math.atan2(lookPt.y - c.y, lookPt.x - c.x);
             }
           } else if (c.aiState === 'engage' && targetX !== null) {
@@ -5131,11 +5347,11 @@
                 moveForwardY += Math.sin(strafeAngle) * speed * strafeMult;
               }
             }
-          } else if (targetX !== null) {
-            // 'advance': Throttled BFS (320 ms) + yon koridordan aylanish (Flank)
+          } else if (navTargetX !== null) {
+            // 'advance': Throttled BFS (320 ms) + Squad Intel + yon koridordan aylanish (Flank)
             if (!c._navStep || now > (c._nextNavCalc || 0)) {
               c._nextNavCalc = now + 320;
-              c._navStep = findNextStepBFS(c.x, c.y, targetX, targetY);
+              c._navStep = findNextStepBFS(c.x, c.y, navTargetX, navTargetY);
               if ((c.aiRole === 'tactician' || c.aiRole === 'ambusher') && c._navStep) {
                 const allyBlocking = combatants.some(o =>
                   o !== c && o.alive && o.dyingProgress === 0 && o.team === c.team &&
@@ -5165,23 +5381,44 @@
             moveForwardY = Math.sin(c.moveDirAngle) * speed;
           }
 
+          // Aktiv HE granatadan qochish (3.6m radiusda)
+          let evadeG = null;
+          let evadeGD = 99;
+          for (let gi = 0; gi < activeGrenades.length; gi++) {
+            const g = activeGrenades[gi];
+            if (g.kind === 'he' && (g.ownerTeam || player.team) !== c.team) {
+              const gd = Math.hypot(c.x - g.x, c.y - g.y);
+              if (gd < 3.6 && gd < evadeGD) {
+                evadeGD = gd;
+                evadeG = g;
+              }
+            }
+          }
+          if (evadeG) {
+            const awayAng = evadeGD > 0.01 ? Math.atan2(c.y - evadeG.y, c.x - evadeG.x) : (c.angle + Math.PI);
+            c.moveDirAngle = awayAng;
+            moveForwardX = Math.cos(awayAng) * speed * 1.32;
+            moveForwardY = Math.sin(awayAng) * speed * 1.32;
+          }
+
           let repulseX = 0;
           let repulseY = 0;
           const distToPlayer = Math.hypot(c.x - player.x, c.y - player.y);
           if (distToPlayer < 1.45 && distToPlayer > 0.01) {
-            repulseX += ((c.x - player.x) / distToPlayer) * 2.6;
-            repulseY += ((c.y - player.y) / distToPlayer) * 2.6;
+            const pPush = (c.team === player.team && distToPlayer < 1.35) ? 4.5 : 2.6;
+            repulseX += ((c.x - player.x) / distToPlayer) * pPush;
+            repulseY += ((c.y - player.y) / distToPlayer) * pPush;
           }
-          // Sherik bot o'yinchi nishon chizig'ini to'sib qo'ysa, darhol yon tomonga chetga chiqadi
-          if (c.team === player.team && distToPlayer > 0.45 && distToPlayer < 4.5) {
+          // Sherik bot bazada va tor koridorda yo'lni to'sib qo'ymasligi
+          if (c.team === player.team && distToPlayer > 0.25 && distToPlayer < 2.4) {
             let angDiff = Math.atan2(c.y - player.y, c.x - player.x) - player.angle;
             while (angDiff < -Math.PI) angDiff += Math.PI * 2;
             while (angDiff > Math.PI) angDiff -= Math.PI * 2;
-            if (Math.abs(angDiff) < 0.34) {
+            if (Math.abs(angDiff) < 0.68) {
               const sideSign = angDiff >= 0 ? 1 : -1;
               const dodgeAngle = player.angle + (Math.PI / 2) * sideSign;
-              repulseX += Math.cos(dodgeAngle) * 3.8;
-              repulseY += Math.sin(dodgeAngle) * 3.8;
+              repulseX += Math.cos(dodgeAngle) * 5.2;
+              repulseY += Math.sin(dodgeAngle) * 5.2;
             }
           }
           // Botlar orasida qat'iy masofa saqlash
@@ -5217,13 +5454,17 @@
             c.walkCycle += actualBotMoved * 5.8;
           }
 
-          // --- REALISTIK BOT OTISHISHI (2-3 O'QLI QISQA SERIYA + ADOLATLI ANIQLIK) ---
-          const botFireDelay = Math.max(920, 1700 - (userStats.botLevel - 1) * 180);
+          // --- REALISTIK BOT OTISHISHI (ADAPTIV PRO DDA SERIYALARI VA ADOLATLI ANIQLIK) ---
+          const botFireDelay = isEnemyBot
+            ? Math.max(460, Math.round(1180 - (userStats.botLevel - 1) * 100 - enemyDda * 560))
+            : Math.max(920, 1700 - (userStats.botLevel - 1) * 180);
           if (canSeeTarget && (c.burstLeft || 0) <= 0 && now - (c.lastAttack || 0) > botFireDelay) {
             if (c.aiState === 'retreat_cover' && Math.random() > 0.25) {
               c.lastAttack = now - botFireDelay * 0.45;
             } else {
-              c.burstLeft = 2 + (Math.random() < 0.45 ? 1 : 0);
+              c.burstLeft = isEnemyBot
+                ? (2 + (Math.random() < (0.42 + enemyDda * 0.45) ? 1 : 0) + (enemyDda >= 0.72 && Math.random() < 0.42 ? 1 : 0))
+                : (2 + (Math.random() < 0.45 ? 1 : 0));
               c._nextBurstShotAt = now;
               c.lastAttack = now;
             }
@@ -5231,7 +5472,7 @@
 
           if (canSeeTarget && (c.burstLeft || 0) > 0 && now >= (c._nextBurstShotAt || 0)) {
             c.burstLeft--;
-            c._nextBurstShotAt = now + 195;
+            c._nextBurstShotAt = now + (isEnemyBot ? Math.round(185 - enemyDda * 45) : 195);
             c.lastAttack = now;
             c.muzzleFlash = 4;
             if (c.aiState === 'peek_out') c._peekFired = true;
@@ -5252,14 +5493,16 @@
             if (targetIsPlayer) {
               if (now >= player.spawnShieldUntil) {
                 const hitChance = Math.max(
-                  0.32,
+                  0.42,
                   Math.min(
-                    0.82,
-                    0.78 - bestDist * 0.045 - (player.currentSpeed > 0.5 ? 0.14 : 0) + (c.aiState === 'ambush' ? 0.12 : 0)
+                    0.91,
+                    0.72 + enemyDda * 0.19 - bestDist * 0.036 - (player.currentSpeed > 0.5 ? 0.11 : 0) + (c.aiState === 'ambush' || c.aiState === 'peek_out' ? 0.13 : 0)
                   )
                 );
                 if (Math.random() <= hitChance) {
-                  const dmg = Math.floor(7 + Math.random() * 7);
+                  const isBotHs = Math.random() < (0.09 + enemyDda * 0.14);
+                  const baseDmg = (8 + enemyDda * 4.5) + Math.random() * 5.5;
+                  const dmg = Math.round(baseDmg * (isBotHs ? 1.45 : 1.0));
                   if (player.armor > 0) {
                     const absorb = Math.min(player.armor, Math.ceil(dmg * 0.50));
                     player.armor -= absorb;
@@ -5268,7 +5511,7 @@
                     player.health = Math.max(0, player.health - dmg);
                   }
                   player.taggedSlowUntil = now + 450;
-                  player.hitShake = 1.0;
+                  player.hitShake = isBotHs ? 1.35 : 1.0;
                   if (!player.damageArcs) player.damageArcs = [];
                   player.damageArcs.push({
                     worldAngle: Math.atan2(c.y - player.y, c.x - player.x),
@@ -5288,31 +5531,7 @@
                   if (player.health <= 0) {
                     c.kills = (c.kills || 0) + 1;
                     c.burstLeft = 0;
-                    player.deaths++;
-                    myProfile.deaths = player.deaths;
-                    if (c.team === 'red') redScore++;
-                    else blueScore++;
-                    addKillFeed(c.name, c.team, myProfile.name, player.team, '💥');
-                    player.health = 100;
-                    player.armor = 50;
-                    const pSp = findSafeSpawnPoint(player.team, true);
-                    player.x = pSp.x;
-                    player.y = pSp.y;
-                    player.angle = findOpenCorridorAngle(pSp.x, pSp.y);
-                    player.angVel = 0;
-                    player.pitch = 0;
-                    const rw = WEAPONS[selectedWeaponIdx] || WEAPONS[0];
-                    if (rw && !rw.isMelee) {
-                      player.magAmmo = rw.magSize;
-                      player.reserveAmmo = rw.reserveAmmo || rw.reserve || (rw.magSize * 3);
-                    }
-                    keys.fire = false;
-                    player.isReloadPending = false;
-                    player.reloadingUntil = 0;
-                    player.spawnShieldUntil = performance.now() + 3200;
-                    player.respawnFireLockUntil = performance.now() + 450;
-                    showToast(`${c.name} sizni yo'q qildi!`, '💀');
-                    checkMatchWinCondition();
+                    handlePlayerDeath(c.name, c.team, isBotHs ? '🎯HS' : '💥');
                   }
                 }
               }
@@ -5733,17 +5952,17 @@
         window._mainThreeRenderer = threeRenderer;
 
         threeScene = new THREE.Scene();
-        threeScene.background = new THREE.Color(0x050404);
-        threeScene.fog = new THREE.FogExp2(0x040302, 0.145);
+        threeScene.background = new THREE.Color(0x09080c);
+        threeScene.fog = new THREE.FogExp2(0x08070b, 0.094);
 
         threeCamera = new THREE.PerspectiveCamera(75, 1, 0.03, 28);
 
-        // Xira ambient yorug'lik (qorong'u burchaklar uchun)
-        const ambLight = new THREE.AmbientLight(0x2f2318, 0.62);
+        // Realistik ambient yorug'lik (qorong'u koridorlarda ham siluet ko'rinishi uchun)
+        const ambLight = new THREE.AmbientLight(0x4a3d33, 0.96);
         threeScene.add(ambLight);
 
-        // O'yinchining o'q uzganda yonadigan dinamik yorug'ligi va xira fonari
-        gunPointLight = new THREE.PointLight(0xffaa44, 0.44, 6.8, 2.0);
+        // O'yinchining o'q uzganda yonadigan dinamik yorug'ligi va fonari (0 yangi chiroq)
+        gunPointLight = new THREE.PointLight(0xffb45c, 0.58, 8.6, 1.85);
         threeScene.add(gunPointLight);
 
         // 2-OPTIMIZATSIYA: Persistent Muzzle Light (Shader recompilation oldini olish uchun doimiy sahnada qoladi)
@@ -8259,6 +8478,10 @@
         player.isReloadPending = false;
         player.heGrenades = 2;
         player.smokeGrenades = 1;
+        player.killStreak = 0;
+        window._ddaAnnouncedTier = 0;
+        window._enemyIntel = null;
+        window._lastBotGrenadeTime = 0;
         player.spawnShieldUntil = performance.now() + 2600;
         updateGrenadeLabels();
 
@@ -8419,6 +8642,10 @@
               keys.fire = false;
               player.isReloadPending = false;
               player.reloadingUntil = 0;
+              player.heGrenades = 2;
+              player.smokeGrenades = 1;
+              player.killStreak = 0;
+              updateGrenadeLabels();
               player.spawnShieldUntil = performance.now() + 2600;
               player.respawnFireLockUntil = performance.now() + 450;
               updateHud();
