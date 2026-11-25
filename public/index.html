@@ -3989,15 +3989,22 @@
 
         const gx0 = player.x + Math.cos(player.angle) * 0.4;
         const gy0 = player.y + Math.sin(player.angle) * 0.4;
-        const gvx = Math.cos(player.angle) * 5.8;
-        const gvy = Math.sin(player.angle) * 5.8;
+        const gvx = Math.cos(player.angle) * 6.2;
+        const gvy = Math.sin(player.angle) * 6.2;
         activeGrenades.push({
           kind: kind,
           x: gx0,
           y: gy0,
           vx: gvx,
           vy: gvy,
-          timer: 1.15, // 1.15 soniyadan so'ng portlaydi!
+          z: 0.94,
+          vz: 2.35 + Math.max(-0.7, Math.min(1.8, (player.pitch || 0) * 4.5)),
+          rotX: 0,
+          rotZ: 0,
+          spinX: 10.5,
+          spinZ: 6.4,
+          bounces: 0,
+          timer: kind === 'smoke' ? 0.95 : 1.35,
           ownerTeam: player.team,
           ownerName: myProfile.name,
           ownerId: 'player',
@@ -4735,16 +4742,60 @@
           }
         });
 
-        // #13, #30 Uchayotgan granatalarni yangilash
+        // #13, #30 Parabolik granata fizikasi (gravitatsiya, sakrash, devordan qaytish va aylanish)
         for (let i = activeGrenades.length - 1; i >= 0; i--) {
           const g = activeGrenades[i];
           g.timer -= dt;
+          if (typeof g.z !== 'number') {
+            g.z = 0.90; g.vz = 2.0; g.rotX = 0; g.rotZ = 0; g.spinX = 8.5; g.spinZ = 5.2; g.bounces = 0;
+          }
+          g.vz -= 9.8 * dt;
+          g.z += g.vz * dt;
+          if (g.z > 1.82) {
+            g.z = 1.82;
+            g.vz = -Math.abs(g.vz) * 0.35;
+          }
           const gx = g.x + g.vx * dt;
           const gy = g.y + g.vy * dt;
-          if (!isWall(gx, g.y)) g.x = gx; else g.vx *= -0.45;
-          if (!isWall(g.x, gy)) g.y = gy; else g.vy *= -0.45;
-          g.vx *= 0.94;
-          g.vy *= 0.94;
+          let hitWallNow = false;
+          if (!isWall(gx, g.y)) g.x = gx; else { g.vx *= -0.48; g.vy *= 0.82; hitWallNow = true; }
+          if (!isWall(g.x, gy)) g.y = gy; else { g.vy *= -0.48; g.vx *= 0.82; hitWallNow = true; }
+
+          if (g.z <= 0.085) {
+            g.z = 0.085;
+            if (Math.abs(g.vz) > 0.65) {
+              g.vz = -g.vz * 0.44;
+              g.vx *= 0.72;
+              g.vy *= 0.72;
+              g.spinX *= 0.72;
+              g.spinZ *= 0.72;
+              g.bounces = (g.bounces || 0) + 1;
+              if (g.bounces <= 2) {
+                const relB = Math.atan2(g.y - player.y, g.x - player.x) - player.angle;
+                const dB = Math.hypot(g.x - player.x, g.y - player.y);
+                playSound('shell_drop', Math.sin(relB), Math.max(0.18, 1 - dB / 10) * 0.8);
+              }
+            } else {
+              g.vz = 0;
+              const rollDrag = Math.pow(0.84, dt * 60);
+              g.vx *= rollDrag;
+              g.vy *= rollDrag;
+              g.spinX *= rollDrag;
+              g.spinZ *= rollDrag;
+            }
+          } else {
+            const airDrag = Math.pow(0.988, dt * 60);
+            g.vx *= airDrag;
+            g.vy *= airDrag;
+          }
+          if (hitWallNow && (g.bounces || 0) < 3) {
+            g.bounces = (g.bounces || 0) + 1;
+            const relW = Math.atan2(g.y - player.y, g.x - player.x) - player.angle;
+            const dW = Math.hypot(g.x - player.x, g.y - player.y);
+            playSound('shell_drop', Math.sin(relW), Math.max(0.18, 1 - dW / 10) * 0.75);
+          }
+          g.rotX += (g.spinX || 0) * dt;
+          g.rotZ += (g.spinZ || 0) * dt;
 
           if (g.timer <= 0) {
             const ownerTeam = g.ownerTeam || player.team;
@@ -5057,8 +5108,10 @@
             targetY = player.y;
             targetIsPlayer = true;
 
-            if (dPlayer < 4.2) {
+            if ((dPlayer < 4.2 && losPlayer) || dPlayer < 1.85) {
               anyEnemyNear = true;
+            }
+            if (dPlayer < 4.2) {
               let angleFromPlayer = Math.atan2(c.y - player.y, c.x - player.x) - player.angle;
               while (angleFromPlayer < -Math.PI) angleFromPlayer += Math.PI * 2;
               while (angleFromPlayer > Math.PI) angleFromPlayer -= Math.PI * 2;
@@ -5220,6 +5273,13 @@
                 y: c.y + Math.sin(ang) * 0.4,
                 vx: Math.cos(ang) * 5.4,
                 vy: Math.sin(ang) * 5.4,
+                z: 0.92,
+                vz: 2.15,
+                rotX: 0,
+                rotZ: 0,
+                spinX: 9.2,
+                spinZ: 5.8,
+                bounces: 0,
                 timer: 1.35,
                 ownerTeam: c.team,
                 ownerName: c.name,
@@ -5244,6 +5304,13 @@
                   y: c.y + Math.sin(ang) * 0.45,
                   vx: Math.cos(ang) * 4.4,
                   vy: Math.sin(ang) * 4.4,
+                  z: 0.92,
+                  vz: 2.15,
+                  rotX: 0,
+                  rotZ: 0,
+                  spinX: 9.2,
+                  spinZ: 5.8,
+                  bounces: 0,
                   timer: 0.55,
                   ownerTeam: c.team,
                   ownerName: c.name,
@@ -5349,9 +5416,9 @@
             if (bestDist > stopDist) {
               moveForwardX = Math.cos(c.moveDirAngle) * speed;
               moveForwardY = Math.sin(c.moveDirAngle) * speed;
-            } else if (bestDist < 2.6) {
-              moveForwardX = -Math.cos(c.moveDirAngle) * speed * 0.65;
-              moveForwardY = -Math.sin(c.moveDirAngle) * speed * 0.65;
+            } else if (bestDist < 2.4) {
+              moveForwardX = -Math.cos(c.moveDirAngle) * speed * 0.82;
+              moveForwardY = -Math.sin(c.moveDirAngle) * speed * 0.82;
             }
             if (bestDist <= 8.5) {
               if (c.hitFlash >= 3) {
@@ -5426,7 +5493,7 @@
           let repulseY = 0;
           const distToPlayer = Math.hypot(c.x - player.x, c.y - player.y);
           if (distToPlayer < 1.45 && distToPlayer > 0.01) {
-            const pPush = (c.team === player.team && distToPlayer < 1.35) ? 4.5 : 2.6;
+            const pPush = (c.team === player.team) ? (distToPlayer < 1.35 ? 4.5 : 2.6) : 3.8;
             repulseX += ((c.x - player.x) / distToPlayer) * pPush;
             repulseY += ((c.y - player.y) / distToPlayer) * pPush;
           }
@@ -5442,11 +5509,14 @@
               repulseY += Math.sin(dodgeAngle) * 5.2;
             }
           }
-          // Botlar orasida qat'iy masofa saqlash (1m tor koridor uchun 0.92m)
-          combatants.forEach(other => {
+          // Botlar orasida qat'iy masofa va bir katakda navbat saqlash
+          const myCellX = Math.floor(c.x);
+          const myCellY = Math.floor(c.y);
+          let waitInCellQueue = false;
+          combatants.forEach((other, otherIdx) => {
             if (other === c || !other.alive || other.dyingProgress > 0) return;
             const d = Math.hypot(c.x - other.x, c.y - other.y);
-            const minSep = 0.92;
+            const minSep = (other.team === c.team) ? 1.08 : 0.92;
             if (d < minSep) {
               const nx = d > 0.001 ? (c.x - other.x) / d : Math.cos(thisBotIdx * 2.1 + now * 0.003);
               const ny = d > 0.001 ? (c.y - other.y) / d : Math.sin(thisBotIdx * 2.1 + now * 0.003);
@@ -5454,7 +5524,14 @@
               repulseX += nx * push;
               repulseY += ny * push;
             }
+            if (other.team === c.team && otherIdx < thisBotIdx && myCellX === Math.floor(other.x) && myCellY === Math.floor(other.y)) {
+              waitInCellQueue = true;
+            }
           });
+          if (waitInCellQueue) {
+            moveForwardX *= 0.3;
+            moveForwardY *= 0.3;
+          }
 
           const stepX = moveForwardX + repulseX * dt;
           const stepY = moveForwardY + repulseY * dt;
@@ -6679,13 +6756,84 @@
       }
 
       let _grenadeMeshPool = null;
-      let _heGrenadeMat = null;
-      let _smokeGrenadeMat = null;
+      let _heFuseMat = null;
+      let _m67Assets = null;
+      let _m18Assets = null;
       let _explFlashPool = null;
       let _smokeMeshPool = null;
       let _smokeSpriteTex = null;
       let _explSpriteTex = null;
+      let _explRingTex = null;
       window._activeExplosions = [];
+
+      function buildM67HeModel() {
+        if (!_m67Assets) {
+          _m67Assets = {
+            bodyGeo: mergeNonIndexedParts([
+              { geo: new THREE.SphereGeometry(0.078, 12, 10) },
+              { geo: new THREE.TorusGeometry(0.076, 0.009, 6, 12), rx: Math.PI / 2, ty: 0.018 },
+              { geo: new THREE.TorusGeometry(0.076, 0.009, 6, 12), rx: Math.PI / 2, ty: -0.022 }
+            ]),
+            steelGeo: mergeNonIndexedParts([
+              { geo: new THREE.CylinderGeometry(0.022, 0.026, 0.040, 8), ty: 0.088 },
+              { geo: new THREE.BoxGeometry(0.044, 0.016, 0.028), ty: 0.110 },
+              { geo: new THREE.BoxGeometry(0.018, 0.092, 0.012), tx: 0.068, ty: 0.048, rz: -0.22 },
+              { geo: new THREE.TorusGeometry(0.020, 0.004, 6, 10), tx: -0.032, ty: 0.104 }
+            ]),
+            bandGeo: new THREE.TorusGeometry(0.077, 0.008, 6, 12),
+            fuseGeo: new THREE.SphereGeometry(0.017, 6, 6),
+            bodyMat: new THREE.MeshStandardMaterial({ color: 0x3b4d2b, roughness: 0.56, metalness: 0.28 }),
+            steelMat: new THREE.MeshStandardMaterial({ color: 0x8b95a5, roughness: 0.34, metalness: 0.78 }),
+            bandMat: new THREE.MeshStandardMaterial({ color: 0xfacc15, emissive: 0xca8a04, emissiveIntensity: 0.55, roughness: 0.40 })
+          };
+          if (!_heFuseMat) _heFuseMat = new THREE.MeshBasicMaterial({ color: 0xff5500 });
+        }
+        const g = new THREE.Group();
+        g.add(new THREE.Mesh(_m67Assets.bodyGeo, _m67Assets.bodyMat));
+        g.add(new THREE.Mesh(_m67Assets.steelGeo, _m67Assets.steelMat));
+        const band = new THREE.Mesh(_m67Assets.bandGeo, _m67Assets.bandMat);
+        band.rotation.x = Math.PI / 2;
+        band.position.y = 0.036;
+        g.add(band);
+        const fuse = new THREE.Mesh(_m67Assets.fuseGeo, _heFuseMat);
+        fuse.position.y = 0.124;
+        g.add(fuse);
+        return g;
+      }
+
+      function buildM18SmokeModel() {
+        if (!_m18Assets) {
+          if (!_m67Assets) {
+            // Ensure shared steel material exists even if M18 initializes first
+            _m67Assets = {
+              steelMat: new THREE.MeshStandardMaterial({ color: 0x8b95a5, roughness: 0.34, metalness: 0.78 })
+            };
+          }
+          const steelMatRef = _m67Assets.steelMat;
+          _m18Assets = {
+            bodyGeo: mergeNonIndexedParts([
+              { geo: new THREE.CylinderGeometry(0.048, 0.048, 0.168, 12) },
+              { geo: new THREE.CylinderGeometry(0.052, 0.052, 0.014, 12), ty: 0.078 },
+              { geo: new THREE.CylinderGeometry(0.052, 0.052, 0.014, 12), ty: -0.078 }
+            ]),
+            bandGeo: new THREE.CylinderGeometry(0.0505, 0.0505, 0.040, 12),
+            valveGeo: mergeNonIndexedParts([
+              { geo: new THREE.CylinderGeometry(0.018, 0.022, 0.032, 8), ty: 0.098 },
+              { geo: new THREE.BoxGeometry(0.016, 0.084, 0.012), tx: 0.052, ty: 0.055, rz: -0.16 }
+            ]),
+            bodyMat: new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.46, metalness: 0.58 }),
+            bandMat: new THREE.MeshStandardMaterial({ color: 0xe2e8f0, emissive: 0x38bdf8, emissiveIntensity: 0.22, roughness: 0.38 }),
+            steelMat: steelMatRef
+          };
+        }
+        const g = new THREE.Group();
+        g.add(new THREE.Mesh(_m18Assets.bodyGeo, _m18Assets.bodyMat));
+        const band = new THREE.Mesh(_m18Assets.bandGeo, _m18Assets.bandMat);
+        band.position.y = 0.018;
+        g.add(band);
+        g.add(new THREE.Mesh(_m18Assets.valveGeo, _m18Assets.steelMat));
+        return g;
+      }
 
       function ensureCombatFxPools() {
         if (!threeScene || typeof THREE === 'undefined') return;
@@ -6728,39 +6876,77 @@
           _explSpriteTex = new THREE.CanvasTexture(ec);
           _explSpriteTex.needsUpdate = true;
         }
+        if (!_explRingTex) {
+          const rc = document.createElement('canvas');
+          rc.width = rc.height = 128;
+          const rctx = rc.getContext('2d');
+          const rg = rctx.createRadialGradient(64, 64, 24, 64, 64, 60);
+          rg.addColorStop(0.0, 'rgba(255,255,255,0)');
+          rg.addColorStop(0.55, 'rgba(253,186,116,0.14)');
+          rg.addColorStop(0.78, 'rgba(254,243,199,0.88)');
+          rg.addColorStop(0.92, 'rgba(249,115,22,0.46)');
+          rg.addColorStop(1.0, 'rgba(0,0,0,0)');
+          rctx.fillStyle = rg;
+          rctx.beginPath();
+          rctx.arc(64, 64, 60, 0, Math.PI * 2);
+          rctx.fill();
+          _explRingTex = new THREE.CanvasTexture(rc);
+          _explRingTex.needsUpdate = true;
+        }
         if (!_grenadeMeshPool) {
-          const gGeo = new THREE.SphereGeometry(0.085, 8, 8);
-          _heGrenadeMat = new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0x991b1b, emissiveIntensity: 0.75, roughness: 0.42 });
-          _smokeGrenadeMat = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, emissive: 0x475569, emissiveIntensity: 0.45, roughness: 0.50 });
           _grenadeMeshPool = [];
           for (let i = 0; i < 6; i++) {
-            const m = new THREE.Mesh(gGeo, _heGrenadeMat);
-            m.visible = false;
-            threeScene.add(m);
-            _grenadeMeshPool.push(m);
+            const root = new THREE.Group();
+            const heModel = buildM67HeModel();
+            const smokeModel = buildM18SmokeModel();
+            root.add(heModel);
+            root.add(smokeModel);
+            root.visible = false;
+            threeScene.add(root);
+            _grenadeMeshPool.push({ root, heModel, smokeModel });
           }
         }
         if (!_explFlashPool) {
           _explFlashPool = [];
           for (let i = 0; i < 3; i++) {
-            const mat = new THREE.SpriteMaterial({
+            const grp = new THREE.Group();
+            const core = new THREE.Sprite(new THREE.SpriteMaterial({
               map: _explSpriteTex,
               transparent: true,
-              opacity: 0.95,
+              opacity: 0.96,
               depthWrite: false,
               blending: THREE.AdditiveBlending
-            });
-            const s = new THREE.Sprite(mat);
-            s.visible = false;
-            threeScene.add(s);
-            _explFlashPool.push(s);
+            }));
+            const ring = new THREE.Sprite(new THREE.SpriteMaterial({
+              map: _explRingTex,
+              transparent: true,
+              opacity: 0.88,
+              depthWrite: false,
+              blending: THREE.AdditiveBlending
+            }));
+            const blastSmoke = new THREE.Sprite(new THREE.SpriteMaterial({
+              map: _smokeSpriteTex,
+              transparent: true,
+              opacity: 0.74,
+              depthWrite: false,
+              blending: THREE.NormalBlending,
+              color: 0x26211e
+            }));
+            grp.add(blastSmoke);
+            grp.add(core);
+            grp.add(ring);
+            grp.visible = false;
+            threeScene.add(grp);
+            _explFlashPool.push({ grp, core, ring, blastSmoke });
           }
         }
         if (!_smokeMeshPool) {
           const puffSpecs = [
-            { ox: 0, oy: 0.82, oz: 0, s: 2.45 },
-            { ox: -0.46, oy: 0.62, oz: 0.28, s: 2.05 },
-            { ox: 0.44, oy: 1.02, oz: -0.26, s: 2.10 }
+            { ox: 0.0,   oy: 0.42, oz: 0.0,   s: 2.55, col: 0xbac5d4 },
+            { ox: -0.46, oy: 0.52, oz: 0.34,  s: 2.35, col: 0xc2cddb },
+            { ox: 0.45,  oy: 0.56, oz: -0.32, s: 2.35, col: 0xc2cddb },
+            { ox: -0.22, oy: 1.08, oz: -0.24, s: 2.50, col: 0xd8e0ea },
+            { ox: 0.26,  oy: 1.20, oz: 0.22,  s: 2.45, col: 0xdce4ee }
           ];
           _smokeMeshPool = [];
           for (let i = 0; i < 6; i++) {
@@ -6771,9 +6957,9 @@
               const mat = new THREE.SpriteMaterial({
                 map: _smokeSpriteTex,
                 transparent: true,
-                opacity: 0.72,
+                opacity: 0.82,
                 depthWrite: false,
-                color: 0xdbe2ec
+                color: spec.col
               });
               const sp = new THREE.Sprite(mat);
               sp.position.set(spec.ox, spec.oy, spec.oz);
@@ -6781,6 +6967,10 @@
               grp.add(sp);
               grpPuffs.push({ sprite: sp, baseScale: spec.s });
             }
+            const canister = buildM18SmokeModel();
+            canister.position.set(0, 0.052, 0);
+            canister.rotation.set(0, i * 1.1, Math.PI / 2);
+            grp.add(canister);
             grp.userData.puffs = grpPuffs;
             grp.visible = false;
             threeScene.add(grp);
@@ -6795,8 +6985,10 @@
         ensureCombatFxPools();
         ensureHitBurstPool();
         if (!window._activeExplosions) window._activeExplosions = [];
-        window._activeExplosions.push({ x: wx, z: wz, ttl: 0.30, maxTtl: 0.30 });
+        window._activeExplosions.push({ x: wx, z: wz, ttl: 0.65, maxTtl: 0.65 });
         if (window._activeExplosions.length > 6) window._activeExplosions.shift();
+        const dEx = Math.hypot(wx - player.x, wz - player.y);
+        if (dEx < 7.5) player.hitShake = Math.max(player.hitShake || 0, (1 - dEx / 7.5) * 0.95);
         if (_hitBurstPool) {
           for (let i = 0; i < 10; i++) {
             const slotIdx = _sparkPoolIdx;
@@ -7187,18 +7379,20 @@
 
           ensureCombatFxPools();
           if (_grenadeMeshPool) {
+            if (_heFuseMat) {
+              _heFuseMat.color.setHex((Math.floor(nowSec * 14) % 2 === 0) ? 0xffe066 : 0xff3b00);
+            }
             for (let i = 0; i < _grenadeMeshPool.length; i++) {
-              const m = _grenadeMeshPool[i];
+              const slot = _grenadeMeshPool[i];
               if (i < activeGrenades.length) {
                 const g = activeGrenades[i];
-                m.visible = true;
-                const nextGMat = g.kind === 'smoke' ? _smokeGrenadeMat : _heGrenadeMat;
-                if (m.material !== nextGMat) m.material = nextGMat;
-                m.position.set(g.x, 0.14 + Math.abs(Math.sin(g.timer * 7.5)) * 0.34, g.y);
-                m.rotation.y += 0.14;
-                m.rotation.x += 0.10;
+                slot.root.visible = true;
+                slot.heModel.visible = (g.kind !== 'smoke');
+                slot.smokeModel.visible = (g.kind === 'smoke');
+                slot.root.position.set(g.x, g.z || 0.09, g.y);
+                slot.root.rotation.set(g.rotX || 0, Math.atan2(g.vy || 0.01, g.vx || 0.01), g.rotZ || 0);
               } else {
-                m.visible = false;
+                slot.root.visible = false;
               }
             }
           }
@@ -7213,18 +7407,36 @@
               if (explList[i].ttl <= 0) explList.splice(i, 1);
             }
             for (let i = 0; i < _explFlashPool.length; i++) {
-              const m = _explFlashPool[i];
+              const slot = _explFlashPool[i];
               if (i < explList.length) {
                 const ex = explList[i];
                 const prog = Math.min(1, Math.max(0, 1 - ex.ttl / ex.maxTtl));
-                const s = 1.2 + prog * 3.8;
-                m.visible = true;
-                m.position.set(ex.x, 0.52 + prog * 0.28, ex.z);
-                m.scale.set(s, s, 1);
-                m.material.opacity = 0.95 * (1 - prog);
-                m.material.rotation = prog * 1.4;
+                slot.grp.visible = true;
+                slot.grp.position.set(ex.x, 0, ex.z);
+
+                const coreP = Math.min(1, prog / 0.45);
+                slot.core.visible = (prog < 0.48);
+                const cs = 0.9 + coreP * 3.3;
+                slot.core.position.set(0, 0.38 + coreP * 0.24, 0);
+                slot.core.scale.set(cs, cs, 1);
+                slot.core.material.opacity = 0.96 * (1 - coreP);
+                slot.core.material.rotation = coreP * 1.4;
+
+                const ringP = Math.min(1, prog / 0.62);
+                slot.ring.visible = (prog < 0.65);
+                const rs = 0.6 + ringP * 4.4;
+                slot.ring.position.set(0, 0.30, 0);
+                slot.ring.scale.set(rs, rs, 1);
+                slot.ring.material.opacity = 0.88 * (1 - ringP);
+                slot.ring.material.rotation = -ringP * 0.9;
+
+                const bs = 1.2 + prog * 2.2;
+                slot.blastSmoke.position.set(0, 0.35 + prog * 0.80, 0);
+                slot.blastSmoke.scale.set(bs, bs, 1);
+                slot.blastSmoke.material.opacity = Math.max(0, 0.74 * (1 - prog));
+                slot.blastSmoke.material.rotation = prog * 0.75;
               } else {
-                m.visible = false;
+                slot.grp.visible = false;
               }
             }
           }
@@ -7234,9 +7446,9 @@
               const grp = _smokeMeshPool[i];
               if (i < smokeClouds.length) {
                 const sm = smokeClouds[i];
-                const fadeIn = sm.ttl > 390 ? (420 - sm.ttl) / 30 : 1.0;
-                const fadeOut = sm.ttl < 85 ? sm.ttl / 85 : 1.0;
-                const op = Math.max(0.02, Math.min(0.76, 0.72 * Math.min(fadeIn, fadeOut)));
+                const fadeIn = sm.ttl > 385 ? (420 - sm.ttl) / 35 : 1.0;
+                const fadeOut = sm.ttl < 90 ? sm.ttl / 90 : 1.0;
+                const op = Math.max(0.02, Math.min(0.86, 0.85 * Math.min(fadeIn, fadeOut)));
                 grp.visible = true;
                 grp.position.set(sm.x, 0, sm.y);
                 const puffs = grp.userData.puffs;
@@ -7335,10 +7547,14 @@
           const { c, screenX, topY, projH } = item;
           const isAlly = (c.team === player.team);
           const isAimed = (aimedFighter === c);
+          if (!isAlly && item.dist > 7.2 && !isAimed) return;
+          const barAlpha = isAlly ? 0.92 : (isAimed ? 0.96 : Math.max(0.20, Math.min(0.92, 1 - (item.dist - 4.2) / 3.4)));
           const barW = Math.max(26, Math.min(54, Math.floor(projH * 0.36)));
           const clampedCenterX = Math.max(barW / 2 + 24, Math.min(w - barW / 2 - 24, screenX));
           let barY = Math.max(22, topY - 6);
 
+          doomCtx.save();
+          doomCtx.globalAlpha = barAlpha;
           // CS:GO uslubi: Takroriy ism yozuvi chizilmaydi — faqat toza HP chizig'i (ism yagona #targetInfoLabel da!)
           const barX = Math.floor(clampedCenterX - barW / 2);
           doomCtx.fillStyle = 'rgba(0,0,0,0.85)';
@@ -7356,6 +7572,7 @@
             doomCtx.closePath();
             doomCtx.fill();
           }
+          doomCtx.restore();
         });
 
         // #2: CS:GO Hitmarker (×) — Dushmanga o'q tekkanda nishon markazida aniq × belgisi chaqnaydi!
@@ -7406,6 +7623,7 @@
           const cx = w / 2;
           const cy = halfH;
           const arcRadius = Math.min(w, h) * 0.28;
+          const gIndRadius = Math.max(arcRadius + 18, 66);
           const blink = 0.55 + Math.abs(Math.sin(performance.now() * 0.018)) * 0.45;
           for (let gi = 0; gi < activeGrenades.length; gi++) {
             const g = activeGrenades[gi];
@@ -7413,8 +7631,8 @@
             const gDist = Math.hypot(g.x - player.x, g.y - player.y);
             if (gDist >= 5.8) continue;
             const rel = (Math.atan2(g.y - player.y, g.x - player.x) - player.angle) - Math.PI / 2;
-            const ix = cx + Math.cos(rel) * arcRadius;
-            const iy = cy + Math.sin(rel) * arcRadius;
+            const ix = cx + Math.cos(rel) * gIndRadius;
+            const iy = cy + Math.sin(rel) * gIndRadius;
             doomCtx.beginPath();
             doomCtx.arc(ix, iy, 15, 0, Math.PI * 2);
             doomCtx.fillStyle = `rgba(127, 29, 29, ${(blink * 0.85).toFixed(2)})`;
@@ -8716,7 +8934,8 @@
             }
           }
 
-          if (c.team !== player.team && Math.hypot(c.x - player.x, c.y - player.y) < 4.2) {
+          const dRem = Math.hypot(c.x - player.x, c.y - player.y);
+          if (c.team !== player.team && ((dRem < 4.2 && hasLineOfSight(player.x, player.y, c.x, c.y)) || dRem < 1.85)) {
             anyEnemyNear = true;
           }
         }
