@@ -1064,6 +1064,50 @@
         0 6px 18px rgba(0, 0, 0, 0.45),
         0 0 14px rgba(14, 165, 233, 0.14);
     }
+    /* === KOMPYUTER (TELEGRAM DESKTOP / PC) REJIMI — 0% MOBIL TA'SIRI, 0 TA BLUR === */
+    #gameView.digi-pc-mode #joystickZone,
+    #gameView.digi-pc-mode .tac-dpad-box,
+    #gameView.digi-pc-mode #fireBtn,
+    #gameView.digi-pc-mode #touchFire {
+      display: none !important;
+    }
+    #gameView.digi-pc-mode #fpsWeaponOverlay {
+      width: clamp(360px, 34vw, 660px) !important;
+      max-width: 660px !important;
+      right: 2.5% !important;
+      bottom: -10px !important;
+    }
+    #gameView.digi-pc-mode .tac-status-row {
+      bottom: 14px !important;
+      left: 50% !important;
+      right: auto !important;
+      transform: translateX(-50%) scale(1.18) !important;
+      transform-origin: bottom center !important;
+      width: max-content !important;
+      min-width: 480px !important;
+      max-width: 680px !important;
+      border-radius: 12px !important;
+      padding: 6px 16px !important;
+    }
+    #gameView.digi-pc-mode .tac-minimap-frame {
+      width: 142px !important;
+    }
+    #gameView.digi-pc-mode #minimapCanvas {
+      width: 138px !important;
+      height: 138px !important;
+    }
+    #pcAimPrompt {
+      display: none;
+    }
+    #gameView.digi-pc-mode #pcAimPrompt.pc-aim-visible {
+      display: inline-flex;
+    }
+    #pcControlsHint {
+      display: none;
+    }
+    #gameView.digi-pc-mode #pcControlsHint {
+      display: flex;
+    }
   </style>
 </head>
 <body class="relative w-full h-full flex flex-col justify-between horror-bg select-none">
@@ -1982,6 +2026,28 @@
       <!-- Jon kam qolganda (<=45%) chiqadigan ixcham qizil ogohlantirish (KillFeed ostida, ustma-ust tushmaydi) -->
       <div id="lowHpWarningBanner" class="hidden absolute top-[74px] left-1/2 -translate-x-1/2 z-30 pointer-events-none px-2.5 py-0.5 rounded bg-red-950/88 border border-red-500/85 text-red-200 font-black text-[10px] tracking-wide whitespace-nowrap">
         💓 JON KAM QOLDI!
+      </div>
+
+      <!-- PC (Kompyuter) sichqoncha nishonini qulflash eslatmasi (faqat .digi-pc-mode da) -->
+      <div id="pcAimPrompt" class="pc-aim-visible absolute top-[92px] left-1/2 -translate-x-1/2 z-30 pointer-events-none items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-950/88 border border-amber-400/75 text-amber-200 text-xs font-bold tracking-wide shadow-lg whitespace-nowrap">
+        <span>🖱️ Nishonni qulflash uchun ekranga bosing</span>
+        <span class="text-slate-400">•</span>
+        <span class="text-slate-300 font-mono text-[11px]">ESC: Kursor</span>
+      </div>
+
+      <!-- PC klaviatura/sichqoncha qisqa eslatmasi (faqat .digi-pc-mode da, pastki chap burchak) -->
+      <div id="pcControlsHint" class="absolute bottom-3 left-3 z-30 pointer-events-none items-center gap-2 px-2.5 py-1 rounded-lg bg-slate-950/78 border border-slate-700/70 text-[10px] font-mono text-slate-300 whitespace-nowrap">
+        <span><b class="text-amber-300">WASD</b> Yurish</span>
+        <span class="text-slate-600">|</span>
+        <span><b class="text-amber-300">LMB</b> Otish</span>
+        <span class="text-slate-600">|</span>
+        <span><b class="text-amber-300">RMB</b> Zoom</span>
+        <span class="text-slate-600">|</span>
+        <span><b class="text-amber-300">R</b> O'qlash</span>
+        <span class="text-slate-600">|</span>
+        <span><b class="text-amber-300">G/Q</b> Granata/Tutun</span>
+        <span class="text-slate-600">|</span>
+        <span><b class="text-amber-300">1-4</b> Qurol</span>
       </div>
 
       <!-- BIRINCHI SHAXS (FPS) HAQIQIY IKKI QO'L (HARBIY QO'LQOP + YENG) VA 3D QUROL MODELI -->
@@ -4629,6 +4695,7 @@
         }, 1000);
 
         modal.classList.remove('hidden');
+        if (typeof releasePcPointerLock === 'function') releasePcPointerLock();
       }
 
       function updatePlayerMovement(dt) {
@@ -6159,8 +6226,21 @@
         if (threeRenderer || typeof THREE === 'undefined') return;
 
         threeRenderer = new THREE.WebGLRenderer({ canvas: webglCanvas, antialias: true, stencil: false, powerPreference: 'high-performance' });
-        // 1-OPTIMIZATSIYA: Mobil ekranlar uchun 1.18x (Adreno GPU da -38% Fill-Rate, AA saqlanadi), katta ekranlarda 1.5x
-        const _maxGameDpr = Math.min(window.innerWidth, window.innerHeight) <= 520 ? 1.18 : 1.5;
+        const _minDim = Math.min(window.innerWidth || 360, window.innerHeight || 640);
+        const _isPcInit = (typeof isPcDesktopEnv === 'function') ? isPcDesktopEnv() : (_minDim > 520);
+        let _isSwGpu = false;
+        try {
+          const gl = threeRenderer.getContext();
+          const dbg = gl && gl.getExtension('WEBGL_debug_renderer_info');
+          const renStr = dbg ? String(gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) || '') : '';
+          if (/swiftshader|llvmpipe|software|microsoft basic render|mesa offscreen/i.test(renStr)) {
+            _isSwGpu = true;
+          }
+        } catch (e) {}
+        window._isSoftwareWebGL = _isSwGpu;
+        window._pcRenderScale = _isSwGpu ? 0.55 : 1.0;
+        // Mobil ekranlar 1.18x (o'zgarishsiz!), kompyuter/katta ekranda 1.0x (ortiqcha 4.6M piksel fill-rate ni yo'qotish)
+        const _maxGameDpr = _minDim <= 520 ? 1.18 : (_isPcInit || _isSwGpu ? 1.0 : 1.25);
         threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, _maxGameDpr));
         threeRenderer.toneMapping = THREE.ACESFilmicToneMapping;
         threeRenderer.toneMappingExposure = 0.94;
@@ -7178,10 +7258,23 @@
 
           const vpW = webglCanvas.clientWidth || w;
           const vpH = webglCanvas.clientHeight || h;
-          if (vpW > 0 && vpH > 0 && (window._lastThreeVpW !== vpW || window._lastThreeVpH !== vpH)) {
-            window._lastThreeVpW = vpW;
-            window._lastThreeVpH = vpH;
-            threeRenderer.setSize(vpW, vpH, false);
+          const isPcRes = !!window._isPcDesktop || Math.min(vpW, vpH) > 540;
+          let targetW = vpW;
+          let targetH = vpH;
+          if (isPcRes && vpW > 0 && vpH > 0) {
+            const maxBaseW = window._isSoftwareWebGL ? 640 : 1280;
+            const dynScale = Math.max(0.42, Math.min(1.0, window._pcRenderScale || 1.0));
+            const capW = Math.max(480, Math.round(maxBaseW * dynScale));
+            if (vpW > capW) {
+              const ratio = capW / vpW;
+              targetW = Math.round(vpW * ratio);
+              targetH = Math.max(270, Math.round(vpH * ratio));
+            }
+          }
+          if (targetW > 0 && targetH > 0 && (window._lastThreeVpW !== targetW || window._lastThreeVpH !== targetH)) {
+            window._lastThreeVpW = targetW;
+            window._lastThreeVpH = targetH;
+            threeRenderer.setSize(targetW, targetH, false);
           }
 
           // #10: Mobil vertikal ekranda kengroq CS:GO FOV (84 gradus) — faqat o'zgarganda projectionMatrix yangilanadi
@@ -8276,7 +8369,23 @@
         if (!gameRunning) return;
         animFrameId = requestAnimationFrame(gameLoop);
         try {
-          const dt = Math.min(0.05, Math.max(0.001, (now - lastFrameTime) / 1000));
+          const rawFrameMs = now - lastFrameTime;
+          if (window._isPcDesktop && rawFrameMs > 0 && rawFrameMs < 2500) {
+            window._pcFrameMsSum = (window._pcFrameMsSum || 0) + rawFrameMs;
+            window._pcFrameMsCnt = (window._pcFrameMsCnt || 0) + 1;
+            if (window._pcFrameMsCnt >= 10) {
+              const avgMs = window._pcFrameMsSum / window._pcFrameMsCnt;
+              window._pcFrameMsSum = 0;
+              window._pcFrameMsCnt = 0;
+              const curS = window._pcRenderScale || 1.0;
+              if (avgMs > 60 && curS > 0.42) {
+                window._pcRenderScale = Math.max(0.42, +(curS * 0.76).toFixed(2));
+                window._lastThreeVpW = 0;
+                window._lastThreeVpH = 0;
+              }
+            }
+          }
+          const dt = Math.min(0.05, Math.max(0.001, rawFrameMs / 1000));
           lastFrameTime = now;
 
           if (isMpMatch) {
@@ -8303,6 +8412,31 @@
 
       // ==================== PUBG / STANDOFF 2 YONBOSH (LANDSCAPE) REJIM DVIGATELI ====================
       window._digiRot90 = false;
+      function isPcDesktopEnv() {
+        const vw = window.innerWidth || document.documentElement.clientWidth || 360;
+        const vh = window.innerHeight || document.documentElement.clientHeight || 640;
+        const tg = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
+        const plat = (tg && tg.platform) ? String(tg.platform).toLowerCase() : '';
+        const isTgDesktop = (plat === 'tdesktop' || plat === 'macos' || plat === 'web' || plat === 'weba' || plat === 'webk');
+        const hasFine = !!(window.matchMedia && window.matchMedia('(pointer: fine)').matches);
+        const hasCoarse = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+        const noTouch = (navigator.maxTouchPoints || 0) === 0;
+        if (isTgDesktop && vw >= 760 && vh >= 480) return true;
+        if (hasFine && !hasCoarse && noTouch && Math.max(vw, vh) >= 900 && Math.min(vw, vh) >= 520) return true;
+        return false;
+      }
+
+      function syncPcModeClasses() {
+        const isPc = isPcDesktopEnv();
+        window._isPcDesktop = isPc;
+        document.body.classList.toggle('digi-pc-mode', isPc);
+        const lv = document.getElementById('lobbyView');
+        const gv = document.getElementById('gameView');
+        if (lv) lv.classList.toggle('digi-pc-mode', isPc);
+        if (gv) gv.classList.toggle('digi-pc-mode', isPc);
+        return isPc;
+      }
+
       const _landscapeBannerIds = ['friendlyFireBanner', 'csEventBanner', 'spawnShieldBanner', 'toastBox', 'jumpscareBanner'];
       let _bannersInGameView = false;
 
@@ -8342,6 +8476,7 @@
       }
 
       function applyLandscapeLayout() {
+        syncPcModeClasses();
         const gv = document.getElementById('gameView');
         if (!gv) return;
         const wantLandscape = gameRunning && isLandscapePrefEnabled();
@@ -8413,11 +8548,21 @@
         if (gameRunning) return;
         const lv = document.getElementById('lobbyView');
         if (!lv || lv.classList.contains('hidden')) return;
+        const isPc = syncPcModeClasses();
         const vw = window.innerWidth || document.documentElement.clientWidth || 360;
         const vh = window.innerHeight || document.documentElement.clientHeight || 640;
         const ins = (typeof getTelegramSafeInsets === 'function') ? getTelegramSafeInsets() : { top: 0, left: 0, right: 0, bottom: 0 };
         const toastBox = document.getElementById('toastBox');
         const incModal = document.getElementById('incomingModal');
+        const stage = document.getElementById('lobbyStage');
+        const resetStage = () => {
+          if (!stage) return;
+          stage.style.width = '';
+          stage.style.height = '';
+          stage.style.flexShrink = '';
+          stage.style.transformOrigin = '';
+          stage.style.transform = '';
+        };
         if (vh > vw) {
           lv.classList.add('digi-lobby-rot90');
           lv.style.width = vh + 'px';
@@ -8429,6 +8574,7 @@
           lv.style.setProperty('--digi-safe-right', Math.max(8, ins.bottom || 0) + 'px');
           if (toastBox && toastBox.parentElement !== lv) lv.appendChild(toastBox);
           if (incModal && incModal.parentElement !== lv) lv.appendChild(incModal);
+          resetStage();
         } else {
           lv.classList.remove('digi-lobby-rot90');
           lv.style.width = '';
@@ -8439,6 +8585,21 @@
           lv.style.setProperty('--digi-safe-right', (ins.right || 0) + 'px');
           if (toastBox && toastBox.parentElement === lv) document.body.appendChild(toastBox);
           if (incModal && incModal.parentElement === lv) document.body.appendChild(incModal);
+          if (stage && isPc && vw >= 1020 && vh >= 560) {
+            const safeTop = ins.top > 0 ? ins.top : 0;
+            const safeL = ins.left || 0;
+            const safeR = ins.right || 0;
+            const availW = Math.max(800, vw - safeL - safeR);
+            const availH = Math.max(460, vh - safeTop);
+            const pcScale = Math.min(1.92, Math.max(1.0, Math.min(availW / 960, availH / 500)));
+            stage.style.width = Math.round(availW / pcScale) + 'px';
+            stage.style.height = Math.round(availH / pcScale) + 'px';
+            stage.style.flexShrink = '0';
+            stage.style.transformOrigin = 'center center';
+            stage.style.transform = 'scale(' + pcScale.toFixed(4) + ')';
+          } else {
+            resetStage();
+          }
         }
       }
       (function bindRotatedModalTouchScroll() {
@@ -8526,6 +8687,7 @@
         setTimeout(() => { if (gameRunning) applyLandscapeLayout(); }, 180);
         setTimeout(() => { if (gameRunning) applyLandscapeLayout(); }, 480);
         if (typeof window._digiGyroSync === 'function') window._digiGyroSync(false);
+        if (typeof syncPcAimPromptUi === 'function') syncPcAimPromptUi();
       }
 
       function exitBattleLandscape() {
@@ -9460,6 +9622,7 @@
         if (sb) sb.classList.add('hidden');
         if (animFrameId) cancelAnimationFrame(animFrameId);
         if (matchIntervalId) clearInterval(matchIntervalId);
+        if (typeof releasePcPointerLock === 'function') releasePcPointerLock();
         const gvExit = document.getElementById('gameView');
         if (gvExit) { gvExit.classList.add('hidden'); gvExit.classList.remove('digi-match-ended'); }
         document.getElementById('matchEndModal').classList.add('hidden');
@@ -9589,6 +9752,15 @@
         if (!gameRunning) return;
         if (e.target && e.target.closest && e.target.closest('button')) return;
         e.preventDefault();
+        if (e.pointerType === 'mouse' && window._isPcDesktop) {
+          if (document.pointerLockElement === arenaViewport) {
+            handlePcLockedMouseBtn(e);
+            return;
+          }
+          if (arenaViewport.requestPointerLock) {
+            try { arenaViewport.requestPointerLock(); } catch (err) {}
+          }
+        }
         lookPointerId = e.pointerId;
         lastLookX = e.clientX;
         lastLookY = e.clientY;
@@ -9615,6 +9787,88 @@
       arenaViewport.addEventListener('pointerup', endLookPointer);
       arenaViewport.addEventListener('pointercancel', endLookPointer);
       arenaViewport.addEventListener('lostpointercapture', () => { lookPointerId = null; });
+
+      function syncPcAimPromptUi() {
+        const pr = document.getElementById('pcAimPrompt');
+        if (!pr) return;
+        const locked = (document.pointerLockElement === arenaViewport);
+        const show = !!(window._isPcDesktop && gameRunning && !locked);
+        pr.classList.toggle('pc-aim-visible', show);
+      }
+
+      /** Unlocks PC Pointer Lock when pausing, ending match, or returning to lobby. */
+      function releasePcPointerLock() {
+        if (document.pointerLockElement && document.exitPointerLock) {
+          try { document.exitPointerLock(); } catch (e) {}
+        }
+        syncPcAimPromptUi();
+      }
+
+      function handlePcLockedMouseBtn(e) {
+        const nowMs = performance.now();
+        if (window._lastPcBtnType === e.button && nowMs - (window._lastPcBtnAt || 0) < 35) return;
+        window._lastPcBtnType = e.button;
+        window._lastPcBtnAt = nowMs;
+        if (e.button === 0) {
+          keys.fire = true;
+          fireWeapon();
+        } else if (e.button === 2) {
+          player.adsZoom = !player.adsZoom;
+          const adsBtn = document.getElementById('btnToggleAds');
+          if (adsBtn) adsBtn.classList.toggle('tac-action-btn-active', player.adsZoom);
+        }
+      }
+
+      document.addEventListener('pointerlockchange', () => {
+        const locked = (document.pointerLockElement === arenaViewport);
+        if (locked) {
+          lookPointerId = null;
+        } else {
+          keys.fire = false;
+        }
+        syncPcAimPromptUi();
+      });
+
+      document.addEventListener('mousemove', (e) => {
+        if (!gameRunning || document.pointerLockElement !== arenaViewport) return;
+        const mx = Math.max(-180, Math.min(180, e.movementX || 0));
+        const my = Math.max(-140, Math.min(140, e.movementY || 0));
+        if (mx !== 0 || my !== 0) {
+          applyScreenLookDelta(mx * 0.36, my * 0.36);
+        }
+      });
+
+      window.addEventListener('mousedown', (e) => {
+        if (!gameRunning || !window._isPcDesktop) return;
+        if (document.pointerLockElement !== arenaViewport) return;
+        if (e.button === 0 || e.button === 2) {
+          e.preventDefault();
+          handlePcLockedMouseBtn(e);
+        }
+      });
+
+      window.addEventListener('mouseup', (e) => {
+        if (e.button === 0 && window._isPcDesktop) {
+          keys.fire = false;
+        }
+      });
+
+      arenaViewport.addEventListener('contextmenu', (e) => {
+        if (gameRunning) e.preventDefault();
+      });
+
+      let _lastWheelSwitch = 0;
+      window.addEventListener('wheel', (e) => {
+        if (!gameRunning || !window._isPcDesktop) return;
+        const nowW = performance.now();
+        if (nowW - _lastWheelSwitch < 180) return;
+        _lastWheelSwitch = nowW;
+        const dir = e.deltaY > 0 ? 1 : -1;
+        selectedWeaponIdx = (selectedWeaponIdx + dir + WEAPONS.length) % WEAPONS.length;
+        player.magAmmo = WEAPONS[selectedWeaponIdx].magSize;
+        updateWeaponButtons();
+        updateHud();
+      }, { passive: true });
 
       const joystickZone = document.getElementById('joystickZone');
       const joystickKnob = document.getElementById('joystickKnob');
