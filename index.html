@@ -4007,11 +4007,11 @@
         if (window.DIGI_SFX && soundEnabled) window.DIGI_SFX.playRadio('grenade', audioCtx, masterGain || (audioCtx && audioCtx.destination), true, 1.0);
 
         const rightAng = player.angle + Math.PI / 2;
-        let gx0 = player.x + Math.cos(player.angle) * 0.48 + Math.cos(rightAng) * 0.16;
-        let gy0 = player.y + Math.sin(player.angle) * 0.48 + Math.sin(rightAng) * 0.16;
+        let gx0 = player.x + Math.cos(player.angle) * 0.56 + Math.cos(rightAng) * 0.18;
+        let gy0 = player.y + Math.sin(player.angle) * 0.56 + Math.sin(rightAng) * 0.18;
         if (isWall(gx0, gy0)) {
-          gx0 = player.x + Math.cos(player.angle) * 0.32;
-          gy0 = player.y + Math.sin(player.angle) * 0.32;
+          gx0 = player.x + Math.cos(player.angle) * 0.36;
+          gy0 = player.y + Math.sin(player.angle) * 0.36;
         }
         const gvx = Math.cos(player.angle) * 6.4;
         const gvy = Math.sin(player.angle) * 6.4;
@@ -4021,7 +4021,7 @@
           y: gy0,
           vx: gvx,
           vy: gvy,
-          z: 0.78,
+          z: 0.72,
           vz: 2.35 + Math.max(-0.7, Math.min(1.8, (player.pitch || 0) * 4.5)),
           rotX: 0,
           rotZ: 0,
@@ -4029,6 +4029,7 @@
           spinZ: 6.4,
           bounces: 0,
           timer: kind === 'smoke' ? 0.95 : 1.35,
+          maxTimer: kind === 'smoke' ? 0.95 : 1.35,
           ownerTeam: player.team,
           ownerName: myProfile.name,
           ownerId: 'player',
@@ -4266,7 +4267,11 @@
           }
         } else if (hitFriendly && !w.isMelee) {
           player.magAmmo = Math.min(w.magSize, player.magAmmo + 1);
-          showFriendlyFireWarning(hitFriendly.name);
+          const ffDist = Math.hypot(hitFriendly.x - player.x, hitFriendly.y - player.y);
+          if (ffDist >= 1.35 && now - (player._lastFfWarnAt || 0) > 4500) {
+            player._lastFfWarnAt = now;
+            showFriendlyFireWarning(hitFriendly.name);
+          }
         } else {
           if (!w.isMelee && typeof spawn3DWallSpark === 'function') {
             const cosY = Math.cos(shotYaw);
@@ -4757,15 +4762,16 @@
             if (pk.type === 'armor' && player.armor >= 100) return;
             if (pk.type !== 'health' && pk.type !== 'armor' && player.reserveAmmo >= 120) return;
             pk.active = false;
+            const canToast = performance.now() >= (player._deathToastUntil || 0);
             if (pk.type === 'health') {
               player.health = Math.min(100, player.health + 35);
-              showToast('+35% Jon', '❤️', 1200);
+              if (canToast) showToast('+35% Jon', '❤️', 1200);
             } else if (pk.type === 'armor') {
               player.armor = Math.min(100, player.armor + 50);
-              showToast('+50% Kevlar Zirh', '🛡️', 1200);
+              if (canToast) showToast('+50% Kevlar Zirh', '🛡️', 1200);
             } else {
               player.reserveAmmo = Math.min(120, player.reserveAmmo + 30);
-              showToast('+30 Zaxira O\'q', '🔋', 1200);
+              if (canToast) showToast('+30 Zaxira O\'q', '🔋', 1200);
             }
             playSound('notify');
             setTimeout(() => { pk.active = true; }, 10000);
@@ -4961,6 +4967,7 @@
         player.lastShotTime = _respawnNow;
         player.spawnShieldUntil = _respawnNow + 3200;
         player.respawnFireLockUntil = _respawnNow + 650;
+        player._deathToastUntil = _respawnNow + 1650;
         showToast(`${killerName || 'Dushman'} sizni yo'q qildi!`, badge === '💣' ? '💣' : '💀');
         updateHud();
         checkMatchWinCondition();
@@ -5029,6 +5036,15 @@
               }
             } else if (d < (isForPlayer ? 1.8 : 1.4)) {
               score -= (isForPlayer ? 18 : 4);
+            }
+          }
+
+          if (isForPlayer && Array.isArray(pickups)) {
+            for (let pkI = 0; pkI < pickups.length; pkI++) {
+              const pk = pickups[pkI];
+              if (pk && pk.active && Math.hypot(pt.x - pk.x, pt.y - pk.y) < 2.0) {
+                score -= 32;
+              }
             }
           }
 
@@ -5577,13 +5593,16 @@
               repulseX += nx * push;
               repulseY += ny * push;
             }
-            if (other.team === c.team && otherIdx < thisBotIdx && myCellX === Math.floor(other.x) && myCellY === Math.floor(other.y)) {
-              waitInCellQueue = true;
+            if (other.team === c.team && d < 1.05) {
+              const fwdDot = (other.x - c.x) * moveForwardX + (other.y - c.y) * moveForwardY;
+              if (fwdDot > 0 && (otherIdx < thisBotIdx || (myCellX === Math.floor(other.x) && myCellY === Math.floor(other.y)))) {
+                waitInCellQueue = true;
+              }
             }
           });
           if (waitInCellQueue) {
-            moveForwardX *= 0.3;
-            moveForwardY *= 0.3;
+            moveForwardX *= 0.14;
+            moveForwardY *= 0.14;
           }
 
           const stepX = moveForwardX + repulseX * dt;
@@ -5604,12 +5623,22 @@
             const dxo = c.x - other.x;
             const dyo = c.y - other.y;
             const doDist = Math.hypot(dxo, dyo);
-            const hardMin = 0.80;
+            const hardMin = 0.84;
             if (doDist < hardMin) {
               const nxo = doDist > 0.001 ? dxo / doDist : Math.cos(thisBotIdx * 2.3 + 0.7);
               const nyo = doDist > 0.001 ? dyo / doDist : Math.sin(thisBotIdx * 2.3 + 0.7);
               const sepHalf = (hardMin - doDist) * 0.58;
-              const pushedC = resolveMazeCollision(c.x + nxo * sepHalf, c.y + nyo * sepHalf, 0.39);
+              let pushedC = resolveMazeCollision(c.x + nxo * sepHalf, c.y + nyo * sepHalf, 0.39);
+              if (Math.hypot(pushedC.x - other.x, pushedC.y - other.y) < doDist + 0.015) {
+                const signX = dxo !== 0 ? Math.sign(dxo) : (thisBotIdx % 2 === 0 ? 1 : -1);
+                const signY = dyo !== 0 ? Math.sign(dyo) : (thisBotIdx % 2 === 0 ? 1 : -1);
+                const tryX = resolveMazeCollision(c.x + signX * sepHalf, c.y, 0.39);
+                const tryY = resolveMazeCollision(c.x, c.y + signY * sepHalf, 0.39);
+                const dX = Math.hypot(tryX.x - other.x, tryX.y - other.y);
+                const dY = Math.hypot(tryY.x - other.x, tryY.y - other.y);
+                if (dX >= dY && dX > doDist + 0.01) pushedC = tryX;
+                else if (dY > doDist + 0.01) pushedC = tryY;
+              }
               c.x = pushedC.x;
               c.y = pushedC.y;
             }
@@ -7023,10 +7052,10 @@
         }
         if (!_smokeMeshPool) {
           const puffSpecs = [
-            { ox: 0.0,   oy: 0.44, oz: 0.0,   s: 1.44, col: 0x8a96a6 },
-            { ox: -0.22, oy: 0.66, oz: 0.18,  s: 1.36, col: 0x98a4b3 },
-            { ox: 0.22,  oy: 0.72, oz: -0.18, s: 1.36, col: 0x8f9baa },
-            { ox: 0.02,  oy: 1.04, oz: 0.04,  s: 1.48, col: 0xa2aebc }
+            { ox: 0.0,   oy: 0.42, oz: 0.0,   s: 1.48, col: 0x8692a2 },
+            { ox: -0.18, oy: 0.72, oz: 0.16,  s: 1.46, col: 0x94a0b0 },
+            { ox: 0.18,  oy: 0.84, oz: -0.16, s: 1.46, col: 0x8c98a8 },
+            { ox: 0.0,   oy: 1.20, oz: 0.02,  s: 1.54, col: 0x9ca8b8 }
           ];
           _smokeMeshPool = [];
           for (let i = 0; i < 6; i++) {
@@ -7277,7 +7306,7 @@
               return;
             }
             const distCam = Math.hypot(c.x - player.x, c.y - player.y);
-            if (c.dyingProgress === 0 && c.team === player.team && distCam < 0.76) {
+            if (c.dyingProgress === 0 && c.team === player.team && distCam < 0.96) {
               grp.visible = false;
               return;
             }
@@ -7489,6 +7518,8 @@
                 slot.root.visible = true;
                 slot.heModel.visible = (g.kind !== 'smoke');
                 slot.smokeModel.visible = (g.kind === 'smoke');
+                const gOpenScale = Math.min(1.0, 0.52 + Math.max(0, (g.maxTimer || 1.35) - g.timer) * 4.8);
+                slot.root.scale.setScalar(gOpenScale);
                 slot.root.position.set(g.x, g.z || 0.042, g.y);
                 slot.root.rotation.set(g.rotX || 0, Math.atan2(g.vy || 0.01, g.vx || 0.01), g.rotZ || 0);
               } else {
@@ -7553,14 +7584,14 @@
                 const fadeOut = sm.ttl < 90 ? sm.ttl / 90 : 1.0;
                 const dCamSm = Math.hypot(sm.x - player.x, sm.y - player.y);
                 const nearFade = dCamSm < 1.05 ? Math.max(0.24, Math.min(1.0, (dCamSm - 0.32) / 0.73)) : 1.0;
-                const op = Math.max(0.02, Math.min(0.76, 0.74 * Math.min(fadeIn, fadeOut) * nearFade));
+                const op = Math.max(0.02, Math.min(0.90, 0.88 * Math.min(fadeIn, fadeOut) * nearFade));
                 grp.visible = true;
                 grp.position.set(sm.x, 0, sm.y);
                 const puffs = grp.userData.puffs;
                 for (let pIdx = 0; pIdx < puffs.length; pIdx++) {
                   const pf = puffs[pIdx];
                   const sc = pf.baseScale * bloomScale * (0.95 + Math.sin(nowSec * 1.1 + i + pIdx * 2.1) * 0.07);
-                  pf.sprite.scale.set(sc, sc, 1);
+                  pf.sprite.scale.set(sc, sc * 1.14, 1);
                   pf.sprite.material.rotation = nowSec * (pIdx % 2 === 0 ? 0.14 : -0.11) + i;
                   pf.sprite.material.opacity = op;
                 }
