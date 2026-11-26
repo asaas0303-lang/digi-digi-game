@@ -2976,7 +2976,7 @@
       myDoomIdEl.textContent = myProfile.id;
 
       let toastTimer = null;
-      function showToast(msg, emoji = '⚡') {
+      function showToast(msg, emoji = '⚡', durationMs = 2000) {
         const csEl = document.getElementById('csEventBanner');
         if (csEl) csEl.classList.add('hidden');
         if (csBannerTimer) { clearTimeout(csBannerTimer); csBannerTimer = null; }
@@ -2987,7 +2987,7 @@
         if (toastTimer) clearTimeout(toastTimer);
         toastTimer = setTimeout(() => {
           toastBox.classList.add('hidden');
-        }, 2000);
+        }, durationMs);
       }
 
       let csBannerTimer = null;
@@ -4706,11 +4706,11 @@
         let pushedByBot = false;
         for (let i = 0; i < combatants.length; i++) {
           const c = combatants[i];
-          if (!c.alive || c.dyingProgress > 0) continue;
+          if (!c.alive || c.dyingProgress > 0 || c.team === player.team) continue;
           const dx = pxNew - c.x;
           const dy = pyNew - c.y;
           const d = Math.hypot(dx, dy);
-          const minBotDist = (c.team === player.team) ? 0.68 : 0.78;
+          const minBotDist = 0.76;
           if (d < minBotDist) {
             const nx = d > 0.001 ? dx / d : Math.cos(player.angle + Math.PI);
             const ny = d > 0.001 ? dy / d : Math.sin(player.angle + Math.PI);
@@ -4748,16 +4748,19 @@
         pickups.forEach(pk => {
           if (!pk.active) return;
           if (Math.hypot(pk.x - player.x, pk.y - player.y) < 0.7) {
+            if (pk.type === 'health' && player.health >= 100) return;
+            if (pk.type === 'armor' && player.armor >= 100) return;
+            if (pk.type !== 'health' && pk.type !== 'armor' && player.reserveAmmo >= 120) return;
             pk.active = false;
             if (pk.type === 'health') {
               player.health = Math.min(100, player.health + 35);
-              showToast('+35% Jon (Aptekachka olindi)', '❤️');
+              showToast('+35% Jon', '❤️', 1200);
             } else if (pk.type === 'armor') {
               player.armor = Math.min(100, player.armor + 50);
-              showToast('+50% Kevlar Zirh kaskasi olindi!', '🛡️');
+              showToast('+50% Kevlar Zirh', '🛡️', 1200);
             } else {
               player.reserveAmmo = Math.min(120, player.reserveAmmo + 30);
-              showToast('+30 Zaxira O\'q-dori olindi!', '🔋');
+              showToast('+30 Zaxira O\'q', '🔋', 1200);
             }
             playSound('notify');
             setTimeout(() => { pk.active = true; }, 10000);
@@ -5053,6 +5056,7 @@
           0.22,
           Math.min(1.0, 0.24 + scoreLead * 0.055 + Math.max(0, streak - 1) * 0.095 + Math.max(0, kdRatio - 1.1) * 0.14)
         );
+        const allyDda = Math.min(0.62, enemyDda * 0.65);
         if (enemyDda >= 0.78 && (window._ddaAnnouncedTier || 0) < 2) {
           window._ddaAnnouncedTier = 2;
           showCsEventBanner('🔥 RAQIB JAMOA: PRO TAKTIKA FAOL!');
@@ -5197,7 +5201,7 @@
           }
 
           const botBoost = 1 + (userStats.botLevel - 1) * 0.12;
-          const speed = (isEnemyBot ? (1.92 + enemyDda * 0.46) : 1.84) * botBoost * dt;
+          const speed = (isEnemyBot ? (1.92 + enemyDda * 0.46) : (1.88 + allyDda * 0.24)) * botBoost * dt;
           if (!c.preferredDist) c.preferredDist = 3.2 + (thisBotIdx % 4) * 0.65;
 
           // --- 5 HOLATLI TAKTIK HOLAT O'TISHLARI ---
@@ -5531,9 +5535,11 @@
           let repulseY = 0;
           const distToPlayer = Math.hypot(c.x - player.x, c.y - player.y);
           if (distToPlayer < 1.45 && distToPlayer > 0.01) {
-            const pPush = (c.team === player.team) ? (distToPlayer < 1.35 ? 4.5 : 2.6) : 3.8;
-            repulseX += ((c.x - player.x) / distToPlayer) * pPush;
-            repulseY += ((c.y - player.y) / distToPlayer) * pPush;
+            const pPush = (c.team === player.team) ? (distToPlayer < 0.85 ? 1.15 : 0) : 3.8;
+            if (pPush > 0) {
+              repulseX += ((c.x - player.x) / distToPlayer) * pPush;
+              repulseY += ((c.y - player.y) / distToPlayer) * pPush;
+            }
           }
           // Sherik bot bazada va tor koridorda yo'lni to'sib qo'ymasligi
           if (c.team === player.team && distToPlayer > 0.25 && distToPlayer < 2.4) {
@@ -5543,8 +5549,8 @@
             if (Math.abs(angDiff) < 0.68) {
               const sideSign = angDiff >= 0 ? 1 : -1;
               const dodgeAngle = player.angle + (Math.PI / 2) * sideSign;
-              repulseX += Math.cos(dodgeAngle) * 5.2;
-              repulseY += Math.sin(dodgeAngle) * 5.2;
+              repulseX += Math.cos(dodgeAngle) * 2.2;
+              repulseY += Math.sin(dodgeAngle) * 2.2;
             }
           }
           // Botlar orasida qat'iy masofa va bir katakda navbat saqlash
@@ -5576,7 +5582,7 @@
           const prevBotX = c.x;
           const prevBotY = c.y;
 
-          const resolvedBot = resolveMazeCollision(c.x + stepX, c.y + stepY, 0.34);
+          const resolvedBot = resolveMazeCollision(c.x + stepX, c.y + stepY, 0.39);
           if (Math.hypot(resolvedBot.x - (c.x + stepX), resolvedBot.y - (c.y + stepY)) > 0.005 && c.strafeSign) {
             c.strafeSign *= -1;
           }
@@ -5594,7 +5600,7 @@
               const nxo = doDist > 0.001 ? dxo / doDist : Math.cos(thisBotIdx * 2.3 + 0.7);
               const nyo = doDist > 0.001 ? dyo / doDist : Math.sin(thisBotIdx * 2.3 + 0.7);
               const sepHalf = (hardMin - doDist) * 0.52;
-              const pushedC = resolveMazeCollision(c.x + nxo * sepHalf, c.y + nyo * sepHalf, 0.34);
+              const pushedC = resolveMazeCollision(c.x + nxo * sepHalf, c.y + nyo * sepHalf, 0.39);
               c.x = pushedC.x;
               c.y = pushedC.y;
             }
@@ -5618,7 +5624,7 @@
               const unstuck = resolveMazeCollision(
                 c.x + (cxMid - c.x) * 0.45,
                 c.y + (cyMid - c.y) * 0.45,
-                0.34
+                0.39
               );
               c.x = unstuck.x;
               c.y = unstuck.y;
@@ -5630,14 +5636,14 @@
           // --- REALISTIK BOT OTISHISHI (ADAPTIV PRO DDA SERIYALARI VA ADOLATLI ANIQLIK) ---
           const botFireDelay = isEnemyBot
             ? Math.max(460, Math.round(1180 - (userStats.botLevel - 1) * 100 - enemyDda * 560))
-            : Math.max(920, 1700 - (userStats.botLevel - 1) * 180);
+            : Math.max(680, Math.round(1280 - (userStats.botLevel - 1) * 110 - allyDda * 340));
           if (canSeeTarget && (c.burstLeft || 0) <= 0 && now - (c.lastAttack || 0) > botFireDelay) {
             if (c.aiState === 'retreat_cover' && Math.random() > 0.25) {
               c.lastAttack = now - botFireDelay * 0.45;
             } else {
               c.burstLeft = isEnemyBot
                 ? (2 + (Math.random() < (0.42 + enemyDda * 0.45) ? 1 : 0) + (enemyDda >= 0.72 && Math.random() < 0.42 ? 1 : 0))
-                : (2 + (Math.random() < 0.45 ? 1 : 0));
+                : (2 + (Math.random() < (0.45 + allyDda * 0.30) ? 1 : 0));
               c._nextBurstShotAt = now;
               c.lastAttack = now;
             }
@@ -5645,7 +5651,7 @@
 
           if (canSeeTarget && (c.burstLeft || 0) > 0 && now >= (c._nextBurstShotAt || 0)) {
             c.burstLeft--;
-            c._nextBurstShotAt = now + (isEnemyBot ? Math.round(185 - enemyDda * 45) : 195);
+            c._nextBurstShotAt = now + (isEnemyBot ? Math.round(185 - enemyDda * 45) : Math.round(190 - allyDda * 25));
             c.lastAttack = now;
             c.muzzleFlash = 4;
             if (c.aiState === 'peek_out') c._peekFired = true;
@@ -6928,16 +6934,25 @@
           const ec = document.createElement('canvas');
           ec.width = ec.height = 128;
           const ectx = ec.getContext('2d');
-          const eg = ectx.createRadialGradient(64, 64, 2, 64, 64, 60);
-          eg.addColorStop(0.0, '#fffbeb');
-          eg.addColorStop(0.25, 'rgba(251,191,36,0.92)');
-          eg.addColorStop(0.55, 'rgba(234,88,12,0.58)');
-          eg.addColorStop(0.85, 'rgba(153,27,27,0.18)');
-          eg.addColorStop(1.0, 'rgba(0,0,0,0)');
-          ectx.fillStyle = eg;
-          ectx.beginPath();
-          ectx.arc(64, 64, 60, 0, Math.PI * 2);
-          ectx.fill();
+          const flames = [
+            [64, 64, 54, '#fff7d6', 'rgba(255,154,20,0.95)', 'rgba(220,38,38,0.52)'],
+            [48, 56, 36, '#ffedd5', 'rgba(249,115,22,0.86)', 'rgba(185,28,28,0.34)'],
+            [80, 58, 34, '#ffedd5', 'rgba(234,88,12,0.84)', 'rgba(153,27,27,0.32)'],
+            [62, 46, 32, '#fef08a', 'rgba(245,158,11,0.82)', 'rgba(185,28,28,0.28)'],
+            [66, 78, 34, '#fed7aa', 'rgba(234,88,12,0.78)', 'rgba(127,29,29,0.28)']
+          ];
+          for (let k = 0; k < flames.length; k++) {
+            const [fx, fy, fr, c0, c1, c2] = flames[k];
+            const eg = ectx.createRadialGradient(fx, fy, 2, fx, fy, fr);
+            eg.addColorStop(0.0, c0);
+            eg.addColorStop(0.32, c1);
+            eg.addColorStop(0.68, c2);
+            eg.addColorStop(1.0, 'rgba(0,0,0,0)');
+            ectx.fillStyle = eg;
+            ectx.beginPath();
+            ectx.arc(fx, fy, fr, 0, Math.PI * 2);
+            ectx.fill();
+          }
           _explSpriteTex = new THREE.CanvasTexture(ec);
           _explSpriteTex.needsUpdate = true;
         }
@@ -6992,11 +7007,12 @@
             const blastSmoke = new THREE.Sprite(new THREE.SpriteMaterial({
               map: _smokeSpriteTex,
               transparent: true,
-              opacity: 0.86,
+              opacity: 0.76,
               depthWrite: false,
               blending: THREE.NormalBlending,
-              color: 0x78716c
+              color: 0x1b1614
             }));
+            blastSmoke.renderOrder = 3;
             core.renderOrder = 5;
             ring.renderOrder = 6;
             grp.add(blastSmoke);
@@ -7263,7 +7279,7 @@
               return;
             }
             const distCam = Math.hypot(c.x - player.x, c.y - player.y);
-            if (c.dyingProgress === 0 && c.team === player.team && distCam < 0.54) {
+            if (c.dyingProgress === 0 && c.team === player.team && distCam < 0.76) {
               grp.visible = false;
               return;
             }
@@ -7484,27 +7500,27 @@
                 slot.grp.visible = true;
                 slot.grp.position.set(ex.x, 0, ex.z);
 
-                const coreP = Math.min(1, prog / 0.45);
-                slot.core.visible = (prog < 0.46);
-                const cs = 1.45 + coreP * 3.25;
-                slot.core.position.set(0, 0.56 + coreP * 0.34, 0);
+                const coreP = Math.min(1, prog / 0.52);
+                slot.core.visible = (prog < 0.54);
+                const cs = 0.95 + coreP * 1.75;
+                slot.core.position.set(0, 0.44 + coreP * 0.28, 0);
                 slot.core.scale.set(cs, cs, 1);
-                slot.core.material.opacity = 1.0 * (1 - coreP * coreP);
-                slot.core.material.rotation = coreP * 1.4;
+                slot.core.material.opacity = 0.98 * (1 - Math.pow(coreP, 1.6));
+                slot.core.material.rotation = coreP * 1.3;
 
-                const ringP = Math.min(1, prog / 0.58);
-                slot.ring.visible = (prog < 0.60);
-                const rs = 0.95 + ringP * 4.45;
-                slot.ring.position.set(0, 0.48, 0);
+                const ringP = Math.min(1, prog / 0.48);
+                slot.ring.visible = (prog < 0.50);
+                const rs = 0.65 + ringP * 2.15;
+                slot.ring.position.set(0, 0.40, 0);
                 slot.ring.scale.set(rs, rs, 1);
-                slot.ring.material.opacity = 0.94 * (1 - ringP);
+                slot.ring.material.opacity = 0.90 * (1 - ringP);
                 slot.ring.material.rotation = -ringP * 0.9;
 
-                const bs = 1.45 + prog * 2.1;
-                slot.blastSmoke.position.set(0, 0.42 + prog * 0.92, 0);
+                const bs = 0.85 + prog * 1.15;
+                slot.blastSmoke.position.set(0, 0.36 + prog * 0.68, 0);
                 slot.blastSmoke.scale.set(bs, bs, 1);
-                slot.blastSmoke.material.opacity = Math.max(0, 0.86 * (1 - Math.pow(prog, 1.35)));
-                slot.blastSmoke.material.rotation = prog * 0.85;
+                slot.blastSmoke.material.opacity = Math.max(0, 0.76 * (1 - Math.pow(prog, 1.35)));
+                slot.blastSmoke.material.rotation = prog * 0.75;
               } else {
                 slot.grp.visible = false;
               }
