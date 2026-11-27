@@ -2080,6 +2080,7 @@ app.post("/api/tg/friend-message", async (req, res) => {
 });
 
 // 6) Telegram Bot Webhook (/api/tg/webhook)
+let tourEngine = null;
 app.post("/api/tg/webhook", async (req, res) => {
   try {
     const update = req.body || {};
@@ -2120,9 +2121,20 @@ app.post("/api/tg/webhook", async (req, res) => {
       const parts = msg.text.trim().split(/\s+/);
       const rawRef = parts[1] || "";
       let webAppUrl = `${APP_URL}/`;
+      let playBtnText = "🔥 O'YINNI BOSHLASH (DIGI DIGI) 🎮";
       if (rawRef.startsWith("room_")) {
         const roomCode = rawRef.replace("room_", "").replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 6);
         if (roomCode) webAppUrl = `${APP_URL}/?room_code=${encodeURIComponent(roomCode)}`;
+      } else if (rawRef.startsWith("tour_")) {
+        playBtnText = "🏆 TURNIRGA KIRISH (DIGI DIGI) 🔥";
+        if (rawRef.startsWith("tour_ref_")) {
+          const tourRefId = rawRef.replace("tour_ref_", "").trim();
+          webAppUrl = tourRefId
+            ? `${APP_URL}/?open_tour=1&tour_ref=${encodeURIComponent(tourRefId)}`
+            : `${APP_URL}/?open_tour=1`;
+        } else {
+          webAppUrl = `${APP_URL}/?open_tour=1`;
+        }
       } else if (rawRef) {
         const cleanRef = rawRef.startsWith("friend_") ? rawRef.replace("friend_", "") : rawRef;
         webAppUrl = `${APP_URL}/?friend_ref=${encodeURIComponent(cleanRef)}`;
@@ -2144,10 +2156,12 @@ app.post("/api/tg/webhook", async (req, res) => {
         parse_mode: "HTML",
         reply_markup: {
           inline_keyboard: [
-            [{ text: "🔥 O'YINNI BOSHLASH (DIGI DIGI) 🎮", web_app: { url: webAppUrl } }]
+            [{ text: playBtnText, web_app: { url: webAppUrl } }]
           ]
         }
       });
+    } else if (msg && msg.text && msg.text.startsWith("/tour") && tourEngine) {
+      await tourEngine.handleAdminCommand(msg);
     }
     res.status(200).json({ ok: true });
   } catch (err) {
@@ -2170,6 +2184,14 @@ try {
   initMultiplayer(app);
 } catch (mpErr) {
   console.error("[Multiplayer] Init error:", mpErr);
+}
+
+// 1v1 Olimpiya Play-off Turnir Dvigateli (1-Bosqich Backend + Telegram Bot Admin)
+try {
+  const { initTournament } = require("./tournament_engine");
+  tourEngine = initTournament({ app, db, saveDb, tgApiCall, DATA_DIR, APP_URL, ADMIN_TG_ID });
+} catch (tourErr) {
+  console.error("[Tournament] Init error:", tourErr);
 }
 
 const httpServer = app.listen(PORT, async () => {
