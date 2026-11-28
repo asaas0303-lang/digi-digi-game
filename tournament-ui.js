@@ -1,4 +1,4 @@
-// DIGI DIGI GRAND CUP — 2-BOSQICH: 3D iOS GLASS TURNIR MARKAZI VA 1v1 PLAY-OFF SETKA UI (v20261128_1)
+// DIGI DIGI GRAND CUP — ONLINE OYNASI ICHIDAGI 3D iOS GLASS TURNIR MARKAZI VA 1v1 SETKA UI (v20261128_3)
 (function () {
   'use strict';
 
@@ -10,7 +10,9 @@
 
   let _state = null;
   let _serverOffsetMs = 0; // serverNow - Date.now()
+  let _onlineTab = 'live'; // 'live' | 'tour'
   let _activeTab = 'main'; // 'main' | 'bracket' | 'rules' | 'history'
+  let _onlineControlsBound = false;
   let _isFetching = false;
   let _lastPollAt = 0;
   let _subWarning = false;
@@ -54,8 +56,9 @@
   }
 
   function isModalOpen() {
-    const m = document.getElementById('modalTournament');
-    return !!(m && !m.classList.contains('hidden'));
+    const m = document.getElementById('modalOnline');
+    const p = document.getElementById('panelTournament');
+    return !!(m && !m.classList.contains('hidden') && p && !p.classList.contains('hidden'));
   }
 
   function getServerNowMs() {
@@ -175,22 +178,9 @@
     const style = document.createElement('style');
     style.id = 'digiTournamentStyles';
     style.textContent = `
-      .dg-tour-lobby-card {
-        position: absolute;
-        left: 34.5%;
-        width: 27.5%;
-        bottom: calc(clamp(104px, 31%, 126px) + 3% + 8px);
-        min-height: 58px;
-        max-height: 74px;
-        z-index: 20;
-        background: linear-gradient(150deg, rgba(58, 22, 12, 0.86) 0%, rgba(28, 12, 16, 0.90) 52%, rgba(14, 18, 36, 0.92) 100%);
-        border: 1.5px solid rgba(251, 191, 36, 0.72);
-        box-shadow: 0 8px 22px rgba(0, 0, 0, 0.62), 0 0 16px rgba(245, 158, 11, 0.24), inset 0 1px 0 rgba(254, 240, 138, 0.38);
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.88);
-        transition: transform 130ms ease, border-color 150ms ease, box-shadow 150ms ease;
-      }
-      .dg-tour-lobby-card:active {
-        transform: scale(0.975);
+      @keyframes dgLivePulse {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.24); opacity: 0.5; }
       }
       @keyframes dgTourPulseGreen {
         0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.55), 0 6px 18px rgba(0, 0, 0, 0.55); border-color: rgba(52, 211, 153, 0.95); }
@@ -206,23 +196,99 @@
       .dg-tour-live-dot {
         animation: dgTourDotBlink 1.1s ease-in-out infinite;
       }
-      #modalTournament {
-        background:
-          radial-gradient(circle at 18% 18%, rgba(251, 191, 36, 0.18), transparent 45%),
-          radial-gradient(circle at 82% 84%, rgba(239, 68, 68, 0.16), transparent 46%),
-          rgba(3, 7, 18, 0.76);
+      .dg-online-live-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 6px;
+        border-radius: 9999px;
+        font-size: 8.5px;
+        font-weight: 900;
+        letter-spacing: 0.06em;
+        line-height: 1.15;
+        color: #ffe4e6;
+        background: linear-gradient(135deg, rgba(244, 63, 94, 0.28) 0%, rgba(159, 18, 57, 0.40) 100%);
+        border: 1px solid rgba(251, 113, 133, 0.62);
+        box-shadow: 0 2px 10px rgba(244, 63, 94, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.24);
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
+        white-space: nowrap;
+      }
+      .dg-online-live-pill.dg-live-reg {
+        color: #fef3c7;
+        background: linear-gradient(135deg, rgba(245, 158, 11, 0.28) 0%, rgba(180, 83, 9, 0.38) 100%);
+        border-color: rgba(251, 191, 36, 0.65);
+        box-shadow: 0 2px 10px rgba(245, 158, 11, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.24);
+      }
+      .dg-online-live-pill.dg-live-hot {
+        color: #ffffff;
+        background: linear-gradient(135deg, rgba(244, 63, 94, 0.42) 0%, rgba(225, 29, 72, 0.56) 100%);
+        border-color: rgba(253, 164, 175, 0.9);
+        box-shadow: 0 0 12px rgba(244, 63, 94, 0.52), inset 0 1px 0 rgba(255, 255, 255, 0.32);
+      }
+      .dg-online-live-dot {
+        width: 5.5px;
+        height: 5.5px;
+        border-radius: 9999px;
+        background: #fb7185;
+        box-shadow: 0 0 8px rgba(251, 113, 133, 0.98);
+        animation: dgLivePulse 1.25s ease-in-out infinite;
+        flex-shrink: 0;
+      }
+      .dg-online-live-pill.dg-live-reg .dg-online-live-dot {
+        background: #fbbf24;
+        box-shadow: 0 0 8px rgba(251, 191, 36, 0.95);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .dg-online-live-dot,
+        .dg-tour-live-dot,
+        .dg-tour-checkin-pulse {
+          animation: none !important;
+        }
+      }
+      .dg-onl-seg-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 4px 10px;
+        border-radius: 9999px;
+        font-size: 11px;
+        font-weight: 800;
+        line-height: 1.2;
+        color: rgba(226, 232, 240, 0.78);
+        background: transparent;
+        border: 1px solid transparent;
+        transition: color 140ms ease, background 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+        white-space: nowrap;
+        cursor: pointer;
+      }
+      #btnOnlineTabLive[aria-selected="true"] {
+        color: #ffffff;
+        background: linear-gradient(180deg, rgba(48, 209, 88, 0.28) 0%, rgba(16, 185, 129, 0.16) 100%);
+        border-color: rgba(52, 211, 153, 0.62);
+        box-shadow: 0 2px 10px rgba(16, 185, 129, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+      }
+      #btnOnlineTabTour[aria-selected="true"] {
+        color: #fef08a;
+        background: linear-gradient(180deg, rgba(245, 158, 11, 0.30) 0%, rgba(180, 83, 9, 0.22) 100%);
+        border-color: rgba(251, 191, 36, 0.68);
+        box-shadow: 0 2px 10px rgba(245, 158, 11, 0.24), inset 0 1px 0 rgba(254, 240, 138, 0.32);
+      }
+      .dg-onl-tour-mini {
+        font-size: 8.5px;
+        font-weight: 900;
+        padding: 1px 5px;
+        border-radius: 9999px;
+        background: rgba(244, 63, 94, 0.32);
+        border: 1px solid rgba(251, 113, 133, 0.65);
+        color: #ffe4e6;
+        line-height: 1.15;
+      }
+      #panelTournament {
         font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", sans-serif;
       }
-      #lobbyView.digi-lobby-rot90 #modalTournament {
-        padding: 8px 14px 8px max(66px, calc(var(--digi-safe-left, 58px) + 8px)) !important;
-      }
-      #lobbyView.digi-lobby-rot90 #modalTournament > div {
-        height: 95% !important;
-        max-height: 95% !important;
-      }
-      #modalTournament .dg-tour-scroll,
-      #modalTournament .overflow-y-auto,
-      #modalTournament .dg-tour-bracket-scroll {
+      #panelTournament .dg-tour-scroll,
+      #panelTournament .overflow-y-auto,
+      #panelTournament .dg-tour-bracket-scroll {
         -webkit-overflow-scrolling: touch;
         touch-action: pan-x pan-y;
         overscroll-behavior: contain;
@@ -240,8 +306,8 @@
         position: relative;
         flex: none;
         scroll-snap-align: start;
-        padding: 7px 11px;
-        border-radius: 10px;
+        padding: 4px 10px;
+        border-radius: 9px;
         font-size: 11px;
         font-weight: 700;
         color: #94a3b8;
@@ -261,11 +327,12 @@
         left: 14%;
         right: 14%;
         bottom: 0;
-        border-block-end: 2.5px solid #fbbf24;
+        border-block-end: 2px solid #fbbf24;
       }
       .dg-tour-tab:focus-visible,
-      #modalTournament button:focus-visible,
-      #modalTournament input:focus-visible {
+      .dg-onl-seg-btn:focus-visible,
+      #panelTournament button:focus-visible,
+      #panelTournament input:focus-visible {
         outline: 2px solid #38bdf8;
         outline-offset: 2px;
       }
@@ -295,210 +362,189 @@
     document.head.appendChild(style);
   }
 
-  function ensureLobbyCardDOM() {
-    ensureTournamentStyles();
-    let card = document.getElementById('lobbyTournamentCard');
-    if (card) return card;
-    const stage = document.getElementById('lobbyStage');
-    if (!stage) return null;
-
-    card = document.createElement('button');
-    card.type = 'button';
-    card.id = 'lobbyTournamentCard';
-    card.className = 'dg-tour-lobby-card rounded-xl px-2.5 py-1.5 flex flex-col justify-between text-left cursor-pointer overflow-hidden';
-    card.setAttribute('aria-label', 'Yakshanba turniri markazini ochish');
-    card.innerHTML = `
-      <div class="w-full flex items-center justify-between gap-1.5 min-w-0">
-        <span class="text-[9px] font-black uppercase tracking-wider text-amber-300 truncate">🏆 YAKSHANBA TURNIRI</span>
-        <span class="text-[8px] font-mono font-bold px-1.5 py-[1px] rounded-full bg-white/10 border border-white/20 text-slate-100 shrink-0">--</span>
-      </div>
-      <div class="w-full flex items-center justify-between gap-1.5 min-w-0">
-        <span class="text-[11px] font-black text-white truncate">500,000 SO'M</span>
-        <span class="text-[8.5px] font-bold text-amber-200 shrink-0">MA'LUMOT ›</span>
-      </div>
-    `;
-    card.addEventListener('click', () => {
-      _lastInvoker = card;
-      openTournamentModal();
-    });
-    stage.appendChild(card);
-    return card;
+  function removeLegacyLobbyCard() {
+    const legacy = document.getElementById('lobbyTournamentCard');
+    if (legacy && legacy.parentNode) legacy.parentNode.removeChild(legacy);
   }
 
-  function renderLobbyCard() {
-    const card = ensureLobbyCardDOM();
-    if (!card) return;
+  function updateOnlineLiveBadge() {
+    ensureTournamentStyles();
+    const badge = document.getElementById('onlineTourLiveBadge');
+    const tabBadge = document.getElementById('onlineTourTabBadge');
     const active = _state && _state.active;
     const me = (_state && _state.me) || {};
-    const history = (_state && Array.isArray(_state.history)) ? _state.history : [];
 
-    card.classList.remove('dg-tour-checkin-pulse');
-
-    if (active && active.status === 'registration') {
-      const cnt = Number(active.participantsCount) || 0;
-      const max = Number(active.maxPlayers) || 32;
-      const prizeStr = formatMoney(active.totalPrize || 500000) + " SO'M";
-      const cd = formatCountdown(active.startAt);
-      card.innerHTML = `
-        <div class="w-full flex items-center justify-between gap-1.5 min-w-0">
-          <span class="text-[8.5px] font-black uppercase tracking-wider text-amber-300 truncate">🏆 YAKSHANBA TURNIRI</span>
-          <span class="text-[8px] font-mono font-extrabold px-1.5 py-[1px] rounded-full bg-emerald-500/20 border border-emerald-400/50 text-emerald-200 shrink-0">${cnt}/${max}</span>
-        </div>
-        <div class="w-full flex items-center justify-between gap-1.5 min-w-0 mt-0.5">
-          <span class="text-[11px] font-black text-amber-200 truncate">${esc(prizeStr)}</span>
-          <div class="flex items-center gap-1.5 shrink-0">
-            <span id="dgTourCardTimer" class="text-[8.5px] font-mono font-bold text-sky-200">⏳ ${esc(cd)}</span>
-            <span class="text-[8.5px] font-black text-amber-300">${me.isRegistered ? 'RO\'YXATDA ›' : 'QATNASHISH ›'}</span>
-          </div>
-        </div>
-      `;
-      return;
+    if (badge) {
+      badge.classList.remove('dg-live-hot', 'dg-live-reg');
+      if (active && (active.status === 'checkin' || active.status === 'live')) {
+        badge.classList.add('dg-live-hot');
+      } else if (active && active.status === 'registration') {
+        badge.classList.add('dg-live-reg');
+      }
     }
 
-    if (active && active.status === 'checkin') {
-      card.classList.add('dg-tour-checkin-pulse');
-      const cd = formatCountdown(active.startAt);
-      const ctaText = me.isCheckedIn ? '✅ TAYYORSIZ' : '✅ TAYYORMAN ›';
-      const ctaCls = me.isCheckedIn ? 'text-emerald-200' : 'text-emerald-300';
-      card.innerHTML = `
-        <div class="w-full flex items-center justify-between gap-1.5 min-w-0">
-          <span class="text-[9px] font-black uppercase tracking-wider text-emerald-300 truncate">🟢 CHECK-IN OCHILDI!</span>
-          <span id="dgTourCardTimer" class="text-[9px] font-mono font-black text-emerald-100 bg-emerald-500/25 border border-emerald-400/55 px-1.5 py-[1px] rounded-full shrink-0">⏳ ${esc(cd)}</span>
-        </div>
-        <div class="w-full flex items-center justify-between gap-1.5 min-w-0 mt-0.5">
-          <span class="text-[10px] font-extrabold text-white truncate">${esc(formatMoney(active.totalPrize || 500000))} SO'M</span>
-          <span class="text-[8.5px] font-black ${ctaCls} shrink-0">${ctaText}</span>
-        </div>
-      `;
-      return;
+    if (tabBadge) {
+      let miniText = '';
+      if (active && active.status === 'live') {
+        const myReady = me.myMatch && (me.myMatch.status === 'ready' || me.myMatch.status === 'playing');
+        miniText = myReady ? 'JANG!' : 'LIVE';
+      } else if (active && active.status === 'checkin') {
+        miniText = 'CHECK-IN';
+      } else if (active && active.status === 'registration') {
+        miniText = `${Number(active.participantsCount) || 0}/${Number(active.maxPlayers) || 32}`;
+      }
+      if (miniText) {
+        tabBadge.textContent = miniText;
+        tabBadge.classList.remove('hidden');
+      } else {
+        tabBadge.textContent = '';
+        tabBadge.classList.add('hidden');
+      }
     }
-
-    if (active && active.status === 'live') {
-      const myMatch = me.myMatch;
-      const myReady = myMatch && (myMatch.status === 'ready' || myMatch.status === 'playing');
-      card.innerHTML = `
-        <div class="w-full flex items-center justify-between gap-1.5 min-w-0">
-          <span class="text-[8.5px] font-black uppercase tracking-wider text-rose-200 truncate flex items-center gap-1">
-            <span class="inline-block w-2 h-2 rounded-full bg-rose-500 dg-tour-live-dot shrink-0"></span>
-            LIVE • 1v1 PLAY-OFF
-          </span>
-          <span class="text-[7.5px] font-mono font-bold text-amber-200 bg-rose-500/25 border border-rose-400/50 px-1.5 py-[1px] rounded-full shrink-0">${active.checkedInCount || active.participantsCount || 0} jangchi</span>
-        </div>
-        <div class="w-full flex items-center justify-between gap-1.5 min-w-0 mt-0.5">
-          <span class="text-[9.5px] font-extrabold ${myReady ? 'text-amber-300' : 'text-white'} truncate">${myReady ? '⚔️ JANGINGIZ TAYYOR!' : '🔥 1v1 PLAY-OFF KETMOQDA'}</span>
-          <span class="text-[8.5px] font-black text-amber-300 shrink-0">${myReady ? 'JANG ›' : 'SETKANI KO\'RISH ›'}</span>
-        </div>
-      `;
-      return;
-    }
-
-    const latestChamp = (active && active.status === 'finished' && active.winners && active.winners.first)
-      ? active.winners.first
-      : (history[0] && history[0].winners && history[0].winners.first);
-
-    card.innerHTML = `
-      <div class="w-full flex items-center justify-between gap-1.5 min-w-0">
-        <span class="text-[8.5px] font-black uppercase tracking-wider text-amber-300 truncate">🏆 YAKSHANBA 20:00 TURNIRI</span>
-        <span class="text-[7.5px] font-bold px-1.5 py-[1px] rounded-full bg-white/10 border border-white/20 text-slate-200 shrink-0">1v1 Cup</span>
-      </div>
-      <div class="w-full flex items-center justify-between gap-1.5 min-w-0 mt-0.5">
-        <span class="text-[10px] font-bold text-slate-100 truncate">${latestChamp ? '🥇 ' + esc(latestChamp.name) : "500,000 SO'M + 850 💎"}</span>
-        <span class="text-[8.5px] font-black text-amber-200 shrink-0">MA'LUMOT ›</span>
-      </div>
-    `;
   }
 
-  function ensureModalDOM() {
+  function ensureEmbeddedTourDOM() {
     ensureTournamentStyles();
-    let modal = document.getElementById('modalTournament');
-    if (modal) return modal;
+    removeLegacyLobbyCard();
+    const panel = document.getElementById('panelTournament');
+    if (!panel) return null;
 
-    const shopEl = document.getElementById('modalShop');
-    const host = document.getElementById('lobbyView') || (shopEl && shopEl.parentElement) || document.body;
-
-    modal = document.createElement('div');
-    modal.id = 'modalTournament';
-    modal.className = 'hidden fixed inset-0 z-[66] flex items-center justify-center p-2.5';
-    modal.setAttribute('role', 'dialog');
-    modal.setAttribute('aria-modal', 'true');
-    modal.setAttribute('aria-labelledby', 'dgTourModalTitle');
-
-    modal.innerHTML = `
-      <div id="dgTourSheet" class="ios-fh-sheet w-[95%] max-w-[680px] max-h-[92%] flex flex-col overflow-hidden">
-        <div class="ios-fh-nav shrink-0 h-[44px] px-3.5 flex items-center justify-between gap-2">
-          <div class="flex items-center gap-2 min-w-0">
-            <span class="w-7 h-7 rounded-full ios-fh-avatar ios-fh-avatar-gold bg-slate-900/90 flex items-center justify-center text-amber-300 text-xs shrink-0">🏆</span>
-            <h2 id="dgTourModalTitle" class="text-[13.5px] font-extrabold tracking-tight bg-gradient-to-b from-white via-amber-100 to-amber-300 bg-clip-text text-transparent truncate">DIGI DIGI GRAND CUP</h2>
-            <span id="dgTourStatusPill" class="ios-fh-stat-pill text-amber-200 text-[9.5px] font-semibold px-2 py-0.5 rounded-full truncate">Yuklanmoqda...</span>
-          </div>
-          <div class="flex items-center gap-1.5 shrink-0">
-            <button id="btnTourRefresh" type="button" class="ios-btn-circle" title="Yangilash" aria-label="Turnir holatini yangilash">
-              <span class="text-xs leading-none">🔄</span>
-            </button>
-            <button id="btnCloseTournamentModal" type="button" class="ios-btn-circle" title="Yopish" aria-label="Yopish">
-              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
-            </button>
-          </div>
-        </div>
-
-        <div class="shrink-0 px-3 pt-2 pb-1.5 border-b border-white/10 bg-slate-950/35">
-          <div id="dgTourTablist" class="dg-tour-tablist" role="tablist" aria-label="Turnir bo'limlari">
+    if (!document.getElementById('dgTourBody')) {
+      panel.innerHTML = `
+        <div class="shrink-0 px-2.5 pt-2 pb-1.5 border-b border-white/10 bg-slate-950/35 flex items-center justify-between gap-2">
+          <div id="dgTourTablist" class="dg-tour-tablist flex-1 min-w-0" role="tablist" aria-label="Turnir bo'limlari">
             <button type="button" role="tab" id="dgTabBtnMain" data-tab="main" aria-selected="true" class="dg-tour-tab">📋 Asosiy</button>
             <button type="button" role="tab" id="dgTabBtnBracket" data-tab="bracket" aria-selected="false" class="dg-tour-tab">🏆 Setka</button>
             <button type="button" role="tab" id="dgTabBtnRules" data-tab="rules" aria-selected="false" class="dg-tour-tab">📜 Qoidalar &amp; Sovrin</button>
             <button type="button" role="tab" id="dgTabBtnHistory" data-tab="history" aria-selected="false" class="dg-tour-tab">🏛️ Chempionlar</button>
           </div>
+          <span id="dgTourStatusPill" class="ios-fh-stat-pill text-amber-200 text-[9.5px] font-semibold px-2 py-0.5 rounded-full truncate shrink-0">Yuklanmoqda...</span>
         </div>
+        <div id="dgTourBody" class="flex-1 min-h-0 overflow-y-auto dg-tour-scroll p-2.5"></div>
+      `;
 
-        <div id="dgTourBody" class="flex-1 min-h-0 overflow-y-auto dg-tour-scroll p-3"></div>
-      </div>
-    `;
-
-    host.appendChild(modal);
-
-    // Light dismiss: faqat sheet tashqarisida boshlanib tashqarisida tugagan bosishda yopiladi
-    let pressedOutside = false;
-    const isOutsideSheet = (e) => {
-      const sheet = document.getElementById('dgTourSheet');
-      if (!sheet) return false;
-      const r = sheet.getBoundingClientRect();
-      return e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom;
-    };
-    modal.addEventListener('pointerdown', (e) => {
-      pressedOutside = isOutsideSheet(e);
-    });
-    modal.addEventListener('pointerup', (e) => {
-      if (pressedOutside && isOutsideSheet(e)) closeTournamentModal();
-      pressedOutside = false;
-    });
-
-    document.getElementById('btnCloseTournamentModal').addEventListener('click', closeTournamentModal);
-    document.getElementById('btnTourRefresh').addEventListener('click', async () => {
-      await fetchTourState(true);
-      showTourToast("Turnir ma'lumoti yangilandi", '🔄');
-    });
-
-    const tablist = document.getElementById('dgTourTablist');
-    tablist.addEventListener('click', (e) => {
-      const btn = e.target.closest('[data-tab]');
-      if (!btn) return;
-      selectTab(btn.getAttribute('data-tab'));
-    });
-    tablist.addEventListener('keydown', (e) => {
-      const tabs = Array.from(tablist.querySelectorAll('[role="tab"]'));
-      const curIdx = tabs.indexOf(document.activeElement);
-      if (curIdx < 0) return;
-      let nextIdx = -1;
-      if (e.key === 'ArrowRight') nextIdx = (curIdx + 1) % tabs.length;
-      else if (e.key === 'ArrowLeft') nextIdx = (curIdx - 1 + tabs.length) % tabs.length;
-      else if (e.key === 'Home') nextIdx = 0;
-      else if (e.key === 'End') nextIdx = tabs.length - 1;
-      if (nextIdx >= 0) {
-        e.preventDefault();
-        tabs[nextIdx].focus();
-        selectTab(tabs[nextIdx].getAttribute('data-tab'));
+      const tablist = document.getElementById('dgTourTablist');
+      if (tablist) {
+        tablist.addEventListener('click', (e) => {
+          const btn = e.target.closest('[data-tab]');
+          if (!btn) return;
+          selectTab(btn.getAttribute('data-tab'));
+        });
+        tablist.addEventListener('keydown', (e) => {
+          const tabs = Array.from(tablist.querySelectorAll('[role="tab"]'));
+          const curIdx = tabs.indexOf(document.activeElement);
+          if (curIdx < 0) return;
+          let nextIdx = -1;
+          if (e.key === 'ArrowRight') nextIdx = (curIdx + 1) % tabs.length;
+          else if (e.key === 'ArrowLeft') nextIdx = (curIdx - 1 + tabs.length) % tabs.length;
+          else if (e.key === 'Home') nextIdx = 0;
+          else if (e.key === 'End') nextIdx = tabs.length - 1;
+          if (nextIdx >= 0) {
+            e.preventDefault();
+            tabs[nextIdx].focus();
+            selectTab(tabs[nextIdx].getAttribute('data-tab'));
+          }
+        });
       }
-    });
+    }
+
+    return panel;
+  }
+
+  function setOnlineTab(mode) {
+    ensureEmbeddedTourDOM();
+    const target = mode === 'tour' ? 'tour' : 'live';
+    _onlineTab = target;
+
+    const panelSquad = document.getElementById('panelSquad');
+    const panelTour = document.getElementById('panelTournament');
+    const btnLive = document.getElementById('btnOnlineTabLive');
+    const btnTour = document.getElementById('btnOnlineTabTour');
+    const btnRefresh = document.getElementById('btnTourHeaderRefresh');
+
+    if (target === 'tour') {
+      if (panelSquad) {
+        panelSquad.classList.add('hidden');
+        panelSquad.classList.remove('flex');
+      }
+      if (panelTour) {
+        panelTour.classList.remove('hidden');
+        panelTour.classList.add('flex');
+      }
+      if (btnRefresh) btnRefresh.classList.remove('hidden');
+      if (btnLive) btnLive.setAttribute('aria-selected', 'false');
+      if (btnTour) btnTour.setAttribute('aria-selected', 'true');
+      renderModalContent(true);
+      fetchTourState(true);
+    } else {
+      if (panelTour) {
+        panelTour.classList.add('hidden');
+        panelTour.classList.remove('flex');
+      }
+      if (panelSquad) {
+        panelSquad.classList.remove('hidden');
+        panelSquad.classList.add('flex');
+      }
+      if (btnRefresh) btnRefresh.classList.add('hidden');
+      if (btnLive) btnLive.setAttribute('aria-selected', 'true');
+      if (btnTour) btnTour.setAttribute('aria-selected', 'false');
+      if (window.DIGI_MP && typeof window.DIGI_MP.refreshOpenRooms === 'function') {
+        window.DIGI_MP.refreshOpenRooms();
+      }
+    }
+  }
+
+  function bindOnlineModalControls() {
+    if (_onlineControlsBound) return;
+    _onlineControlsBound = true;
+
+    const btnLive = document.getElementById('btnOnlineTabLive');
+    const btnTour = document.getElementById('btnOnlineTabTour');
+    const btnRefresh = document.getElementById('btnTourHeaderRefresh');
+    const btnOnline = document.getElementById('menuBtnOnline');
+    const btnClose = document.getElementById('btnCloseOnlineModal');
+    const onlineModal = document.getElementById('modalOnline');
+    const segList = onlineModal ? onlineModal.querySelector('.ios-mp-seg') : null;
+
+    if (btnLive) {
+      btnLive.addEventListener('click', () => setOnlineTab('live'));
+    }
+    if (btnTour) {
+      btnTour.addEventListener('click', () => setOnlineTab('tour'));
+    }
+    if (segList) {
+      segList.addEventListener('keydown', (e) => {
+        const tabs = Array.from(segList.querySelectorAll('[role="tab"]'));
+        const curIdx = tabs.indexOf(document.activeElement);
+        if (curIdx < 0) return;
+        let nextIdx = -1;
+        if (e.key === 'ArrowRight') nextIdx = (curIdx + 1) % tabs.length;
+        else if (e.key === 'ArrowLeft') nextIdx = (curIdx - 1 + tabs.length) % tabs.length;
+        if (nextIdx >= 0) {
+          e.preventDefault();
+          tabs[nextIdx].focus();
+          setOnlineTab(tabs[nextIdx].getAttribute('data-online-tab'));
+        }
+      });
+    }
+    if (btnRefresh) {
+      btnRefresh.addEventListener('click', async () => {
+        await fetchTourState(true);
+        showTourToast("Turnir ma'lumoti yangilandi", '🔄');
+      });
+    }
+    if (btnOnline) {
+      btnOnline.addEventListener('click', () => {
+        _lastInvoker = btnOnline;
+        setOnlineTab(_waitingMatch ? 'tour' : 'live');
+      });
+    }
+    if (btnClose) {
+      btnClose.addEventListener('click', () => {
+        if (!_waitingMatch) setOnlineTab('live');
+        _lastInvoker = null;
+      });
+    }
 
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && isModalOpen()) {
@@ -506,8 +552,6 @@
         closeTournamentModal();
       }
     });
-
-    return modal;
   }
 
   function selectTab(tabName) {
@@ -658,9 +702,9 @@
 
     return `
       ${noticeHtml}
-      <div class="flex flex-col gap-2.5">
+      <div class="flex flex-col gap-2">
         <!-- 1) Afisha Banneri -->
-        <div class="ios-fh-group p-3 bg-gradient-to-br from-amber-950/45 via-slate-900/80 to-rose-950/35 border border-amber-400/45">
+        <div class="ios-fh-group p-2.5 bg-gradient-to-br from-amber-950/45 via-slate-900/80 to-rose-950/35 border border-amber-400/45">
           <div class="flex items-start justify-between gap-2">
             <div class="min-w-0">
               <div class="text-[13px] font-black text-amber-200 tracking-wide truncate">${esc(title)}</div>
@@ -671,7 +715,7 @@
               <div id="dgTourMainTimer" class="text-[13px] font-mono font-black text-amber-300">${esc(timerVal)}</div>
             </div>
           </div>
-          <div class="mt-2.5">
+          <div class="mt-2">
             <div class="flex items-center justify-between text-[10px] font-bold text-slate-200 mb-1">
               <span>👥 Ishtirokchilar: <span class="text-amber-300 font-mono">${cnt} / ${max}</span></span>
               <span class="text-emerald-300 font-mono">✅ Check-In: ${active ? (Number(active.checkedInCount) || 0) : 0}</span>
@@ -683,7 +727,7 @@
         </div>
 
         <!-- 2) Sovrin Jamg'armasi 3 ta karta -->
-        <div class="grid grid-cols-3 gap-2">
+        <div class="grid grid-cols-3 gap-1.5">
           <div class="ios-fh-group p-2 text-center border-amber-400/55 bg-amber-950/25">
             <div class="text-[10px] font-black text-amber-300">🥇 1-O'RIN</div>
             <div class="text-[11.5px] font-black text-white mt-0.5">${esc(formatMoney(prizes.first))} so'm</div>
@@ -702,7 +746,7 @@
         </div>
 
         <!-- 3) Majburiy shartlar qutisi -->
-        <div class="ios-fh-group p-2.5 flex flex-col gap-2 ${_subWarning ? 'border-rose-400/85 shadow-[0_0_16px_rgba(244,63,94,0.35)]' : ''}">
+        <div class="ios-fh-group p-2 flex flex-col gap-1.5 ${_subWarning ? 'border-rose-400/85 shadow-[0_0_16px_rgba(244,63,94,0.35)]' : ''}">
           <div class="flex items-center justify-between gap-2 text-[10.5px]">
             <span class="text-slate-200 font-semibold">🆔 Telegram profili:</span>
             <span class="font-bold ${identity.tgId ? 'text-emerald-300' : 'text-rose-300'}">${identity.tgId ? '✅ Tasdiqlangan' : '❌ Telegram orqali kiring'}</span>
@@ -723,7 +767,7 @@
         <div>${actionBlockHtml}</div>
 
         <!-- 5) Viral do'st chaqirish -->
-        <div class="ios-fh-group p-2.5 flex items-center justify-between gap-2">
+        <div class="ios-fh-group p-2 flex items-center justify-between gap-2">
           <button id="btnTourShareRef" type="button" data-share-url="${esc(myRefLink)}" class="ios-btn-tinted flex-1 py-2 px-3 text-[11px] font-extrabold cursor-pointer">
             ✈️ DO'STNI TURNIRGA CHAQIRISH (+$1,000)
           </button>
@@ -1329,7 +1373,7 @@
             _serverOffsetMs = Number(data.serverNow) - Date.now();
           }
           _lastPollAt = Date.now();
-          renderLobbyCard();
+          updateOnlineLiveBadge();
           renderModalContent(false);
         }
       }
@@ -1341,16 +1385,22 @@
   }
 
   async function openTournamentModal() {
-    const modal = ensureModalDOM();
+    ensureEmbeddedTourDOM();
     _statusNotice = null;
-    modal.classList.remove('hidden');
-    renderModalContent(true);
+    if (typeof window.openOnlineModal === 'function') {
+      window.openOnlineModal();
+    } else {
+      const m = document.getElementById('modalOnline');
+      if (m) m.classList.remove('hidden');
+    }
+    setOnlineTab('tour');
     await fetchTourState(true);
   }
 
   function closeTournamentModal() {
-    const modal = document.getElementById('modalTournament');
+    const modal = document.getElementById('modalOnline');
     if (modal) modal.classList.add('hidden');
+    if (!_waitingMatch) setOnlineTab('live');
     if (_lastInvoker && typeof _lastInvoker.focus === 'function') {
       try { _lastInvoker.focus(); } catch (_) {}
     }
@@ -1445,8 +1495,6 @@
 
     if (active && (active.status === 'registration' || active.status === 'checkin')) {
       const cd = formatCountdown(active.startAt);
-      const cardTimer = document.getElementById('dgTourCardTimer');
-      if (cardTimer) cardTimer.textContent = '⏳ ' + cd;
       if (isModalOpen() && _activeTab === 'main') {
         const mainTimer = document.getElementById('dgTourMainTimer');
         if (mainTimer) mainTimer.textContent = cd;
@@ -1468,7 +1516,11 @@
   }
 
   function bootTournamentUI() {
-    ensureLobbyCardDOM();
+    ensureTournamentStyles();
+    removeLegacyLobbyCard();
+    bindOnlineModalControls();
+    ensureEmbeddedTourDOM();
+    updateOnlineLiveBadge();
     parseDeepLinksAndAutoOpen();
     if (!isGameBusy()) {
       fetchTourState(false);
@@ -1479,6 +1531,7 @@
   window.DIGI_TOUR = {
     open: openTournamentModal,
     close: closeTournamentModal,
+    setOnlineTab,
     refresh: fetchTourState,
     getState: () => _state,
     onMpEvent,

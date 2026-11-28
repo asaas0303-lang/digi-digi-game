@@ -461,6 +461,8 @@
     if (!listEl || currentRoom) return;
     const modal = document.getElementById("modalOnline");
     if (!modal || modal.classList.contains("hidden")) return;
+    const panelSquad = document.getElementById("panelSquad");
+    if (panelSquad && panelSquad.classList.contains("hidden")) return;
 
     try {
       const res = await fetch("/api/mp/rooms?t=" + Date.now(), { cache: "no-store" });
@@ -738,6 +740,9 @@
     setTimeout(() => {
       const modal = document.getElementById("modalOnline");
       if (modal) modal.classList.remove("hidden");
+      if (window.DIGI_TOUR && typeof window.DIGI_TOUR.setOnlineTab === "function") {
+        window.DIGI_TOUR.setOnlineTab("live");
+      }
       joinRoomByCode(roomCode);
     }, 550);
   }

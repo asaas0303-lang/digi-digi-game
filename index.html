@@ -1270,7 +1270,13 @@
                   <div class="text-[8px] text-slate-300/90 truncate">Do'stlar bilan o'ynash</div>
                 </div>
               </div>
-              <span class="relative z-10 text-slate-200 font-black text-sm shrink-0 pl-1">›</span>
+              <div class="relative z-10 flex items-center gap-1.5 shrink-0 pl-1">
+                <span id="onlineTourLiveBadge" class="dg-online-live-pill">
+                  <span class="dg-online-live-dot"></span>
+                  <span>LIVE</span>
+                </span>
+                <span class="text-slate-200 font-black text-sm">›</span>
+              </div>
             </button>
     
             <!-- 3) SOZLAMALAR -->
@@ -1505,29 +1511,39 @@
     <div id="modalOnline" class="hidden fixed inset-0 z-50 flex items-center justify-center p-2.5">
       <div class="ios-fh-sheet w-full max-w-4xl h-[94%] flex flex-col overflow-hidden">
 
-        <!-- Yuqori 3D iOS Glass Sarlavha (Ortiqcha bezak va tablar yo'q!) -->
+        <!-- Yuqori 3D iOS Glass Sarlavha (Jonli o'yin + Turnir almashtirgichi) -->
         <div class="ios-fh-nav shrink-0 h-[44px] px-3.5 flex items-center justify-between gap-2">
           <div class="flex items-center gap-2 min-w-0">
             <span class="w-7 h-7 rounded-full ios-fh-avatar bg-slate-900/90 flex items-center justify-center text-sky-300 shrink-0">
               <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a13 13 0 0 1 0 18M12 3a13 13 0 0 0 0 18"/></svg>
             </span>
             <h2 class="text-[15px] font-bold tracking-tight bg-gradient-to-b from-white via-sky-100 to-amber-200 bg-clip-text text-transparent drop-shadow truncate">Online</h2>
-            <span class="ios-fh-stat-pill inline-flex items-center gap-1.5 text-sky-100 text-[10px] font-semibold px-2.5 py-0.5 rounded-full shrink-0">
-              <span class="w-1.5 h-1.5 rounded-full bg-[#30D158] shadow-[0_0_8px_rgba(48,209,88,0.95)]"></span>
-              <span>Jonli o'yin</span>
-            </span>
+            <div class="ios-mp-seg flex items-center gap-1 shrink-0" role="tablist" aria-label="Online bo'limlari">
+              <button id="btnOnlineTabLive" type="button" role="tab" data-online-tab="live" aria-selected="true" class="dg-onl-seg-btn dg-onl-seg-live">
+                <span class="w-1.5 h-1.5 rounded-full bg-[#30D158] shadow-[0_0_8px_rgba(48,209,88,0.95)]"></span>
+                <span>Jonli o'yin</span>
+              </button>
+              <button id="btnOnlineTabTour" type="button" role="tab" data-online-tab="tour" aria-selected="false" class="dg-onl-seg-btn dg-onl-seg-tour">
+                <span>🏆 Turnir</span>
+                <span id="onlineTourTabBadge" class="dg-onl-tour-mini hidden"></span>
+              </button>
+            </div>
           </div>
 
           <div class="flex items-center gap-1.5 shrink-0">
+            <button id="btnTourHeaderRefresh" type="button" class="hidden ios-btn-circle" title="Yangilash" aria-label="Turnir holatini yangilash">
+              <span class="text-xs leading-none">🔄</span>
+            </button>
             <button id="btnCloseOnlineModal" type="button" class="ios-btn-circle" title="Yopish" aria-label="Yopish">
               <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
             </button>
           </div>
         </div>
 
-        <!-- Asosiy Maydon: mp-client.js shu yerga (#panelSquad) sodda 2-ustunli 3D iOS panelni ulaydi -->
-        <div class="flex-1 min-h-0 overflow-y-auto p-3 flex flex-col">
-          <section id="panelSquad" class="flex-1 min-h-0 flex flex-col"></section>
+        <!-- Asosiy Maydon: Jonli o'yin (#panelSquad) va Turnir Markazi (#panelTournament) -->
+        <div class="flex-1 min-h-0 flex flex-col overflow-hidden">
+          <section id="panelSquad" class="flex-1 min-h-0 overflow-y-auto p-3 flex flex-col"></section>
+          <section id="panelTournament" class="hidden flex-1 min-h-0 flex-col overflow-hidden"></section>
         </div>
 
         <!-- Eski oflayn/tab ID lari uchun ko'rinmas himoya qutisi (0% JS null-xato kafolati) -->
@@ -9261,8 +9277,6 @@
         }
 
         document.getElementById('modalOnline').classList.add('hidden');
-        const tm = document.getElementById('modalTournament');
-        if (tm) tm.classList.add('hidden');
         window._isTourMpMatch = Boolean(snap && snap.isTournament);
         window._tourOvertimeAnnounced = false;
         document.getElementById('lobbyView').classList.add('hidden');
@@ -12646,8 +12660,8 @@
   <script src="/telegram-bridge.js?v=20261124_11"></script>
   <script src="/gifts-ui.js?v=20261124_11"></script>
   <script src="/weekly-champion.js?v=20261124_13"></script>
-  <script src="/mp-client.js?v=20261128_2"></script>
+  <script src="/mp-client.js?v=20261128_3"></script>
   <script src="/sfx-engine.js"></script>
-  <script src="/tournament-ui.js?v=20261128_2"></script>
+  <script src="/tournament-ui.js?v=20261128_3"></script>
 </body>
 </html>
