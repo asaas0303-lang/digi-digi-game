@@ -51,7 +51,8 @@ const HOT_TEXT_ASSETS = {
   "/telegram-bridge.js": { fileName: "telegram-bridge.js", contentType: "application/javascript; charset=UTF-8" },
   "/mp-client.js": { fileName: "mp-client.js", contentType: "application/javascript; charset=UTF-8" },
   "/sfx-engine.js": { fileName: "sfx-engine.js", contentType: "application/javascript; charset=UTF-8" },
-  "/gifts-catalog.js": { fileName: "gifts-catalog.js", contentType: "application/javascript; charset=UTF-8" }
+  "/gifts-catalog.js": { fileName: "gifts-catalog.js", contentType: "application/javascript; charset=UTF-8" },
+  "/tournament-ui.js": { fileName: "tournament-ui.js", contentType: "application/javascript; charset=UTF-8" }
 };
 const hotAssetCache = new Map();
 
