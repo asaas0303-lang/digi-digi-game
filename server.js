@@ -2180,17 +2180,21 @@ try {
 }
 
 // Real-Time Multiplayer Room Engine (1v1 Duel & 4v4 TDM — SSE + Keep-Alive HTTP)
+let mpEngine = null;
 try {
   const { initMultiplayer } = require("./mp_engine");
-  initMultiplayer(app);
+  mpEngine = initMultiplayer(app);
 } catch (mpErr) {
   console.error("[Multiplayer] Init error:", mpErr);
 }
 
-// 1v1 Olimpiya Play-off Turnir Dvigateli (1-Bosqich Backend + Telegram Bot Admin)
+// 1v1 Olimpiya Play-off Turnir Dvigateli (Backend + Telegram Bot Admin + PvP Bridge)
 try {
   const { initTournament } = require("./tournament_engine");
-  tourEngine = initTournament({ app, db, saveDb, tgApiCall, DATA_DIR, APP_URL, ADMIN_TG_ID });
+  tourEngine = initTournament({ app, db, saveDb, tgApiCall, DATA_DIR, APP_URL, ADMIN_TG_ID, mpEngine });
+  if (mpEngine && typeof mpEngine.setTournamentEngine === "function" && tourEngine) {
+    mpEngine.setTournamentEngine(tourEngine);
+  }
 } catch (tourErr) {
   console.error("[Tournament] Init error:", tourErr);
 }

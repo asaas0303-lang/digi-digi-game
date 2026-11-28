@@ -5,6 +5,13 @@
 const MAP_SIZE = 16;
 const ROOM_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
+const TOUR_WEAPON_SPECS = {
+  0: { minIntervalMs: 75,  maxDmg: 42,  maxHsDmg: 112 }, // M4A1-S
+  1: { minIntervalMs: 85,  maxDmg: 48,  maxHsDmg: 128 }, // AK-47
+  2: { minIntervalMs: 380, maxDmg: 105, maxHsDmg: 135 }, // XM1014 Shotgun
+  3: { minIntervalMs: 120, maxDmg: 40,  maxHsDmg: 102 }  // USP-S
+};
+
 const RED_SPAWNS = [
   { x: 1.5, y: 1.5, a: 0 },
   { x: 4.5, y: 1.5, a: Math.PI / 2 },
@@ -40,6 +47,89 @@ function cleanCode(raw) {
 function initMultiplayer(app) {
   const rooms = new Map();       // code -> room
   const playerRoom = new Map();  // playerId -> code
+  let tourBridge = null;
+
+  function setTournamentEngine(eng) {
+    tourBridge = eng || null;
+  }
+
+  function ensureAc(room, pid) {
+    if (!room.acStats) room.acStats = {};
+    if (!room.acStats[pid]) {
+      room.acStats[pid] = {
+        kills: 0,
+        deaths: 0,
+        shots: 0,
+        hits: 0,
+        hs: 0,
+        dmgDealt: 0,
+        flagsSpeed: 0,
+        flagsFireRate: 0,
+        flagsDmg: 0
+      };
+    }
+    return room.acStats[pid];
+  }
+
+  function createTournamentRoom({ tourId, matchId, roundName, p1, p2, mazeIdx }) {
+    const code = genCode();
+    const p1Id = cleanId(p1 && p1.playerId);
+    const p2Id = cleanId(p2 && p2.playerId);
+    const tourAllowed = {};
+    if (p1Id) {
+      tourAllowed[p1Id] = {
+        team: "red",
+        name: cleanName(p1 && p1.name, p1Id),
+        elo: Number(p1 && p1.elo) || 1000
+      };
+    }
+    if (p2Id) {
+      tourAllowed[p2Id] = {
+        team: "blue",
+        name: cleanName(p2 && p2.name, p2Id),
+        elo: Number(p2 && p2.elo) || 1000
+      };
+    }
+    const now = Date.now();
+    const room = {
+      code,
+      mode: "1v1",
+      maxPlayers: 2,
+      mazeIdx: mazeIdx === 1 ? 1 : 0,
+      isPublic: false,
+      status: "waiting",
+      hostId: p1Id,
+      durationSec: 120,
+      startedAt: null,
+      redScore: 0,
+      blueScore: 0,
+      players: new Map(),
+      events: [],
+      nextEventSeq: 1,
+      createdAt: now,
+      updatedAt: now,
+      dirty: false,
+      isTournament: true,
+      tourId: String(tourId || ""),
+      tourMatchId: String(matchId || ""),
+      tourRoundName: String(roundName || "1v1 PLAY-OFF"),
+      tourP1Id: p1Id,
+      tourP2Id: p2Id,
+      tourAllowed,
+      noShowDeadlineAt: 0,
+      forfeitAt: 0,
+      overtime: false,
+      tourReported: false,
+      tko: false,
+      acStats: {}
+    };
+    rooms.set(code, room);
+    return room;
+  }
+
+  function getRoom(code) {
+    return rooms.get(cleanCode(code)) || null;
+  }
 
   function genCode() {
     for (let attempt = 0; attempt < 30; attempt++) {
@@ -111,7 +201,40 @@ function initMultiplayer(app) {
         p.wp
       ]);
     }
-    return { rem, rs: room.redScore, bs: room.blueScore, p: arr };
+    return { rem, rs: room.redScore, bs: room.blueScore, ot: room.overtime ? 1 : 0, p: arr };
+  }
+
+  function finishTournamentRoom(room, winnerPid, opts = {}) {
+    if (!room || !room.isTournament || room.tourReported) return;
+    room.tourReported = true;
+    room.status = "ended";
+    room.tko = Boolean(opts.tko);
+    room.updatedAt = Date.now();
+    const s1 = room.redScore || 0;
+    const s2 = room.blueScore || 0;
+    const winnerTeam = (winnerPid === room.tourP1Id) ? "red" : "blue";
+    if (opts.tko && s1 === s2) {
+      if (winnerTeam === "red") room.redScore = Math.max(1, s1);
+      else room.blueScore = Math.max(1, s2);
+    }
+    broadcast(room, "match_end", {
+      winner: winnerTeam,
+      winnerId: winnerPid,
+      tko: room.tko,
+      overtimeWin: Boolean(opts.overtimeWin),
+      tourMatchId: room.tourMatchId,
+      tourRoundName: room.tourRoundName,
+      room: serializeRoom(room)
+    });
+    if (tourBridge && typeof tourBridge.reportMatchResult === "function") {
+      tourBridge
+        .reportMatchResult(room.tourMatchId, winnerPid, room.redScore, room.blueScore, {
+          tko: room.tko,
+          dqReason: opts.dqReason || "",
+          antiCheat: room.acStats
+        })
+        .catch(err => console.error("[MP->Tour] report error:", err));
+    }
   }
 
   function collectEventsSince(room, sinceSeq, pid) {
@@ -162,6 +285,12 @@ function initMultiplayer(app) {
       redScore: room.redScore,
       blueScore: room.blueScore,
       remSec,
+      isTournament: Boolean(room.isTournament),
+      tourMatchId: room.tourMatchId || null,
+      tourRoundName: room.tourRoundName || "",
+      noShowDeadlineAt: room.noShowDeadlineAt || 0,
+      overtime: Boolean(room.overtime),
+      tko: Boolean(room.tko),
       players: playersList
     };
   }
@@ -272,6 +401,9 @@ function initMultiplayer(app) {
       p.mv = 0;
       p.mfUntil = 0;
       p.lastSeenAt = now;
+      p.lastMoveAt = now;
+      p.justRespawnedUntil = now + 1500;
+      p.lastShotAt = 0;
     }
     broadcast(room, "start", serializeRoom(room));
   }
@@ -335,8 +467,37 @@ function initMultiplayer(app) {
     if (!pid || !code) return res.status(400).json({ ok: false, error: "INVALID_INPUT" });
     const room = rooms.get(code);
     if (!room) return res.status(404).json({ ok: false, error: "ROOM_NOT_FOUND" });
+    if (room.isTournament && room.status === "ended") {
+      return res.status(409).json({ ok: false, error: "ROOM_ENDED" });
+    }
     if (!room.players.has(pid) && room.players.size >= room.maxPlayers) {
       return res.status(409).json({ ok: false, error: "ROOM_FULL" });
+    }
+    if (room.isTournament) {
+      const allowed = room.tourAllowed && room.tourAllowed[pid];
+      if (!allowed) {
+        return res.status(403).json({ ok: false, error: "TOUR_NOT_ALLOWED" });
+      }
+      addPlayerToRoom(room, pid, cleanName(b.name, allowed.name || pid), allowed.team);
+      if (room.players.size >= 2) {
+        room.forfeitAt = 0;
+      }
+      if (room.status === "waiting") {
+        if (!room.noShowDeadlineAt) {
+          room.noShowDeadlineAt = Date.now() + 45000;
+        }
+        if (room.players.size >= 2) {
+          startRoomMatch(room);
+          if (tourBridge && typeof tourBridge.attachRoomToMatch === "function") {
+            tourBridge.attachRoomToMatch(room.tourMatchId, room.code, { markPlaying: true });
+          }
+          const snapStarted = serializeRoom(room);
+          return res.json({ ok: true, room: snapStarted, seq: (typeof room.nextEventSeq === "number" ? room.nextEventSeq - 1 : 0) });
+        }
+      }
+      const snapTour = serializeRoom(room);
+      broadcast(room, "room", snapTour);
+      return res.json({ ok: true, room: snapTour, seq: (typeof room.nextEventSeq === "number" ? room.nextEventSeq - 1 : 0) });
     }
     addPlayerToRoom(room, pid, cleanName(b.name, pid), b.team);
     const snap = serializeRoom(room);
@@ -394,6 +555,7 @@ function initMultiplayer(app) {
     const pid = cleanId(b.playerId);
     const code = cleanCode(b.code);
     const room = rooms.get(code);
+    if (room && room.isTournament) return res.status(403).json({ ok: false, error: "TOUR_TEAM_LOCKED" });
     if (!room || room.status !== "waiting") return res.status(400).json({ ok: false });
     const p = room.players.get(pid);
     if (!p) return res.status(404).json({ ok: false });
@@ -429,7 +591,17 @@ function initMultiplayer(app) {
   app.post("/api/mp/leave", (req, res) => {
     const b = req.body || {};
     const pid = cleanId(b.playerId);
-    if (pid) removePlayerFromAnyRoom(pid);
+    if (pid) {
+      const code = playerRoom.get(pid);
+      const room = code ? rooms.get(code) : null;
+      if (room && room.isTournament && room.status === "playing" && !room.tourReported) {
+        const oppId = (pid === room.tourP1Id) ? room.tourP2Id : room.tourP1Id;
+        if (oppId) {
+          finishTournamentRoom(room, oppId, { tko: true, dqReason: "FORFEIT_LEAVE" });
+        }
+      }
+      removePlayerFromAnyRoom(pid);
+    }
     res.json({ ok: true });
   });
 
@@ -504,8 +676,22 @@ function initMultiplayer(app) {
     const now = Date.now();
     p.lastSeenAt = now;
     if (p.alive) {
-      p.x = clamp(b.x, 1.0, MAP_SIZE - 1.0);
-      p.y = clamp(b.y, 1.0, MAP_SIZE - 1.0);
+      let nx = clamp(b.x, 1.0, MAP_SIZE - 1.0);
+      let ny = clamp(b.y, 1.0, MAP_SIZE - 1.0);
+      if (room.isTournament && room.status === "playing" && p.lastMoveAt && now > (p.justRespawnedUntil || 0)) {
+        const dtSec = Math.max(0.05, Math.min(2.0, (now - p.lastMoveAt) / 1000));
+        const dist = Math.hypot(nx - p.x, ny - p.y);
+        const maxAllowedDist = Math.max(1.85, dtSec * 8.8);
+        if (dist > maxAllowedDist) {
+          ensureAc(room, pid).flagsSpeed++;
+          const ratio = maxAllowedDist / dist;
+          nx = p.x + (nx - p.x) * ratio;
+          ny = p.y + (ny - p.y) * ratio;
+        }
+      }
+      p.x = nx;
+      p.y = ny;
+      p.lastMoveAt = now;
       p.a = Number.isFinite(Number(b.a)) ? Number(b.a) : p.a;
       p.mv = b.mv ? 1 : 0;
       p.wp = Math.max(0, Math.min(3, parseInt(b.wp, 10) || 0));
@@ -534,6 +720,16 @@ function initMultiplayer(app) {
 
     const now = Date.now();
     shooter.lastSeenAt = now;
+    const ac = room.isTournament ? ensureAc(room, shooter.id) : null;
+    if (room.isTournament) {
+      const spec = TOUR_WEAPON_SPECS[shooter.wp] || TOUR_WEAPON_SPECS[0];
+      if (shooter.lastShotAt && (now - shooter.lastShotAt) < spec.minIntervalMs) {
+        ac.flagsFireRate++;
+        return res.json({ ok: true, hit: false, rateLimited: true });
+      }
+      shooter.lastShotAt = now;
+      ac.shots++;
+    }
     shooter.mfUntil = now + 130;
     room.dirty = true;
 
@@ -555,7 +751,19 @@ function initMultiplayer(app) {
       return res.json({ ok: true, hit: false, shielded: true });
     }
 
-    const rawDmg = Math.round(clamp(b.dmg, 5, 135));
+    const isHeadshot = !!b.isHeadshot;
+    let rawDmg = Math.round(clamp(b.dmg, 5, 135));
+    if (room.isTournament) {
+      const spec = TOUR_WEAPON_SPECS[shooter.wp] || TOUR_WEAPON_SPECS[0];
+      const maxAllowedDmg = isHeadshot ? spec.maxHsDmg : spec.maxDmg;
+      if (Number(b.dmg) > maxAllowedDmg + 15) {
+        ac.flagsDmg++;
+      }
+      rawDmg = Math.round(clamp(b.dmg, 5, maxAllowedDmg));
+      ac.hits++;
+      if (isHeadshot) ac.hs++;
+      ac.dmgDealt += rawDmg;
+    }
     let hpDmg = rawDmg;
     if (target.armor > 0) {
       const absorb = Math.min(target.armor, Math.ceil(rawDmg * 0.45));
@@ -563,7 +771,6 @@ function initMultiplayer(app) {
       hpDmg = Math.max(1, rawDmg - absorb);
     }
     target.hp = Math.max(0, target.hp - hpDmg);
-    const isHeadshot = !!b.isHeadshot;
     const isWallbang = !!b.isWallbang;
     const badge = isHeadshot ? "🎯HS" : (isWallbang ? "🧱WB" : "💥");
 
@@ -600,6 +807,14 @@ function initMultiplayer(app) {
         redScore: room.redScore,
         blueScore: room.blueScore
       });
+
+      if (room.isTournament) {
+        ensureAc(room, shooter.id).kills = shooter.kills;
+        ensureAc(room, target.id).deaths = target.deaths;
+        if (room.overtime === true) {
+          finishTournamentRoom(room, shooter.id, { tko: false, overtimeWin: true });
+        }
+      }
     }
 
     res.json({ ok: true, hit: true, killed, targetHp: target.hp, targetArmor: target.armor });
@@ -650,7 +865,7 @@ function initMultiplayer(app) {
           p.wp
         ]);
       }
-      broadcast(room, "state", { rem, rs: room.redScore, bs: room.blueScore, p: arr });
+      broadcast(room, "state", { rem, rs: room.redScore, bs: room.blueScore, ot: room.overtime ? 1 : 0, p: arr });
     }
   }, 60);
 
@@ -679,8 +894,41 @@ function initMultiplayer(app) {
           p.alive = true;
           p.respawnAt = 0;
           p.spawnShieldUntil = now + 2600;
+          p.justRespawnedUntil = now + 1500;
+          p.lastMoveAt = now;
           room.dirty = true;
           broadcast(room, "respawn", { id: p.id, x: p.x, y: p.y, a: p.a, hp: 100, armor: 50 });
+        }
+      }
+
+      // Turnir 45s No-Show TKO
+      if (room.isTournament && room.status === "waiting" && room.noShowDeadlineAt > 0 && now >= room.noShowDeadlineAt && !room.tourReported) {
+        if (room.players.size === 1) {
+          const present = room.players.values().next().value;
+          if (present) {
+            finishTournamentRoom(room, present.id, { tko: true, dqReason: "NO_SHOW_45S" });
+          }
+        }
+      }
+
+      // Turnir jang paytida uzilib qolsa (15s reconnect)
+      if (room.isTournament && room.status === "playing" && !room.tourReported) {
+        if (room.players.size === 1) {
+          if (!room.forfeitAt) {
+            room.forfeitAt = now + 15000;
+          } else if (now >= room.forfeitAt) {
+            const survivor = room.players.values().next().value;
+            if (survivor) {
+              finishTournamentRoom(room, survivor.id, { tko: true, dqReason: "DISCONNECT_TIMEOUT" });
+            }
+          }
+        } else if (room.players.size >= 2) {
+          room.forfeitAt = 0;
+        } else if (room.players.size === 0) {
+          const fallbackWin = (room.redScore || 0) >= (room.blueScore || 0) ? room.tourP1Id : room.tourP2Id;
+          if (fallbackWin) {
+            finishTournamentRoom(room, fallbackWin, { tko: true, dqReason: "BOTH_DISCONNECTED" });
+          }
         }
       }
 
@@ -700,9 +948,33 @@ function initMultiplayer(app) {
       if (room.status === "playing" && room.startedAt) {
         const elapsed = (now - room.startedAt) / 1000;
         if (elapsed >= room.durationSec) {
-          room.status = "ended";
-          const winner = room.redScore > room.blueScore ? "red" : (room.blueScore > room.redScore ? "blue" : "draw");
-          broadcast(room, "match_end", { winner, room: serializeRoom(room) });
+          if (room.isTournament) {
+            if (!room.tourReported) {
+              if ((room.redScore || 0) > (room.blueScore || 0)) {
+                finishTournamentRoom(room, room.tourP1Id);
+              } else if ((room.blueScore || 0) > (room.redScore || 0)) {
+                finishTournamentRoom(room, room.tourP2Id);
+              } else if (!room.overtime) {
+                room.overtime = true;
+                room.durationSec += 30;
+                room.dirty = true;
+                broadcast(room, "room", serializeRoom(room));
+              } else {
+                const ac1 = (room.acStats && room.acStats[room.tourP1Id]) || {};
+                const ac2 = (room.acStats && room.acStats[room.tourP2Id]) || {};
+                const d1 = Number(ac1.dmgDealt) || 0;
+                const d2 = Number(ac2.dmgDealt) || 0;
+                const e1 = (room.tourAllowed && room.tourAllowed[room.tourP1Id] && room.tourAllowed[room.tourP1Id].elo) || 1000;
+                const e2 = (room.tourAllowed && room.tourAllowed[room.tourP2Id] && room.tourAllowed[room.tourP2Id].elo) || 1000;
+                const tieWinnerId = d1 !== d2 ? (d1 > d2 ? room.tourP1Id : room.tourP2Id) : (e1 >= e2 ? room.tourP1Id : room.tourP2Id);
+                finishTournamentRoom(room, tieWinnerId, { overtimeWin: true });
+              }
+            }
+          } else {
+            room.status = "ended";
+            const winner = room.redScore > room.blueScore ? "red" : (room.blueScore > room.redScore ? "blue" : "draw");
+            broadcast(room, "match_end", { winner, room: serializeRoom(room) });
+          }
         }
       }
     }
@@ -718,6 +990,8 @@ function initMultiplayer(app) {
       }
     }
   }, 14000);
+
+  return { setTournamentEngine, createTournamentRoom, getRoom };
 }
 
 module.exports = { initMultiplayer };

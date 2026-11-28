@@ -9261,6 +9261,10 @@
         }
 
         document.getElementById('modalOnline').classList.add('hidden');
+        const tm = document.getElementById('modalTournament');
+        if (tm) tm.classList.add('hidden');
+        window._isTourMpMatch = Boolean(snap && snap.isTournament);
+        window._tourOvertimeAnnounced = false;
         document.getElementById('lobbyView').classList.add('hidden');
         const gvMp = document.getElementById('gameView');
         if (gvMp) gvMp.classList.remove('hidden', 'digi-match-ended');
@@ -9275,7 +9279,7 @@
 
         const modeBadgeEl = document.getElementById('hudModeBadge');
         if (modeBadgeEl) {
-          modeBadgeEl.textContent = gameMode === '1v1' ? 'LIVE 1V1' : 'LIVE 4V4';
+          modeBadgeEl.textContent = snap.isTournament ? ('🏆 ' + (snap.tourRoundName || 'TOUR 1V1')) : (gameMode === '1v1' ? 'LIVE 1V1' : 'LIVE 4V4');
         }
 
         stopAllMovement();
@@ -9366,6 +9370,10 @@
             redScore = data.rs || 0;
             blueScore = data.bs || 0;
             syncMpTimerHud(data.rem);
+            if (data.ot && !window._tourOvertimeAnnounced) {
+              window._tourOvertimeAnnounced = true;
+              showCsEventBanner("⚡ OVERTAYM! BIRINCHI FRAG G'ALABA!");
+            }
             const myId = window.DIGI_MP.getMyId();
             if (Array.isArray(data.p)) {
               for (let i = 0; i < data.p.length; i++) {
@@ -9526,8 +9534,16 @@
           onMatchEnd: (data) => {
             if (!isMpMatch) return;
             isMpMatch = false;
+            const wasTour = !!window._isTourMpMatch;
+            window._isTourMpMatch = false;
             const winner = (data && data.winner) ? data.winner : (redScore > blueScore ? 'red' : (blueScore > redScore ? 'blue' : 'draw'));
             finishMatch(winner);
+            if (data && data.tko) {
+              showCsEventBanner("🏆 TEXNIK G'ALABA (TKO)!");
+            }
+            if (wasTour && window.DIGI_TOUR && typeof window.DIGI_TOUR.onMatchFinished === 'function') {
+              window.DIGI_TOUR.onMatchFinished(data);
+            }
           }
         });
       }
@@ -12630,8 +12646,8 @@
   <script src="/telegram-bridge.js?v=20261124_11"></script>
   <script src="/gifts-ui.js?v=20261124_11"></script>
   <script src="/weekly-champion.js?v=20261124_13"></script>
-  <script src="/mp-client.js"></script>
+  <script src="/mp-client.js?v=20261128_2"></script>
   <script src="/sfx-engine.js"></script>
-  <script src="/tournament-ui.js?v=20261128_1"></script>
+  <script src="/tournament-ui.js?v=20261128_2"></script>
 </body>
 </html>

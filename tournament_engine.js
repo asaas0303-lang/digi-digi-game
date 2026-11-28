@@ -220,8 +220,12 @@ function buildPlayoffBracket(tour, opts = {}) {
   };
 }
 
-function initTournament({ app, db, saveDb, tgApiCall, DATA_DIR, APP_URL, ADMIN_TG_ID }) {
+function initTournament({ app, db, saveDb, tgApiCall, DATA_DIR, APP_URL, ADMIN_TG_ID, mpEngine }) {
   const adminIdStr = String(ADMIN_TG_ID || DEFAULT_ADMIN_ID);
+  let _mpEngine = mpEngine || null;
+  function setMpEngine(eng) {
+    _mpEngine = eng || null;
+  }
   const TOUR_DB_FILE = path.join(DATA_DIR, "tournaments_db.json");
   if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -654,9 +658,21 @@ function initTournament({ app, db, saveDb, tgApiCall, DATA_DIR, APP_URL, ADMIN_T
       }
     }
 
-    // Admin hisoboti
+    // Admin hisoboti (TOP-3 + Anti-Cheat xulosasi)
+    const formatAcLine = (w) => {
+      if (!w) return "";
+      const p = findParticipant(tour, w.playerId, w.tgId);
+      const ac = p && p.acSummary;
+      if (!ac) return "\n   🛡️ Anti-Cheat: — (o'yin ma'lumoti yo'q)";
+      const hsPct = ac.hits > 0 ? Math.round((ac.hs / ac.hits) * 100) : 0;
+      const tot = Number(ac.totalFlags) || 0;
+      if (tot === 0 && hsPct < 70) {
+        return `\n   🛡️ Anti-Cheat: ✅ Toza (0 shubha, HS: ${hsPct}%)`;
+      }
+      return `\n   🛡️ Anti-Cheat: ⚠️ ${tot} ta shubhali belgi! (Speed: ${ac.flagsSpeed || 0}, Fire: ${ac.flagsFireRate || 0}, Dmg: ${ac.flagsDmg || 0}, HS: ${hsPct}%)`;
+    };
     const lineFor = (label, w) => w
-      ? `${label}: <b>${escapeHtml(w.name)}</b> (<code>${escapeHtml(w.playerId)}</code>) — ${formatMoney(w.cashPrize)} so'm + ${w.gemPrize}💎`
+      ? `${label}: <b>${escapeHtml(w.name)}</b> (<code>${escapeHtml(w.playerId)}</code>) — ${formatMoney(w.cashPrize)} so'm + ${w.gemPrize}💎${formatAcLine(w)}`
       : `${label}: —`;
 
     await sendAdminDm(
@@ -711,6 +727,28 @@ function initTournament({ app, db, saveDb, tgApiCall, DATA_DIR, APP_URL, ADMIN_T
     match.finishedAt = Date.now();
     match.tko = Boolean(opts.tko);
     if (opts.dqReason) match.dqReason = String(opts.dqReason);
+
+    if (opts.antiCheat && typeof opts.antiCheat === "object") {
+      match.antiCheat = opts.antiCheat;
+      for (const [acPid, acVal] of Object.entries(opts.antiCheat)) {
+        if (!acVal || typeof acVal !== "object") continue;
+        const p = findParticipant(tour, acPid, null);
+        if (!p) continue;
+        if (!p.acSummary) {
+          p.acSummary = { kills: 0, deaths: 0, shots: 0, hits: 0, hs: 0, dmgDealt: 0, flagsSpeed: 0, flagsFireRate: 0, flagsDmg: 0, totalFlags: 0 };
+        }
+        p.acSummary.kills += Number(acVal.kills) || 0;
+        p.acSummary.deaths += Number(acVal.deaths) || 0;
+        p.acSummary.shots += Number(acVal.shots) || 0;
+        p.acSummary.hits += Number(acVal.hits) || 0;
+        p.acSummary.hs += Number(acVal.hs) || 0;
+        p.acSummary.dmgDealt += Number(acVal.dmgDealt) || 0;
+        p.acSummary.flagsSpeed += Number(acVal.flagsSpeed) || 0;
+        p.acSummary.flagsFireRate += Number(acVal.flagsFireRate) || 0;
+        p.acSummary.flagsDmg += Number(acVal.flagsDmg) || 0;
+        p.acSummary.totalFlags = p.acSummary.flagsSpeed + p.acSummary.flagsFireRate + p.acSummary.flagsDmg;
+      }
+    }
 
     const rounds = tour.bracket.rounds || [];
     const totalRounds = tour.bracket.totalRounds;
@@ -866,10 +904,24 @@ function initTournament({ app, db, saveDb, tgApiCall, DATA_DIR, APP_URL, ADMIN_T
     _tickBusy = true;
     try {
       const tour = tourDb.active;
-      if (!tour || tour.status === "finished" || tour.status === "cancelled" || tour.status === "live") return;
+      if (!tour || tour.status === "finished" || tour.status === "cancelled") return;
       if (!tour.notified) tour.notified = { h1: false, checkin: false, start: false, lowPlayers: false };
 
       const now = Date.now();
+
+      // Double No-Show himoyasi: 3 daqiqa (180s) ichida ikkala o'yinchi ham kirmasa yuqori seed o'tadi
+      if (tour.status === "live") {
+        if (tour.bracket) {
+          const allMatches = getAllBracketMatches(tour.bracket);
+          for (const m of allMatches) {
+            if (m.status === "ready" && m.p1 && m.p2 && !m.roomCode && m.readyAt > 0 && (now - m.readyAt) >= 180000) {
+              await reportMatchResult(m.id, m.p1.playerId, 1, 0, { tko: true, dqReason: "DOUBLE_NO_SHOW" });
+            }
+          }
+        }
+        return;
+      }
+
       const checkinAt = Number(tour.checkinAt) || (Number(tour.startAt) - 15 * 60 * 1000);
 
       if (tour.status === "registration") {
@@ -1132,6 +1184,76 @@ function initTournament({ app, db, saveDb, tgApiCall, DATA_DIR, APP_URL, ADMIN_T
       });
     } catch (err) {
       console.error("[Tournament] /api/tour/checkin error:", err);
+      return res.status(500).json({ ok: false, error: "SERVER_ERROR" });
+    }
+  });
+
+  app.post("/api/tour/enter-match", (req, res) => {
+    try {
+      const { playerId, tgId } = req.body || {};
+      const active = tourDb.active;
+      if (!active || active.status !== "live") {
+        return res.status(404).json({ ok: false, error: "NO_ACTIVE_MATCH" });
+      }
+      const part = findParticipant(active, playerId, tgId);
+      const effectivePid = (part && part.playerId) || String(playerId || "").trim().toUpperCase();
+      const effectiveTgId = (part && part.tgId) || String(tgId || "").trim();
+      const m = findPlayerMatch(active, effectivePid, effectiveTgId);
+      if (!m || (m.status !== "ready" && m.status !== "playing")) {
+        return res.status(404).json({ ok: false, error: "NO_ACTIVE_MATCH" });
+      }
+      if (!m.p1 || !m.p2) {
+        return res.status(400).json({ ok: false, error: "MATCH_NOT_READY" });
+      }
+      if (!_mpEngine || typeof _mpEngine.createTournamentRoom !== "function") {
+        return res.status(500).json({ ok: false, error: "MP_ENGINE_UNAVAILABLE" });
+      }
+
+      const isP1 = (effectivePid && String(m.p1.playerId).toUpperCase() === effectivePid) ||
+        (effectiveTgId && String(m.p1.tgId) === effectiveTgId);
+      const mySlot = isP1 ? m.p1 : m.p2;
+      const oppSlot = isP1 ? m.p2 : m.p1;
+      const myTeam = isP1 ? "red" : "blue";
+
+      let room = (m.roomCode && typeof _mpEngine.getRoom === "function") ? _mpEngine.getRoom(m.roomCode) : null;
+      if (!room || room.status === "ended") {
+        room = _mpEngine.createTournamentRoom({
+          tourId: active.id,
+          matchId: m.id,
+          roundName: m.roundName,
+          p1: m.p1,
+          p2: m.p2,
+          mazeIdx: 0
+        });
+        attachRoomToMatch(m.id, room.code, { markPlaying: false });
+      }
+
+      if (!m.urgentDmSent && oppSlot && oppSlot.tgId) {
+        m.urgentDmSent = true;
+        saveTourDb();
+        sendPlayerDm(
+          oppSlot.tgId,
+          `⏳ <b>SHOSHILINCH! RAQIBINGIZ KUTMOQDA!</b>\n\n` +
+          `🏆 ${escapeHtml(m.roundName)}\n` +
+          `🆚 <b>${escapeHtml(mySlot.name)}</b> 1v1 turnir xonasiga kirdi!\n` +
+          `⚠️ <b>45 soniya</b> ichida kirmasangiz texnik mag'lubiyat (TKO) yoziladi!\n\n` +
+          `👇 Darhol jangga kiring:`,
+          true
+        ).catch(() => {});
+      }
+
+      return res.json({
+        ok: true,
+        roomCode: room.code,
+        matchId: m.id,
+        roundName: m.roundName,
+        team: myTeam,
+        opponentName: oppSlot.name,
+        opponentElo: oppSlot.elo,
+        noShowDeadlineAt: room.noShowDeadlineAt || (Date.now() + 45000)
+      });
+    } catch (err) {
+      console.error("[Tournament] /api/tour/enter-match error:", err);
       return res.status(500).json({ ok: false, error: "SERVER_ERROR" });
     }
   });
@@ -1628,7 +1750,8 @@ function initTournament({ app, db, saveDb, tgApiCall, DATA_DIR, APP_URL, ADMIN_T
     reportMatchResult,
     getActiveTournament,
     getTourMatchByRoomCode,
-    attachRoomToMatch
+    attachRoomToMatch,
+    setMpEngine
   };
 }
 

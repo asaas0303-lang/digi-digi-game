@@ -76,6 +76,12 @@
     return data;
   }
 
+  function notifyTourMpEvent(evType, data) {
+    if (window.DIGI_TOUR && typeof window.DIGI_TOUR.onMpEvent === "function") {
+      try { window.DIGI_TOUR.onMpEvent(evType, data); } catch (_) {}
+    }
+  }
+
   function dispatchMpEvent(evType, data) {
     if (!evType || !data) return;
     switch (evType) {
@@ -85,6 +91,7 @@
         if (_hooks && typeof _hooks.onRoom === "function") {
           try { _hooks.onRoom(data); } catch (e) {}
         }
+        notifyTourMpEvent("room", data);
         break;
       case "start":
         currentRoom = data;
@@ -144,6 +151,7 @@
         if (_hooks && typeof _hooks.onMatchEnd === "function") {
           try { _hooks.onMatchEnd(data); } catch (e) {}
         }
+        notifyTourMpEvent("match_end", data);
         break;
     }
   }
@@ -161,6 +169,7 @@
       if (_hooks && typeof _hooks.onRoom === "function") {
         try { _hooks.onRoom(payload.room); } catch (e) {}
       }
+      notifyTourMpEvent("room", payload.room);
     }
 
     if (Array.isArray(payload.events) && payload.events.length > 0) {
@@ -313,11 +322,11 @@
     }
   }
 
-  async function joinRoomByCode(rawCode) {
+  async function joinRoomByCode(rawCode, opts = {}) {
     const code = String(rawCode || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
     if (code.length < 4) {
       showMpToast("4 belgili xona kodini kiriting (masalan: A7K9)", "⚠️");
-      return;
+      return { ok: false, error: "INVALID_CODE" };
     }
     const me = getPlayerIdentity();
     setButtonsBusy(true);
@@ -330,17 +339,30 @@
       if (!data.ok || !data.room) {
         const errMsg = data.error === "ROOM_NOT_FOUND"
           ? "Bunday kodli xona topilmadi!"
-          : (data.error === "ROOM_FULL" ? "Bu xona allaqachon to'lgan!" : "Xonaga kirib bo'lmadi!");
+          : (data.error === "TOUR_NOT_ALLOWED"
+            ? "Bu turnir xonasi faqat juftlik ishtirokchilari uchun!"
+            : (data.error === "ROOM_ENDED"
+              ? "Bu jang xonasi allaqachon yakunlangan!"
+              : (data.error === "ROOM_FULL" ? "Bu xona allaqachon to'lgan!" : "Xonaga kirib bo'lmadi!")));
         showMpToast(errMsg, "⚠️");
-        return;
+        return { ok: false, error: data.error || "JOIN_FAILED" };
       }
       currentRoom = data.room;
       lastEventSeq = typeof data.seq === "number" ? data.seq : 0;
       startSyncLoop(currentRoom.code, me.id);
       renderMpRoomUI();
-      showMpToast("Xonaga qo'shildingiz: " + currentRoom.code, "✅");
+      if (opts && opts.isTournament) {
+        showMpToast("🏆 Turnir xonasiga ulandiniz (" + currentRoom.code + ")...", "⚔️");
+        if (data.room.status === "playing") {
+          applySyncPayload({ ok: true, room: data.room, seq: data.seq, events: [] });
+        }
+      } else {
+        showMpToast("Xonaga qo'shildingiz: " + currentRoom.code, "✅");
+      }
+      return { ok: true, room: currentRoom };
     } catch (err) {
       showMpToast("Serverga ulanib bo'lmadi!", "⚠️");
+      return { ok: false, error: "NETWORK_ERROR" };
     } finally {
       setButtonsBusy(false);
     }
@@ -744,6 +766,8 @@
       return found ? found.team : "red";
     },
     setGameHooks: (hooksObj) => { _hooks = hooksObj || null; },
+    joinRoomByCode: (code, opts) => joinRoomByCode(code, opts),
+    isTournamentRoom: () => !!(currentRoom && currentRoom.isTournament),
     leaveRoom: (silent) => leaveRoom(silent),
     sendState: (x, y, a, mv, wp) => {
       if (!currentRoom || currentRoom.status !== "playing") return;

@@ -18,6 +18,7 @@
   let _statusNotice = null; // { type: 'ok' | 'err', text: string }
   let _lastInvoker = null;
   let _lastModalRenderSig = '';
+  let _waitingMatch = null; // { roomCode, matchId, roundName, oppName, oppElo, noShowDeadlineAt }
   const _payoutDraft = { cardNumber: '', holderName: '', phone: '' };
 
   function esc(str) {
@@ -602,7 +603,19 @@
       }
     } else if (active.status === 'live') {
       const m = me.myMatch;
-      if (m && (m.status === 'ready' || m.status === 'playing')) {
+      if (_waitingMatch && m && (m.status === 'ready' || m.status === 'playing')) {
+        const noShowRem = Math.max(0, Math.ceil((Number(_waitingMatch.noShowDeadlineAt || 0) - Date.now()) / 1000));
+        actionBlockHtml = `
+          <div class="rounded-xl p-3 bg-gradient-to-r from-amber-950/80 via-slate-900/90 to-rose-950/75 border border-amber-400/80 flex flex-col gap-2">
+            <div role="status" aria-live="polite" class="flex items-center justify-between gap-2">
+              <span class="text-[11px] font-black text-amber-200 truncate">⏳ Raqib kutilmoqda: ${esc(_waitingMatch.oppName || 'Raqib')} • Xona: ${esc(_waitingMatch.roomCode)}</span>
+              <span class="text-[10px] font-mono font-black px-2 py-0.5 rounded-full bg-rose-500/25 border border-rose-400/60 text-rose-200 shrink-0" id="dgTourNoShowTimer">TKO gacha: ${noShowRem}s</span>
+            </div>
+            <div class="text-[10px] text-slate-300">Raqibingizga shoshilinch Telegram xabari yuborildi. U kirishi bilan 3D jang avtomatik boshlanadi!</div>
+            <button id="btnTourCancelWait" type="button" class="ios-btn-gray w-full py-2 px-4 text-[11px] cursor-pointer">🚪 Kutishni bekor qilish</button>
+          </div>
+        `;
+      } else if (m && (m.status === 'ready' || m.status === 'playing')) {
         const opp = (m.p1 && m.p1.playerId === identity.playerId) ? m.p2 : m.p1;
         actionBlockHtml = `
           <div class="rounded-xl p-3 bg-gradient-to-r from-rose-950/80 via-amber-950/65 to-slate-900/85 border border-amber-400/70 flex flex-col gap-2">
@@ -611,7 +624,9 @@
               <span class="text-[9.5px] font-bold px-2 py-0.5 rounded-full bg-rose-500/25 border border-rose-400/50 text-rose-200">${m.status === 'playing' ? '● JANGDA' : 'TAYYOR'}</span>
             </div>
             <div class="text-[12px] font-extrabold text-white">🆚 Raqib: <span class="text-amber-200">${esc((opp && opp.name) || 'Aniqlanmoqda...')}</span> <span class="text-[10px] text-slate-300 font-mono">(ELO ${Number((opp && opp.elo) || 1000)})</span></div>
-            <button id="btnTourLaunchMatch" type="button" class="ios-btn-gold w-full py-2 px-4 text-[12px] cursor-pointer">⚔️ 1v1 JANGGA KIRISH</button>
+            <button id="btnTourLaunchMatch" type="button" ${_actionBusy ? 'disabled' : ''} class="ios-btn-gold w-full py-2 px-4 text-[12px] cursor-pointer disabled:opacity-60">
+              ${_actionBusy ? '⏳ Xona ochilmoqda...' : '⚔️ 1v1 JANGGA KIRISH'}
+            </button>
           </div>
         `;
       } else if (me.isDq) {
@@ -1004,14 +1019,18 @@
 
     const btnLaunch = document.getElementById('btnTourLaunchMatch');
     if (btnLaunch) {
-      btnLaunch.addEventListener('click', () => {
-        const active = _state && _state.active;
-        const myMatch = _state && _state.me && _state.me.myMatch;
-        if (typeof window.DIGI_TOUR_LAUNCH_MATCH === 'function') {
-          window.DIGI_TOUR_LAUNCH_MATCH(myMatch, active);
-        } else {
-          selectTab('bracket');
+      btnLaunch.addEventListener('click', launchMyTournamentMatch);
+    }
+
+    const btnCancelWait = document.getElementById('btnTourCancelWait');
+    if (btnCancelWait) {
+      btnCancelWait.addEventListener('click', () => {
+        _waitingMatch = null;
+        if (window.DIGI_MP && typeof window.DIGI_MP.leaveRoom === 'function') {
+          window.DIGI_MP.leaveRoom(true);
         }
+        renderModalContent(true);
+        showTourToast('Kutish bekor qilindi', '🚪');
       });
     }
 
@@ -1166,6 +1185,7 @@
       tab: _activeTab,
       busy: _actionBusy,
       subWarn: _subWarning,
+      waiting: _waitingMatch ? _waitingMatch.roomCode : null,
       notice: _statusNotice,
       active,
       me,
@@ -1337,6 +1357,88 @@
     _lastInvoker = null;
   }
 
+  async function launchMyTournamentMatch() {
+    if (_actionBusy) return;
+    const active = _state && _state.active;
+    const myMatch = _state && _state.me && _state.me.myMatch;
+    if (typeof window.DIGI_TOUR_LAUNCH_MATCH === 'function') {
+      window.DIGI_TOUR_LAUNCH_MATCH(myMatch, active);
+      return;
+    }
+    const id = getMyIdentity();
+    if (!id.playerId) {
+      _statusNotice = { type: 'err', text: "O'yinchi ID topilmadi. Sahifani qayta yuklang." };
+      renderModalContent(true);
+      return;
+    }
+    _actionBusy = true;
+    _statusNotice = null;
+    renderModalContent(true);
+    try {
+      const res = await fetch('/api/tour/enter-match', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playerId: id.playerId, tgId: id.tgId, name: id.name })
+      });
+      const data = await res.json();
+      if (!res.ok || !data || !data.ok || !data.roomCode) {
+        _statusNotice = { type: 'err', text: (data && data.error) || 'Jang xonasini ochib bo\'lmadi.' };
+        return;
+      }
+      if (!window.DIGI_MP || typeof window.DIGI_MP.joinRoomByCode !== 'function') {
+        _statusNotice = { type: 'err', text: 'Multiplayer moduli hali yuklanmadi.' };
+        return;
+      }
+      const joinRes = await window.DIGI_MP.joinRoomByCode(data.roomCode, { isTournament: true });
+      if (!joinRes || !joinRes.ok) {
+        _waitingMatch = null;
+        _statusNotice = { type: 'err', text: (joinRes && joinRes.error) || 'Turnir xonasiga ulanib bo\'lmadi.' };
+      } else if (joinRes.room && joinRes.room.status === 'waiting') {
+        _waitingMatch = {
+          roomCode: data.roomCode,
+          matchId: data.matchId,
+          roundName: data.roundName,
+          oppName: data.opponentName,
+          oppElo: data.opponentElo,
+          noShowDeadlineAt: Number(joinRes.room.noShowDeadlineAt || data.noShowDeadlineAt) || (Date.now() + 45000)
+        };
+      } else {
+        _waitingMatch = null;
+      }
+    } catch (_) {
+      _statusNotice = { type: 'err', text: 'Tarmoq xatosi. Qayta urinib ko\'ring.' };
+    } finally {
+      _actionBusy = false;
+      renderModalContent(true);
+    }
+  }
+
+  function onMpEvent(type, data) {
+    if (type === 'room' && _waitingMatch) {
+      if (data && data.noShowDeadlineAt) {
+        _waitingMatch.noShowDeadlineAt = Number(data.noShowDeadlineAt);
+      }
+      if (data && data.status === 'playing') {
+        _waitingMatch = null;
+        renderModalContent(true);
+      }
+    } else if (type === 'match_end') {
+      _waitingMatch = null;
+      if (data && data.tko) {
+        showTourToast("🏆 Texnik g'alaba (TKO) qayd etildi!", '🏆');
+      } else if (data && data.overtimeWin) {
+        showTourToast("⚡ Overtaym g'alabasi qayd etildi!", '⚡');
+      }
+      renderModalContent(true);
+      setTimeout(() => { fetchTourState(true); }, 700);
+    }
+  }
+
+  function onMatchFinished(data) {
+    _waitingMatch = null;
+    fetchTourState(true);
+  }
+
   function tickSecond() {
     if (document.hidden || isGameBusy() || !isLobbyVisible()) return;
     const active = _state && _state.active;
@@ -1348,6 +1450,14 @@
       if (isModalOpen() && _activeTab === 'main') {
         const mainTimer = document.getElementById('dgTourMainTimer');
         if (mainTimer) mainTimer.textContent = cd;
+      }
+    }
+
+    if (_waitingMatch && isModalOpen() && _activeTab === 'main') {
+      const nsTimer = document.getElementById('dgTourNoShowTimer');
+      if (nsTimer) {
+        const noShowRem = Math.max(0, Math.ceil((Number(_waitingMatch.noShowDeadlineAt || 0) - Date.now()) / 1000));
+        nsTimer.textContent = 'TKO gacha: ' + noShowRem + 's';
       }
     }
 
@@ -1370,7 +1480,9 @@
     open: openTournamentModal,
     close: closeTournamentModal,
     refresh: fetchTourState,
-    getState: () => _state
+    getState: () => _state,
+    onMpEvent,
+    onMatchFinished
   };
 
   if (document.readyState === 'loading') {
